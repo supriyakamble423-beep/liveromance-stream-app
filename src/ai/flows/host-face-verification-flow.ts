@@ -22,7 +22,7 @@ export type HostFaceVerificationInput = z.infer<typeof HostFaceVerificationInput
 const HostFaceVerificationOutputSchema = z.object({
   isVerified: z
     .boolean()
-    .describe('Whether the photo contains a clear, verifiable human face.'),
+    .describe('Whether the photo contains a detectable human face.'),
   confidence: z
     .number()
     .min(0)
@@ -30,10 +30,10 @@ const HostFaceVerificationOutputSchema = z.object({
     .describe('Confidence score (0-1) in the verification decision.'),
   lightingIssue: z
     .boolean()
-    .describe('Whether the verification failed specifically due to lighting issues.'),
+    .describe('Whether the lighting is extremely poor, making face detection impossible.'),
   message: z
     .string()
-    .describe('A message explaining the verification result or any issues.'),
+    .describe('A message explaining the verification result.'),
 });
 export type HostFaceVerificationOutput = z.infer<typeof HostFaceVerificationOutputSchema>;
 
@@ -47,15 +47,13 @@ const hostFaceVerificationPrompt = ai.definePrompt({
   name: 'hostFaceVerificationPrompt',
   input: { schema: HostFaceVerificationInputSchema },
   output: { schema: HostFaceVerificationOutputSchema },
-  prompt: `You are an AI identity assistant. Analyze the image to confirm if it is a REAL HUMAN FACE.
+  prompt: `You are an AI identity assistant. Your primary task is to detect if there is a human face in the image.
 
 CRITERIA:
-1. Is it a human face? (Not an object, animal, or screen photo).
-2. Is the lighting sufficient to see features?
-3. Is the face clear and centered?
+1. Is there a human face visible?
+2. Is the person identifiable (even if lighting isn't perfect)?
 
-If there is a person present but it's too dark or blurry, set 'lightingIssue' to true and 'isVerified' to false. 
-Provide a friendly message like "Face detected but please move to a brighter area" or "Verification successful".
+Be lenient with lighting. Only set 'lightingIssue' to true if it is pitch black or so blurry that no facial features are visible at all. If you can see a face, set 'isVerified' to true.
 
 Image: {{media url=photoDataUri}}`,
 });

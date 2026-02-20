@@ -1,10 +1,9 @@
 'use client';
 
 import { useState, useRef, useEffect } from "react";
-import { ArrowLeft, User, CheckCircle, Loader2, Lightbulb, Camera, AlertCircle } from "lucide-react";
+import { ArrowLeft, User, CheckCircle, Loader2, Camera, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import { hostFaceVerification } from "@/ai/flows/host-face-verification-flow";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
@@ -89,15 +88,21 @@ export default function HostFaceVerification() {
         const hostRef = doc(firestore, 'hosts', hostId);
         await setDoc(hostRef, { 
           verified: true,
+          previewImageUrl: photoDataUri, // Use captured photo as profile preview
           updatedAt: serverTimestamp() 
         }, { merge: true });
 
-        toast({ title: 'Face Verified!', description: 'You are now a verified host!' });
+        toast({ title: 'Face Verified!', description: 'Verification successful!' });
+      } else if (res.lightingIssue) {
+        toast({
+          title: 'Lighting Issue',
+          description: 'Please move to a brighter spot or ensure your face is visible.'
+        });
       } else {
         toast({
-          variant: res.lightingIssue ? 'default' : 'destructive',
-          title: res.lightingIssue ? 'Lighting Guide' : 'Verification Failed',
-          description: res.message
+          variant: 'destructive',
+          title: 'Verification Failed',
+          description: res.message || 'No human face detected. Please try again.'
         });
       }
     } catch (err) {
@@ -115,7 +120,7 @@ export default function HostFaceVerification() {
             <ArrowLeft className="size-5" />
           </Button>
         </Link>
-        <h1 className="flex-1 text-center text-lg font-bold tracking-tight font-headline">Live Face Check</h1>
+        <h1 className="flex-1 text-center text-lg font-bold tracking-tight font-headline">Face Verification</h1>
       </header>
 
       <main className="flex-1 flex flex-col items-center justify-center px-6 space-y-6">
@@ -142,14 +147,14 @@ export default function HostFaceVerification() {
         {result?.lightingIssue && (
           <Alert variant="destructive" className="bg-destructive/10 border-destructive/20">
             <AlertCircle className="size-4" />
-            <AlertTitle>Poor Lighting</AlertTitle>
-            <AlertDescription>Please move to a brighter spot for better face detection.</AlertDescription>
+            <AlertTitle>Low Light Detected</AlertTitle>
+            <AlertDescription>The AI is struggling to see you. Please move to a brighter area.</AlertDescription>
           </Alert>
         )}
 
         <div className="text-center space-y-2">
-          <p className="text-sm font-bold">Position your face within the frame</p>
-          <p className="text-xs text-muted-foreground">This helps us verify you are a real person.</p>
+          <p className="text-sm font-bold">Look directly at the camera</p>
+          <p className="text-xs text-muted-foreground">We just need to confirm you are a real person.</p>
         </div>
       </main>
 
@@ -160,11 +165,11 @@ export default function HostFaceVerification() {
           className="w-full bg-primary hover:bg-primary/90 h-14 rounded-2xl shadow-xl shadow-primary/25 font-bold gap-2 text-base"
         >
           {isVerifying ? (
-            <><Loader2 className="size-5 animate-spin" /> Verifying...</>
+            <><Loader2 className="size-5 animate-spin" /> Checking...</>
           ) : result?.isVerified ? (
-            <><CheckCircle className="size-5" /> Verified</>
+            <><CheckCircle className="size-5" /> Verified Successfully</>
           ) : (
-            <><Camera className="size-5" /> Confirm Live Face</>
+            <><Camera className="size-5" /> Capture & Verify</>
           )}
         </Button>
       </footer>
