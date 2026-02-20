@@ -1,16 +1,16 @@
-"use client"
+
+'use client';
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Compass, MessageCircle, User, Map } from "lucide-react";
+import { Home, Compass, Radio, User, Map, LayoutDashboard, Heart } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
-  { icon: Home, label: "Home", href: "/" },
-  { icon: Compass, label: "Explore", href: "/explore" },
-  { icon: Map, label: "Map", href: "/map" },
-  { icon: MessageCircle, label: "Chats", href: "/chats", badge: 3 },
-  { icon: User, label: "Profile", href: "/dashboard" },
+  { icon: Home, label: "Global", href: "/global" },
+  { icon: Radio, label: "Trends", href: "/trends" },
+  { icon: Map, label: "Map", href: "/interest" },
+  { icon: LayoutDashboard, label: "Host Hub", href: "/host-p" },
 ];
 
 export function BottomNav() {
@@ -32,11 +32,6 @@ export function BottomNav() {
             >
               <div className="relative">
                 <item.icon className={cn("size-6", isActive && "fill-current")} />
-                {item.badge && (
-                  <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[8px] font-bold text-white">
-                    {item.badge}
-                  </span>
-                )}
               </div>
               <span className="text-[10px] font-medium leading-none">{item.label}</span>
               {isActive && (
