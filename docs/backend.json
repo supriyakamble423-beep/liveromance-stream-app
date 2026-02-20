@@ -39,7 +39,7 @@
         },
         "gender": {
           "type": "string",
-          "description": "The user's self-identified gender. Can be used for categorization like 'Boys', 'Girls', 'Couples', 'Groups', 'LGBTQ+'."
+          "description": "The user's self-identified gender."
         },
         "language": {
           "type": "string",
@@ -62,15 +62,15 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "HostProfile",
       "type": "object",
-      "description": "Extends UserProfile to include details specific to users who act as hosts/streamers on the platform.",
+      "description": "Extends UserProfile to include details specific to users who act as hosts/streamers.",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the HostProfile entity. This typically corresponds to a UserProfile ID. (Relationship: UserProfile 1:1 HostProfile)"
+          "description": "Unique identifier for the HostProfile entity."
         },
         "userId": {
           "type": "string",
-          "description": "Reference to the associated UserProfile. (Relationship: UserProfile 1:1 HostProfile)"
+          "description": "Reference to the associated UserProfile."
         },
         "isLive": {
           "type": "boolean",
@@ -83,44 +83,28 @@
         },
         "viewers": {
           "type": "number",
-          "description": "Current number of viewers on the host's active stream. Only relevant if isLive is true."
-        },
-        "coinsPerMin": {
-          "type": "number",
-          "description": "The rate at which viewers are charged coins per minute to interact with this host in a private session."
-        },
-        "boostExpiry": {
-          "type": "string",
-          "description": "Timestamp when any active boost or promotion for the host expires.",
-          "format": "date-time"
+          "description": "Current number of viewers."
         },
         "verified": {
           "type": "boolean",
-          "description": "Indicates if the host's identity has been successfully verified (e.g., via face verification)."
+          "description": "Indicates if the host's identity has been verified."
+        },
+        "canStreamPublic": {
+          "type": "boolean",
+          "description": "Permission to stream publicly."
+        },
+        "canStreamPrivate": {
+          "type": "boolean",
+          "description": "Permission to stream privately."
         },
         "rating": {
           "type": "number",
-          "description": "The average rating of the host, typically from 1 to 5."
+          "description": "Average rating."
         },
         "previewImageUrl": {
           "type": "string",
-          "description": "URL to an image that serves as a preview for the host's profile or stream.",
+          "description": "URL to an image for host's profile or stream.",
           "format": "uri"
-        },
-        "categoryIds": {
-          "type": "array",
-          "description": "References to categories that this host belongs to. (Relationship: HostProfile N:N Category)",
-          "items": {
-            "type": "string"
-          }
-        },
-        "waitingRoom": {
-          "type": "object",
-          "description": "Map of user IDs currently in the waiting room for the host's stream."
-        },
-        "invites": {
-          "type": "object",
-          "description": "Map of user IDs invited to the host's private stream."
         }
       },
       "required": [
@@ -128,370 +112,6 @@
         "userId",
         "isLive",
         "verified"
-      ]
-    },
-    "Stream": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Stream",
-      "type": "object",
-      "description": "Represents an active or past live stream by a host.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Stream entity."
-        },
-        "hostId": {
-          "type": "string",
-          "description": "Reference to the HostProfile who is broadcasting this stream. (Relationship: HostProfile 1:N Stream)"
-        },
-        "title": {
-          "type": "string",
-          "description": "The title of the live stream."
-        },
-        "description": {
-          "type": "string",
-          "description": "A brief description of the stream content."
-        },
-        "streamUrl": {
-          "type": "string",
-          "description": "URL for accessing the live stream video feed.",
-          "format": "uri"
-        },
-        "thumbnailUrl": {
-          "type": "string",
-          "description": "URL to a thumbnail image for the stream.",
-          "format": "uri"
-        },
-        "status": {
-          "type": "string",
-          "description": "The current status of the stream (e.g., 'live', 'ended', 'scheduled')."
-        },
-        "currentViewers": {
-          "type": "number",
-          "description": "The number of concurrent viewers on the stream."
-        },
-        "startTime": {
-          "type": "string",
-          "description": "Timestamp when the stream started.",
-          "format": "date-time"
-        },
-        "endTime": {
-          "type": "string",
-          "description": "Timestamp when the stream ended. Null if still live.",
-          "format": "date-time"
-        },
-        "isFeatured": {
-          "type": "boolean",
-          "description": "Indicates if this stream is promoted as a featured stream on the platform."
-        }
-      },
-      "required": [
-        "id",
-        "hostId",
-        "title",
-        "streamUrl",
-        "status",
-        "startTime"
-      ]
-    },
-    "Category": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Category",
-      "type": "object",
-      "description": "Defines categories for organizing hosts and streams, such as 'Boys', 'Girls', 'Couples', 'Groups', 'LGBTQ+'.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Category entity."
-        },
-        "name": {
-          "type": "string",
-          "description": "The name of the category (e.g., 'Couples', 'LGBTQ+')."
-        },
-        "description": {
-          "type": "string",
-          "description": "A brief description of what the category represents."
-        }
-      },
-      "required": [
-        "id",
-        "name"
-      ]
-    },
-    "StreamRequest": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "StreamRequest",
-      "type": "object",
-      "description": "Records a user's request to interact with a host, such as initiating a private chat or 'zap'.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the StreamRequest entity."
-        },
-        "hostId": {
-          "type": "string",
-          "description": "Reference to the HostProfile receiving the request. (Relationship: HostProfile 1:N StreamRequest)"
-        },
-        "userId": {
-          "type": "string",
-          "description": "Reference to the UserProfile making the request. (Relationship: UserProfile 1:N StreamRequest)"
-        },
-        "status": {
-          "type": "string",
-          "description": "The current status of the request (e.g., 'pending', 'accepted', 'rejected', 'completed')."
-        },
-        "requestType": {
-          "type": "string",
-          "description": "The type of interaction requested (e.g., 'chat', 'private_stream', 'zap')."
-        },
-        "coins": {
-          "type": "number",
-          "description": "The number of coins involved in this request, if applicable."
-        },
-        "timestamp": {
-          "type": "string",
-          "description": "Timestamp when the request was made.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "id",
-        "hostId",
-        "userId",
-        "status",
-        "requestType",
-        "timestamp"
-      ]
-    },
-    "Message": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Message",
-      "type": "object",
-      "description": "Represents a chat message sent within a live stream or private conversation.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Message entity."
-        },
-        "streamId": {
-          "type": "string",
-          "description": "Reference to the Stream where the message was sent, if public chat. Null for private chat. (Relationship: Stream 1:N Message)"
-        },
-        "senderId": {
-          "type": "string",
-          "description": "Reference to the UserProfile who sent the message. (Relationship: UserProfile 1:N Message)"
-        },
-        "receiverId": {
-          "type": "string",
-          "description": "Reference to the UserProfile who received the message, if private. Null for public chat. (Relationship: UserProfile 1:N Message)"
-        },
-        "content": {
-          "type": "string",
-          "description": "The text content of the message."
-        },
-        "timestamp": {
-          "type": "string",
-          "description": "Timestamp when the message was sent.",
-          "format": "date-time"
-        },
-        "isSystemMessage": {
-          "type": "boolean",
-          "description": "Indicates if the message is from the system (e.g., 'Welcome to the room!')."
-        }
-      },
-      "required": [
-        "id",
-        "senderId",
-        "content",
-        "timestamp"
-      ]
-    },
-    "Tip": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Tip",
-      "type": "object",
-      "description": "Records an instance of a user sending virtual coins or a gift to a host during a stream.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Tip entity."
-        },
-        "tipperUserId": {
-          "type": "string",
-          "description": "Reference to the UserProfile who sent the tip. (Relationship: UserProfile 1:N Tip)"
-        },
-        "hostId": {
-          "type": "string",
-          "description": "Reference to the HostProfile who received the tip. (Relationship: HostProfile 1:N Tip)"
-        },
-        "streamId": {
-          "type": "string",
-          "description": "Reference to the Stream during which the tip was sent. (Relationship: Stream 1:N Tip)"
-        },
-        "amount": {
-          "type": "number",
-          "description": "The amount of virtual coins tipped."
-        },
-        "tipMessage": {
-          "type": "string",
-          "description": "An optional message included with the tip."
-        },
-        "timestamp": {
-          "type": "string",
-          "description": "Timestamp when the tip was sent.",
-          "format": "date-time"
-        },
-        "tipAction": {
-          "type": "string",
-          "description": "Describes the specific action or item purchased with the tip (e.g., 'Bite Lips', 'Strip Show', 'DM')."
-        }
-      },
-      "required": [
-        "id",
-        "tipperUserId",
-        "hostId",
-        "streamId",
-        "amount",
-        "timestamp"
-      ]
-    },
-    "Transaction": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Transaction",
-      "type": "object",
-      "description": "A general record of financial movements on the platform, including coin purchases, host earnings, and referral commissions.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Transaction entity."
-        },
-        "userId": {
-          "type": "string",
-          "description": "Reference to the UserProfile involved in the transaction (payer or recipient). (Relationship: UserProfile 1:N Transaction)"
-        },
-        "type": {
-          "type": "string",
-          "description": "The type of transaction (e.g., 'coin_purchase', 'host_earning', 'referral_commission', 'tip_sent', 'tip_received')."
-        },
-        "amount": {
-          "type": "number",
-          "description": "The amount of virtual coins involved in the transaction. Positive for gains, negative for expenses."
-        },
-        "timestamp": {
-          "type": "string",
-          "description": "Timestamp when the transaction occurred.",
-          "format": "date-time"
-        },
-        "relatedHostId": {
-          "type": "string",
-          "description": "Optional: Reference to a HostProfile if the transaction relates to a host's earnings or a tip received. (Relationship: HostProfile 1:N Transaction)"
-        },
-        "relatedReferralId": {
-          "type": "string",
-          "description": "Optional: Reference to a Referral if the transaction is a commission. (Relationship: Referral 1:N Transaction)"
-        },
-        "description": {
-          "type": "string",
-          "description": "A brief description of the transaction."
-        }
-      },
-      "required": [
-        "id",
-        "userId",
-        "type",
-        "amount",
-        "timestamp"
-      ]
-    },
-    "Referral": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Referral",
-      "type": "object",
-      "description": "Manages the host referral program, linking a referrer user to a referred host and tracking commission rates.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Referral entity."
-        },
-        "referrerUserId": {
-          "type": "string",
-          "description": "Reference to the UserProfile who made the referral. (Relationship: UserProfile 1:N Referral)"
-        },
-        "referredHostId": {
-          "type": "string",
-          "description": "Reference to the HostProfile who was referred. (Relationship: HostProfile 1:1 Referral)"
-        },
-        "referralCode": {
-          "type": "string",
-          "description": "The unique code or link used for this referral."
-        },
-        "commissionRate": {
-          "type": "number",
-          "description": "The percentage commission the referrer earns from the referred host's earnings (e.g., 0.01 for 1%)."
-        },
-        "status": {
-          "type": "string",
-          "description": "The current status of the referral (e.g., 'active', 'pending_verification', 'inactive')."
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp when the referral was established.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "id",
-        "referrerUserId",
-        "referredHostId",
-        "referralCode",
-        "commissionRate",
-        "status",
-        "createdAt"
-      ]
-    },
-    "HostVerificationAttempt": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "HostVerificationAttempt",
-      "type": "object",
-      "description": "Records details and outcome of a host's identity verification attempt, typically using face recognition.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the HostVerificationAttempt entity."
-        },
-        "hostId": {
-          "type": "string",
-          "description": "Reference to the HostProfile attempting verification. (Relationship: HostProfile 1:N HostVerificationAttempt)"
-        },
-        "timestamp": {
-          "type": "string",
-          "description": "Timestamp when the verification attempt was made.",
-          "format": "date-time"
-        },
-        "status": {
-          "type": "string",
-          "description": "The outcome of the verification attempt (e.g., 'pending', 'approved', 'rejected', 'manual_review')."
-        },
-        "reason": {
-          "type": "string",
-          "description": "Optional: A brief reason if the verification was rejected or requires manual review."
-        },
-        "verificationImageUrl": {
-          "type": "string",
-          "description": "URL to the image submitted for face verification.",
-          "format": "uri"
-        },
-        "aiConfidenceScore": {
-          "type": "number",
-          "description": "The confidence score provided by the AI verification system, typically between 0 and 1."
-        }
-      },
-      "required": [
-        "id",
-        "hostId",
-        "timestamp",
-        "status",
-        "verificationImageUrl"
       ]
     }
   },
@@ -510,13 +130,7 @@
           "schema": {
             "$ref": "#/backend/entities/UserProfile"
           },
-          "description": "Stores core user profile data.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier of the user."
-            }
-          ]
+          "description": "Stores core user profile data."
         }
       },
       {
@@ -526,13 +140,22 @@
           "schema": {
             "$ref": "#/backend/entities/HostProfile"
           },
-          "description": "Stores host-specific profile data.",
-          "params": [
-            {
-              "name": "hostId",
-              "description": "The unique identifier of the host."
+          "description": "Stores host-specific profile data."
+        }
+      },
+      {
+        "path": "/adminMessages/{messageId}",
+        "definition": {
+          "entityName": "AdminMessage",
+          "schema": {
+            "type": "object",
+            "properties": {
+              "hostId": { "type": "string" },
+              "content": { "type": "string" },
+              "timestamp": { "type": "string", "format": "date-time" }
             }
-          ]
+          },
+          "description": "Direct messages from admin to hosts."
         }
       }
     ]

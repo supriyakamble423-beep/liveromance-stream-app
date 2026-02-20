@@ -1,30 +1,32 @@
+
 'use client';
 
 import { useState, useRef, useEffect } from "react";
-import { ArrowLeft, User, CheckCircle, Loader2, Camera, AlertCircle } from "lucide-react";
+import { ArrowLeft, User, CheckCircle, Loader2, Camera, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { hostFaceVerification } from "@/ai/flows/host-face-verification-flow";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useFirebase } from "@/firebase";
 import { collection, addDoc, serverTimestamp, doc, setDoc } from "firebase/firestore";
 import { cn } from "@/lib/utils";
-import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
 export default function HostFaceVerification() {
   const [isVerifying, setIsVerifying] = useState(false);
-  const [result, setResult] = useState<{ isVerified: boolean; message: string; confidence?: number; lightingIssue?: boolean } | null>(null);
+  const [result, setResult] = useState<{ isVerified: boolean; message: string } | null>(null);
   const [hasCameraPermission, setHasCameraPermission] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { toast } = useToast();
   const { firestore, auth } = useFirebase();
+  const router = useRouter();
 
   useEffect(() => {
     const getCameraPermission = async () => {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
         setHasCameraPermission(true);
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
@@ -60,51 +62,38 @@ export default function HostFaceVerification() {
     }
 
     const photoDataUri = capturePhoto();
-    if (!photoDataUri) {
-      toast({ variant: 'destructive', title: 'Capture Error', description: 'Could not capture photo.' });
-      return;
-    }
+    if (!photoDataUri) return;
 
     setIsVerifying(true);
     setResult(null);
 
     try {
       const res = await hostFaceVerification({ photoDataUri });
-      setResult(res);
-
+      
       if (res.isVerified && auth?.currentUser) {
-        const hostId = auth.currentUser.uid;
+        const userId = auth.currentUser.uid;
         
-        // Record verification attempt
-        addDoc(collection(firestore, 'hostVerificationAttempts'), {
-          hostId,
-          status: 'approved',
-          timestamp: serverTimestamp(),
-          aiConfidenceScore: res.confidence || 0.9,
-          photoUrl: photoDataUri.slice(0, 100) + '...' 
-        });
-
-        // Update Host Profile - Real-time verified status
-        const hostRef = doc(firestore, 'hosts', hostId);
+        // Instant unlock for both permissions
+        const hostRef = doc(firestore, 'hosts', userId);
         await setDoc(hostRef, { 
           verified: true,
+          canStreamPublic: true,
+          canStreamPrivate: true,
           previewImageUrl: photoDataUri, 
+          status: 'online',
           updatedAt: serverTimestamp() 
         }, { merge: true });
 
-        toast({ title: 'Success!', description: 'You are now verified!' });
-      } else if (res.lightingIssue && !res.isVerified) {
+        toast({ title: '✅ VERIFIED!', description: 'Permissions unlocked! Redirecting...' });
+        setResult(res);
+        setTimeout(() => router.push('/host-p'), 1500);
+      } else {
         toast({
           variant: 'destructive',
-          title: 'Too Dark',
-          description: 'It is too dark to see anything. Please turn on a light.'
+          title: 'Verification Failed',
+          description: res.message || 'Face not recognized. Please ensure clear lighting.'
         });
-      } else if (!res.isVerified) {
-        toast({
-          variant: 'destructive',
-          title: 'Not Detected',
-          description: 'We could not detect a face. Please try again.'
-        });
+        setResult(res);
       }
     } catch (err) {
       toast({ variant: 'destructive', title: 'Error', description: 'System busy. Try again.' });
@@ -114,66 +103,63 @@ export default function HostFaceVerification() {
   };
 
   return (
-    <div className="relative w-full max-w-lg h-screen bg-background flex flex-col overflow-hidden border-x border-border mx-auto">
-      <header className="flex items-center px-6 py-4 pt-10">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-black text-white p-6 max-w-lg mx-auto border-x border-white/10">
+      <header className="absolute top-10 left-6">
         <Link href="/host-p">
-          <Button variant="ghost" size="icon" className="rounded-full">
-            <ArrowLeft className="size-5" />
+          <Button variant="ghost" size="icon" className="rounded-full text-white">
+            <ArrowLeft className="size-6" />
           </Button>
         </Link>
-        <h1 className="flex-1 text-center text-lg font-bold tracking-tight font-headline">Fast Verify</h1>
       </header>
 
-      <main className="flex-1 flex flex-col items-center justify-center px-6 space-y-6">
-        <div className="relative size-72 rounded-full border-4 border-primary/40 overflow-hidden bg-black shadow-2xl">
-          <video 
-            ref={videoRef} 
-            className={cn(
-              "w-full h-full object-cover",
-              isVerifying && "opacity-50"
-            )} 
-            autoPlay 
-            muted 
-            playsInline
-          />
-          <canvas ref={canvasRef} className="hidden" />
-          
-          {isVerifying && (
-            <div className="absolute inset-0 pointer-events-none overflow-hidden">
-              <div className="absolute top-0 left-0 w-full h-1 bg-primary/60 shadow-[0_0_15px_#895af6] animate-scan" />
-            </div>
-          )}
-        </div>
+      <div className="text-center space-y-4 mb-10">
+        <Badge className="bg-primary/20 text-primary border-primary/30 px-4 py-1 uppercase tracking-widest text-[10px] font-bold">Identity Step</Badge>
+        <h1 className="text-3xl font-black tracking-tighter uppercase font-headline">1-Sec Selfie</h1>
+        <p className="text-slate-400 text-xs">Verify instantly to unlock Public & Private streaming.</p>
+      </div>
 
-        {result?.lightingIssue && !result?.isVerified && (
-          <Alert variant="destructive" className="bg-destructive/10 border-destructive/20 max-w-xs">
-            <AlertCircle className="size-4" />
-            <AlertTitle>Image too dark</AlertTitle>
-            <AlertDescription>Please move to a brighter spot.</AlertDescription>
-          </Alert>
+      <div className="relative size-72 rounded-full border-4 border-primary/40 overflow-hidden bg-slate-900 shadow-[0_0_50px_rgba(137,90,246,0.3)]">
+        <video 
+          ref={videoRef} 
+          className={cn(
+            "w-full h-full object-cover",
+            isVerifying && "opacity-50 grayscale"
+          )} 
+          autoPlay 
+          muted 
+          playsInline
+        />
+        <canvas ref={canvasRef} className="hidden" />
+        
+        {isVerifying && (
+          <div className="absolute inset-0 pointer-events-none overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-1.5 bg-primary shadow-[0_0_20px_#895af6] animate-scan" />
+          </div>
         )}
 
-        <div className="text-center space-y-2">
-          <p className="text-sm font-bold">Show your face to the camera</p>
-          <p className="text-xs text-muted-foreground">Verification is now faster and easier.</p>
-        </div>
-      </main>
+        {result?.isVerified && (
+          <div className="absolute inset-0 bg-green-500/20 backdrop-blur-sm flex items-center justify-center">
+            <CheckCircle className="size-20 text-green-500" />
+          </div>
+        )}
+      </div>
 
-      <footer className="p-6 pb-12">
+      <div className="mt-12 w-full space-y-4">
         <Button 
           disabled={isVerifying || result?.isVerified} 
           onClick={handleVerify}
-          className="w-full bg-primary hover:bg-primary/90 h-14 rounded-2xl shadow-xl shadow-primary/25 font-bold gap-2 text-base"
+          className="w-full bg-primary hover:bg-primary/90 h-16 rounded-3xl shadow-2xl shadow-primary/40 font-black text-lg gap-3 transition-transform active:scale-95 uppercase"
         >
           {isVerifying ? (
-            <><Loader2 className="size-5 animate-spin" /> Verifying...</>
+            <><Loader2 className="size-6 animate-spin" /> Verifying...</>
           ) : result?.isVerified ? (
-            <><CheckCircle className="size-5" /> Success</>
+            <><ShieldCheck className="size-6" /> Success!</>
           ) : (
-            <><Camera className="size-5" /> Verify Me</>
+            <><Camera className="size-6" /> Take 1-Sec Selfie</>
           )}
         </Button>
-      </footer>
+        <p className="text-center text-[10px] text-slate-500 uppercase font-bold tracking-widest">Powered by Stream-X AI</p>
+      </div>
     </div>
   );
 }
