@@ -1,16 +1,18 @@
+
 "use client"
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import { 
-  X, Visibility, Heart, Gift, MessageCircle, Share2, 
-  Info, Star, SentimentSatisfiedAlt, ArrowUpRight 
+  X, Eye, Heart, Gift, MessageCircle, Share2, 
+  Info, Star, Smile, ArrowUpRight 
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { MOCK_HOSTS } from "@/lib/mock-data";
+import { cn } from "@/lib/utils";
 
 export default function StreamPage() {
   const { id } = useParams();
@@ -52,7 +54,7 @@ export default function StreamPage() {
           <div>
             <h3 className="text-sm font-bold leading-none text-white">{host.name}</h3>
             <div className="flex items-center gap-1 mt-1 opacity-70">
-              <Visibility className="size-3 text-white" />
+              <Eye className="size-3 text-white" />
               <span className="text-[10px] font-bold text-white">{host.viewers || "1.5k"}</span>
             </div>
           </div>
@@ -118,7 +120,7 @@ export default function StreamPage() {
               placeholder="Say something..." 
             />
             <Button variant="ghost" size="icon" className="text-slate-300 hover:text-white">
-              <SentimentSatisfiedAlt className="size-5" />
+              <Smile className="size-5" />
             </Button>
           </div>
           <Button variant="secondary" size="icon" className="size-12 glass-effect rounded-full shadow-xl">
@@ -156,5 +158,3 @@ export default function StreamPage() {
     </div>
   );
 }
-
-import { cn } from "@/lib/utils";

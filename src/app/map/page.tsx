@@ -1,12 +1,14 @@
+
 "use client"
 
 import { BottomNav } from "@/components/BottomNav";
-import { Search, Bell, Map as MapIcon, Layers, Target, Visibility } from "lucide-react";
+import { Search, Bell, Map as MapIcon, Layers, Target, Eye } from "lucide-react";
 import Image from "next/image";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 const MapHotspot = ({ top, left, avatar }: { top: string, left: string, avatar: string }) => (
   <div className="absolute animate-pulse" style={{ top, left }}>
@@ -113,7 +115,7 @@ export default function MapPage() {
                     <span className="size-1.5 bg-white rounded-full animate-ping" /> Live
                   </Badge>
                   <Badge variant="secondary" className="bg-black/40 backdrop-blur-md text-white text-[10px] gap-1">
-                    <Visibility className="size-3" /> 1.2k
+                    <Eye className="size-3" /> 1.2k
                   </Badge>
                 </div>
               </div>
@@ -139,5 +141,3 @@ export default function MapPage() {
     </div>
   );
 }
-
-import { cn } from "@/lib/utils";
