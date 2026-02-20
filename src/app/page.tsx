@@ -4,7 +4,7 @@ import { Header } from "@/components/Header";
 import { BottomNav } from "@/components/BottomNav";
 import { MOCK_HOSTS } from "@/lib/mock-data";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
-import { MessageCircle, UserPlus, Users, Music } from "lucide-react";
+import { MessageCircle, UserPlus, Users } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 export default function Home() {
-  const featuredImage = PlaceHolderImages.find(img => img.id === "hero-stream")?.imageUrl || "";
+  const featuredImage = PlaceHolderImages.find(img => img.id === "hero-stream")?.imageUrl;
 
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -20,15 +20,17 @@ export default function Home() {
       
       <main className="px-4 pt-4 space-y-6 max-w-lg mx-auto">
         {/* Featured Section */}
-        <section className="relative group overflow-hidden rounded-2xl shadow-2xl">
+        <section className="relative group overflow-hidden rounded-2xl shadow-2xl bg-muted">
           <div className="relative aspect-[16/9] w-full">
-            <Image 
-              src={featuredImage} 
-              alt="Featured Music Stream" 
-              fill 
-              className="object-cover transition-transform duration-700 group-hover:scale-105"
-              data-ai-hint="streaming music"
-            />
+            {featuredImage && (
+              <Image 
+                src={featuredImage} 
+                alt="Featured Music Stream" 
+                fill 
+                className="object-cover transition-transform duration-700 group-hover:scale-105"
+                data-ai-hint="streaming music"
+              />
+            )}
             <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
           </div>
           
@@ -64,13 +66,15 @@ export default function Home() {
               key={host.id} 
               className="flex flex-col bg-card rounded-2xl overflow-hidden shadow-sm border border-border group transition-all hover:shadow-md"
             >
-              <Link href={`/stream/${host.id}`} className="relative aspect-[3/4] overflow-hidden">
-                <Image 
-                  src={host.imageUrl} 
-                  alt={host.name} 
-                  fill 
-                  className="object-cover transition-transform duration-500 group-hover:scale-110"
-                />
+              <Link href={`/stream/${host.id}`} className="relative aspect-[3/4] overflow-hidden bg-muted">
+                {host.imageUrl && (
+                  <Image 
+                    src={host.imageUrl} 
+                    alt={host.name} 
+                    fill 
+                    className="object-cover transition-transform duration-500 group-hover:scale-110"
+                  />
+                )}
                 <div className="absolute top-2 left-2 bg-black/30 backdrop-blur-sm rounded-full px-2 py-0.5 text-xs text-white">
                   {host.flag}
                 </div>

@@ -23,7 +23,7 @@ export const MOCK_HOSTS: Host[] = [
     isLive: true,
     viewers: "1.2k",
     categories: ["Girls", "Gaming"],
-    imageUrl: PlaceHolderImages.find(img => img.id === "host-1")?.imageUrl || "",
+    imageUrl: PlaceHolderImages.find(img => img.id === "host-1")?.imageUrl || "https://picsum.photos/seed/host1/600/800",
     rating: 4.8,
   },
   {
@@ -34,7 +34,7 @@ export const MOCK_HOSTS: Host[] = [
     flag: "🇬🇧",
     isLive: false,
     categories: ["Boys", "Music"],
-    imageUrl: PlaceHolderImages.find(img => img.id === "host-2")?.imageUrl || "",
+    imageUrl: PlaceHolderImages.find(img => img.id === "host-2")?.imageUrl || "https://picsum.photos/seed/host2/600/800",
     rating: 4.5,
   },
   {
@@ -46,7 +46,7 @@ export const MOCK_HOSTS: Host[] = [
     isLive: true,
     viewers: "850",
     categories: ["Girls", "Talk"],
-    imageUrl: PlaceHolderImages.find(img => img.id === "host-3")?.imageUrl || "",
+    imageUrl: PlaceHolderImages.find(img => img.id === "host-3")?.imageUrl || "https://picsum.photos/seed/host3/600/800",
     rating: 4.9,
   },
   {
@@ -57,7 +57,7 @@ export const MOCK_HOSTS: Host[] = [
     flag: "🇺🇸",
     isLive: false,
     categories: ["Boys", "Fitness"],
-    imageUrl: PlaceHolderImages.find(img => img.id === "host-4")?.imageUrl || "",
+    imageUrl: PlaceHolderImages.find(img => img.id === "host-4")?.imageUrl || "https://picsum.photos/seed/host4/600/800",
     rating: 4.2,
   },
   {
@@ -69,7 +69,7 @@ export const MOCK_HOSTS: Host[] = [
     isLive: true,
     viewers: "2.1k",
     categories: ["Girls", "Fashion"],
-    imageUrl: PlaceHolderImages.find(img => img.id === "host-5")?.imageUrl || "",
+    imageUrl: PlaceHolderImages.find(img => img.id === "host-5")?.imageUrl || "https://picsum.photos/seed/host5/600/800",
     rating: 4.7,
   },
   {
@@ -80,7 +80,7 @@ export const MOCK_HOSTS: Host[] = [
     flag: "🇰🇪",
     isLive: false,
     categories: ["Boys", "Cooking"],
-    imageUrl: PlaceHolderImages.find(img => img.id === "host-6")?.imageUrl || "",
+    imageUrl: PlaceHolderImages.find(img => img.id === "host-6")?.imageUrl || "https://picsum.photos/seed/host6/600/800",
     rating: 4.6,
   },
 ];

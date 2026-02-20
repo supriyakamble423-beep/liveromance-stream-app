@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { 
-  Bell, Globe, TrendingUp, Cpu, AlertTriangle, 
+  Bell, TrendingUp, AlertTriangle, 
   ArrowUp, Download, LayoutDashboard, BarChart2, 
-  Bolt, UserCircle, Settings, RefreshCcw, Wifi, Users
+  Bolt, Settings, RefreshCcw, Wifi, Users, UserCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -12,7 +12,6 @@ import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { adminAIErrorReports, type AdminAIErrorReportsOutput } from "@/ai/flows/admin-ai-error-reports";
 import Image from "next/image";
 import Link from "next/link";
-import { BottomNav } from "@/components/BottomNav";
 import { cn } from "@/lib/utils";
 
 export default function DashboardPage() {
@@ -37,7 +36,7 @@ export default function DashboardPage() {
     fetchReports();
   }, []);
 
-  const adminAvatar = PlaceHolderImages.find(img => img.id === "avatar-admin")?.imageUrl || "";
+  const adminAvatar = PlaceHolderImages.find(img => img.id === "avatar-admin")?.imageUrl;
 
   return (
     <div className="relative flex h-screen w-full flex-col overflow-hidden max-w-lg mx-auto border-x border-border bg-background pb-20">
@@ -53,8 +52,12 @@ export default function DashboardPage() {
           <Button variant="secondary" size="icon" className="size-10 rounded-full bg-primary/10 text-primary">
             <Bell className="size-5" />
           </Button>
-          <div className="size-10 rounded-full overflow-hidden border-2 border-primary/30 relative">
-            <Image src={adminAvatar} alt="Admin" fill className="object-cover" />
+          <div className="size-10 rounded-full overflow-hidden border-2 border-primary/30 relative bg-muted flex items-center justify-center">
+            {adminAvatar ? (
+              <Image src={adminAvatar} alt="Admin" fill className="object-cover" />
+            ) : (
+              <UserCircle className="size-6 text-muted-foreground" />
+            )}
           </div>
         </div>
       </header>
