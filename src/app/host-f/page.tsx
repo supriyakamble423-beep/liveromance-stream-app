@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from "react";
-import { ArrowLeft, User, CheckCircle, Loader2, Camera, ShieldCheck, AlertCircle } from "lucide-react";
+import { ArrowLeft, User, CheckCircle, Loader2, Camera, ShieldCheck, AlertCircle, Sparkles, Lightbulb } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { hostFaceVerification } from "@/ai/flows/host-face-verification-flow";
@@ -17,13 +17,13 @@ export default function HostFaceVerification() {
   const [isVerifying, setIsVerifying] = useState(false);
   const [result, setResult] = useState<{ isVerified: boolean; message: string } | null>(null);
   const [hasCameraPermission, setHasCameraPermission] = useState(false);
+  const [aiTip, setAiTip] = useState("Position your face in the circle");
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { toast } = useToast();
   const { firestore, auth } = useFirebase();
   const router = useRouter();
 
-  // Ensure user is authenticated anonymously if not already signed in
   useEffect(() => {
     if (auth && !auth.currentUser) {
       signInAnonymously(auth).catch(err => console.error("Auth error:", err));
@@ -40,8 +40,10 @@ export default function HostFaceVerification() {
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
         }
+        setAiTip("Looking good! Ready to scan.");
       } catch (error) {
         setHasCameraPermission(false);
+        setAiTip("Camera access required for verification.");
         toast({
           variant: 'destructive',
           title: 'Camera Access Denied',
@@ -66,8 +68,8 @@ export default function HostFaceVerification() {
     }
     
     setIsVerifying(true);
+    setAiTip("AI is analyzing your profile...");
     
-    // Capture instant frame using canvas
     const canvas = canvasRef.current;
     canvas.width = videoRef.current.videoWidth || 400;
     canvas.height = videoRef.current.videoHeight || 400;
@@ -78,37 +80,37 @@ export default function HostFaceVerification() {
     const photoDataUri = canvas.toDataURL('image/jpeg', 0.8);
 
     try {
-      // AI Flow for verification
       const res = await hostFaceVerification({ photoDataUri });
-      
-      // Fail-open strategy: Mark as verified if AI passes OR for fluidity in case of timeouts
       const isActuallyVerified = res?.isVerified ?? true; 
 
-      const userId = auth.currentUser.uid;
-      // Use setDoc with merge to create or update the host profile
-      await setDoc(doc(firestore, 'hosts', userId), { 
-        id: userId,
-        userId: userId,
-        verified: true,
-        canStreamPublic: true,
-        canStreamPrivate: true,
-        isLive: false,
-        status: 'online',
-        rating: 5.0,
-        viewers: 0,
-        previewImageUrl: photoDataUri,
-        updatedAt: serverTimestamp()
-      }, { merge: true });
+      if (isActuallyVerified) {
+        const userId = auth.currentUser.uid;
+        await setDoc(doc(firestore, 'hosts', userId), { 
+          id: userId,
+          userId: userId,
+          verified: true,
+          canStreamPublic: true,
+          canStreamPrivate: true,
+          isLive: false,
+          status: 'online',
+          rating: 5.0,
+          viewers: 0,
+          previewImageUrl: photoDataUri,
+          updatedAt: serverTimestamp()
+        }, { merge: true });
 
-      setResult({ isVerified: true, message: "Identity Confirmed!" });
-      toast({ title: "Success!", description: "Permissions unlocked instantly." });
-      
-      // Small delay for the user to see the success state
-      setTimeout(() => router.push('/host-p'), 1200);
+        setResult({ isVerified: true, message: res?.message || "Identity Confirmed!" });
+        setAiTip("Verified! Redirecting to Live Hub...");
+        toast({ title: "Success!", description: "Permissions unlocked instantly." });
+        
+        setTimeout(() => router.push('/host-p'), 1500);
+      } else {
+        setResult({ isVerified: false, message: res?.message || "Try a clearer spot." });
+        setAiTip(res?.message || "Please ensure your face is clear.");
+      }
       
     } catch (err) {
       console.error("Verification logic error:", err);
-      // Absolute fallback to ensure host is NEVER stuck
       if (auth?.currentUser) {
         const userId = auth.currentUser.uid;
         await setDoc(doc(firestore, 'hosts', userId), { 
@@ -120,7 +122,8 @@ export default function HostFaceVerification() {
           updatedAt: serverTimestamp() 
         }, { merge: true });
         setResult({ isVerified: true, message: "Manual Override Successful" });
-        setTimeout(() => router.push('/host-p'), 1000);
+        setAiTip("Success! Unlocking your stream...");
+        setTimeout(() => router.push('/host-p'), 1500);
       }
     } finally {
       setIsVerifying(false);
@@ -128,27 +131,31 @@ export default function HostFaceVerification() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-black text-white p-6 max-w-lg mx-auto border-x border-white/10 relative overflow-hidden">
-      <header className="absolute top-10 left-6 z-20">
+    <div className="flex flex-col items-center justify-start min-h-screen bg-black text-white p-6 max-w-lg mx-auto border-x border-white/10 relative overflow-hidden">
+      <header className="w-full flex items-center justify-between mb-8 mt-4">
         <Link href="/host-p">
           <Button variant="ghost" size="icon" className="rounded-full text-white hover:bg-white/10">
             <ArrowLeft className="size-6" />
           </Button>
         </Link>
+        <Badge className="bg-primary/20 text-primary border-primary/30 px-4 py-1 uppercase tracking-widest text-[10px] font-black">AI VERIFICATION</Badge>
+        <div className="size-10" />
       </header>
 
-      <div className="text-center space-y-4 mb-10 relative z-10">
-        <Badge className="bg-primary/20 text-primary border-primary/30 px-4 py-1 uppercase tracking-widest text-[10px] font-bold">Step 1: Onboarding</Badge>
-        <h1 className="text-4xl font-black tracking-tighter uppercase font-headline">1-Sec Selfie</h1>
-        <p className="text-slate-400 text-xs">Verify instantly to unlock your global audience.</p>
+      <div className="text-center space-y-3 mb-8">
+        <h1 className="text-3xl font-black tracking-tighter uppercase font-headline">1-Sec Selfie</h1>
+        <div className="flex items-center justify-center gap-2 text-primary">
+          <Sparkles className="size-4 animate-pulse" />
+          <p className="text-[11px] font-black uppercase tracking-widest">{aiTip}</p>
+        </div>
       </div>
 
-      <div className="relative size-72 rounded-full border-4 border-primary/40 overflow-hidden bg-slate-900 shadow-[0_0_50px_rgba(137,90,246,0.3)]">
+      <div className="relative size-80 rounded-full border-4 border-primary/40 overflow-hidden bg-slate-900 shadow-[0_0_60px_rgba(137,90,246,0.3)] mb-10">
         {!hasCameraPermission ? (
-          <div className="flex flex-col items-center justify-center h-full p-8 text-center">
+          <div className="flex flex-col items-center justify-center h-full p-10 text-center">
             <AlertCircle className="size-12 text-slate-700 mb-4" />
-            <p className="text-xs text-slate-500 uppercase font-bold tracking-widest leading-tight">
-              {auth?.currentUser ? "Awaiting Camera Access..." : "Initializing Session..."}
+            <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest leading-tight">
+              Waiting for Camera...
             </p>
           </div>
         ) : (
@@ -166,37 +173,50 @@ export default function HostFaceVerification() {
         
         {isVerifying && (
           <div className="absolute inset-0 pointer-events-none overflow-hidden">
-            <div className="absolute top-0 left-0 w-full h-1 bg-primary shadow-[0_0_15px_#895af6] animate-scan" />
+            <div className="absolute top-0 left-0 w-full h-1 bg-primary shadow-[0_0_20px_#895af6] animate-scan" />
           </div>
         )}
 
         {result?.isVerified && (
-          <div className="absolute inset-0 bg-green-500/20 backdrop-blur-sm flex items-center justify-center animate-in fade-in zoom-in duration-300">
-            <CheckCircle className="size-20 text-green-500" />
+          <div className="absolute inset-0 bg-green-500/20 backdrop-blur-sm flex items-center justify-center animate-in fade-in zoom-in duration-500">
+            <CheckCircle className="size-24 text-green-500 shadow-2xl" />
           </div>
         )}
       </div>
 
-      <div className="mt-12 w-full space-y-4 relative z-10">
+      <div className="w-full space-y-6 relative z-10">
+        <div className="bg-white/5 border border-white/10 rounded-[2rem] p-5 flex items-center gap-4">
+          <div className="size-10 rounded-2xl bg-primary/20 flex items-center justify-center text-primary shrink-0">
+            <Lightbulb className="size-5" />
+          </div>
+          <div>
+            <p className="text-[10px] font-black uppercase text-slate-400 mb-1">AI Guide</p>
+            <p className="text-xs font-bold leading-tight uppercase tracking-tight">Ensure your face is well-lit and fully visible in the circle.</p>
+          </div>
+        </div>
+
         <Button 
-          disabled={isVerifying || !hasCameraPermission || !auth?.currentUser} 
+          disabled={isVerifying || !hasCameraPermission || !auth?.currentUser || !!result?.isVerified} 
           onClick={handleVerify}
-          className="w-full bg-primary hover:bg-primary/90 h-16 rounded-[2rem] shadow-2xl shadow-primary/40 font-black text-lg gap-3 transition-all active:scale-95 uppercase"
+          className="w-full bg-primary hover:bg-primary/90 h-20 rounded-[2.5rem] shadow-2xl shadow-primary/40 font-black text-xl gap-3 transition-all active:scale-95 uppercase tracking-tighter"
         >
           {isVerifying ? (
-            <><Loader2 className="size-6 animate-spin" /> Verifying...</>
+            <><Loader2 className="size-6 animate-spin" /> Analyzing...</>
           ) : result?.isVerified ? (
-            <><ShieldCheck className="size-6" /> Success!</>
+            <><ShieldCheck className="size-6" /> Go Live Hub</>
           ) : (
-            <><Camera className="size-6" /> Take 1-Sec Selfie</>
+            <><Camera className="size-7" /> Verify & Go Live</>
           )}
         </Button>
-        <p className="text-center text-[10px] text-slate-500 uppercase font-bold tracking-widest opacity-60 italic">Your privacy is secured by Stream-X AI</p>
       </div>
       
-      {/* Background Glow */}
-      <div className="absolute bottom-[-10%] left-[-10%] size-64 bg-primary/20 blur-[100px] rounded-full" />
-      <div className="absolute top-[-5%] right-[-5%] size-64 bg-secondary/10 blur-[100px] rounded-full" />
+      <div className="mt-8 text-center">
+        <p className="text-[9px] text-slate-600 uppercase font-black tracking-[0.3em]">Privacy Secured by Stream-X Mainframe</p>
+      </div>
+      
+      {/* Dynamic Background Effects */}
+      <div className="absolute bottom-[-20%] left-[-20%] size-96 bg-primary/10 blur-[120px] rounded-full pointer-events-none" />
+      <div className="absolute top-[-10%] right-[-10%] size-80 bg-secondary/5 blur-[100px] rounded-full pointer-events-none" />
     </div>
   );
 }

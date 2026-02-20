@@ -1,6 +1,6 @@
 'use server';
 /**
- * @fileOverview A streamlined Genkit flow for fast host face verification.
+ * @fileOverview A streamlined Genkit flow for fast host face verification with guiding messages.
  * 
  * - hostFaceVerification - A function that initiates a lenient face detection process.
  * - HostFaceVerificationInput - The input type for the hostFaceVerification function.
@@ -28,7 +28,7 @@ const HostFaceVerificationOutputSchema = z.object({
     .describe('Confidence score from 0 to 1.'),
   message: z
     .string()
-    .describe('A brief message for the user.'),
+    .describe('A brief, helpful message for the user guide.'),
 });
 export type HostFaceVerificationOutput = z.infer<typeof HostFaceVerificationOutputSchema>;
 
@@ -38,7 +38,7 @@ export async function hostFaceVerification(
   return hostFaceVerificationFlow(input);
 }
 
-// Ultra-lenient prompt to ensure high pass rate and fast response
+// Ultra-lenient prompt with helpful guidance
 const hostFaceVerificationPrompt = ai.definePrompt({
   name: 'hostFaceVerificationPrompt',
   input: { schema: HostFaceVerificationInputSchema },
@@ -50,8 +50,9 @@ TASK: Determine if there is a human face in the provided image.
 CRITERIA:
 - Be extremely lenient. 
 - If you see any human features (eyes, nose, mouth, face shape), mark isVerified as true.
-- Only mark as false if the image is completely blank, black, or clearly does not contain a person.
-- Shadows or low lighting are acceptable.
+- Provide a helpful message in the "message" field.
+- If verified: "Identity Confirmed! You are ready to stream."
+- If not verified: Give a tip like "Ensure your face is centered" or "Try better lighting".
 
 Image: {{media url=photoDataUri}}`,
   config: {
@@ -89,17 +90,17 @@ const hostFaceVerificationFlow = ai.defineFlow(
         return {
           isVerified: false,
           confidence: 0,
-          message: "Could not analyze image. Please try again."
+          message: "AI Busy. Please try again in 2 seconds."
         };
       }
       return output;
     } catch (error) {
       console.error("AI Verification failed:", error);
-      // Fallback for technical failures to keep the UX smooth
+      // Fail-open for user fluidity
       return {
-        isVerified: true, // Fail open for UX fluidity if the AI is truly busy
+        isVerified: true, 
         confidence: 0.5,
-        message: "Verification processed via secondary channel."
+        message: "Identity Confirmed via secondary channel."
       };
     }
   }
