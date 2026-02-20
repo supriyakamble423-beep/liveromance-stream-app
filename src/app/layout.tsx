@@ -1,10 +1,29 @@
-import type {Metadata} from 'next';
-import './globals.css';
+import type { Metadata, Viewport } from "next";
+import { Inter, Spline_Sans } from "next/font/google";
+import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
+
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+  display: 'swap',
+});
+
+const splineSans = Spline_Sans({
+  subsets: ["latin"],
+  variable: "--font-spline-sans",
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
   title: 'Global Live - Social Discovery',
   description: 'Connect with hosts around the world in real-time.',
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: "#895af6",
 };
 
 export default function RootLayout({
@@ -13,12 +32,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark" suppressHydrationWarning>
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Spline+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-      </head>
+    <html lang="en" className={`dark ${inter.variable} ${splineSans.variable}`} suppressHydrationWarning>
       <body className="font-body antialiased selection:bg-primary/30 selection:text-primary" suppressHydrationWarning>
         {children}
         <Toaster />
