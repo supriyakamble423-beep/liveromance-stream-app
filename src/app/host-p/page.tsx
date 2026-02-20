@@ -1,13 +1,13 @@
-
 'use client';
 
 import { useFirebase, useDoc, useMemoFirebase } from "@/firebase";
 import { BottomNav } from "@/components/BottomNav";
-import { User, ShieldCheck, Wallet, Settings, LayoutDashboard, Radio } from "lucide-react";
+import { User, ShieldCheck, Wallet, Settings, LayoutDashboard, Radio, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Image from "next/image";
 import Link from "next/link";
+import { doc } from "firebase/firestore";
 
 export default function HostProfileDashboard() {
   const { auth, firestore } = useFirebase();
@@ -108,5 +108,3 @@ export default function HostProfileDashboard() {
     </div>
   );
 }
-
-import { doc } from "firebase/firestore";
