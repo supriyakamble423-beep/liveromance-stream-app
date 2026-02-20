@@ -1,0 +1,58 @@
+{
+  "placeholderImages": [
+    {
+      "id": "hero-stream",
+      "description": "Group of friends streaming",
+      "imageUrl": "https://picsum.photos/seed/stream1/1200/675",
+      "imageHint": "streaming group"
+    },
+    {
+      "id": "host-1",
+      "description": "Host Mariana",
+      "imageUrl": "https://picsum.photos/seed/host1/600/800",
+      "imageHint": "portrait woman"
+    },
+    {
+      "id": "host-2",
+      "description": "Host Liam",
+      "imageUrl": "https://picsum.photos/seed/host2/600/800",
+      "imageHint": "portrait man"
+    },
+    {
+      "id": "host-3",
+      "description": "Host Sophia",
+      "imageUrl": "https://picsum.photos/seed/host3/600/800",
+      "imageHint": "portrait girl"
+    },
+    {
+      "id": "host-4",
+      "description": "Host Ethan",
+      "imageUrl": "https://picsum.photos/seed/host4/600/800",
+      "imageHint": "portrait tattoos"
+    },
+    {
+      "id": "host-5",
+      "description": "Host Chloe",
+      "imageUrl": "https://picsum.photos/seed/host5/600/800",
+      "imageHint": "smiling woman"
+    },
+    {
+      "id": "host-6",
+      "description": "Host Malik",
+      "imageUrl": "https://picsum.photos/seed/host6/600/800",
+      "imageHint": "portrait model"
+    },
+    {
+      "id": "map-bg",
+      "description": "World Map Background",
+      "imageUrl": "https://picsum.photos/seed/map/1200/800",
+      "imageHint": "world map dark"
+    },
+    {
+      "id": "avatar-admin",
+      "description": "Admin Avatar",
+      "imageUrl": "https://picsum.photos/seed/admin/200/200",
+      "imageHint": "avatar professional"
+    }
+  ]
+}

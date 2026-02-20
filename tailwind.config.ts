@@ -11,7 +11,7 @@ export default {
     extend: {
       fontFamily: {
         body: ['Inter', 'sans-serif'],
-        headline: ['Inter', 'sans-serif'],
+        headline: ['Spline Sans', 'sans-serif'],
         code: ['monospace'],
       },
       colors: {
@@ -26,20 +26,20 @@ export default {
           foreground: 'hsl(var(--popover-foreground))',
         },
         primary: {
-          DEFAULT: 'hsl(var(--primary))',
-          foreground: 'hsl(var(--primary-foreground))',
+          DEFAULT: '#895af6',
+          foreground: '#ffffff',
         },
         secondary: {
-          DEFAULT: 'hsl(var(--secondary))',
-          foreground: 'hsl(var(--secondary-foreground))',
+          DEFAULT: '#0EA5E9',
+          foreground: '#ffffff',
+        },
+        accent: {
+          DEFAULT: '#FF7043',
+          foreground: '#ffffff',
         },
         muted: {
           DEFAULT: 'hsl(var(--muted))',
           foreground: 'hsl(var(--muted-foreground))',
-        },
-        accent: {
-          DEFAULT: 'hsl(var(--accent))',
-          foreground: 'hsl(var(--accent-foreground))',
         },
         destructive: {
           DEFAULT: 'hsl(var(--destructive))',
@@ -88,10 +88,15 @@ export default {
             height: '0',
           },
         },
+        'scan': {
+          '0%': { top: '0%' },
+          '100%': { top: '100%' },
+        }
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
+        'scan': 'scan 2s linear infinite',
       },
     },
   },
