@@ -1,43 +1,36 @@
-
 'use client';
 
-import { useState } from 'react';
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
-import { collection, addDoc, serverTimestamp, query, where, doc, getDoc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, query, where, limit } from 'firebase/firestore';
 import { Header } from "@/components/Header";
 import { BottomNav } from "@/components/BottomNav";
-import { MessageCircle, Zap, Users, Star, Lock, ShieldCheck } from "lucide-react";
+import { MessageCircle, Zap, Users, ShieldCheck, Lock, TrendingUp } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
 export default function GlobalMarketplace() {
   const { firestore, auth } = useFirebase();
   const { toast } = useToast();
 
-  // ONLY show verified hosts in the marketplace
   const liveHostsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return query(
       collection(firestore, 'hosts'), 
       where('isLive', '==', true),
-      where('verified', '==', true)
+      where('verified', '==', true),
+      limit(20)
     );
   }, [firestore]);
 
   const { data: hosts, isLoading } = useCollection(liveHostsQuery);
 
-  const zapConnect = async (hostId: string, streamType: string = 'public') => {
+  const zapConnect = async (hostId: string, streamType: string) => {
     if (!auth?.currentUser) {
-      toast({ variant: "destructive", title: "Sign in required", description: "Please log in to send a Zap." });
+      toast({ variant: "destructive", title: "Sign in required", description: "Please log in to interact." });
       return;
-    }
-
-    if (streamType === 'private') {
-      toast({ title: "Private Stream", description: "This host is currently in a private session. You have been added to the waiting room." });
     }
 
     try {
@@ -50,7 +43,7 @@ export default function GlobalMarketplace() {
         streamType,
         timestamp: serverTimestamp()
       });
-      toast({ title: "🎉 Zap sent!", description: "Host has been notified!" });
+      toast({ title: "🎉 Zap Sent!", description: streamType === 'private' ? "Added to waiting room." : "Host has been notified!" });
     } catch (e) {
       toast({ variant: "destructive", title: "Error", description: "Could not send Zap." });
     }
@@ -61,58 +54,76 @@ export default function GlobalMarketplace() {
       <Header />
       
       <main className="px-4 pt-6 space-y-6">
+        {/* Marketplace Stats Banner */}
+        <section className="bg-primary/5 border border-primary/10 rounded-[2rem] p-5 flex items-center justify-between">
+          <div className="space-y-1">
+            <p className="text-[10px] font-black uppercase tracking-widest text-primary">Global Health</p>
+            <h2 className="text-xl font-black font-headline tracking-tighter">Market Success</h2>
+          </div>
+          <div className="flex gap-4 text-right">
+            <div>
+              <p className="text-xs font-bold text-slate-400">Online</p>
+              <p className="text-lg font-black">{hosts?.length || 0}</p>
+            </div>
+            <div>
+              <p className="text-xs font-bold text-slate-400">Zaps</p>
+              <p className="text-lg font-black text-secondary">2.4k</p>
+            </div>
+          </div>
+        </section>
+
         <section className="flex items-center justify-between">
           <div className="flex flex-col">
-            <h2 className="text-2xl font-bold font-headline">Verified Hosts</h2>
-            <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">Safe & Secured Discovery</p>
+            <h2 className="text-2xl font-black font-headline tracking-tight uppercase">Top Verified</h2>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold flex items-center gap-1">
+              <ShieldCheck className="size-3 text-green-500" /> Verified Onboarding Active
+            </p>
           </div>
-          <Badge variant="secondary" className="bg-primary/10 text-primary border-none">
-            {hosts?.length || 0} Online
+          <Badge variant="secondary" className="bg-primary/10 text-primary border-none font-black text-[10px]">
+             LIVE FEED
           </Badge>
         </section>
 
         {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-20 space-y-4">
+          <div className="flex flex-col items-center justify-center py-20 space-y-4 opacity-50">
             <div className="size-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-            <p className="text-muted-foreground animate-pulse">Scanning global signals...</p>
+            <p className="text-[10px] font-black uppercase tracking-widest">Syncing Nodes...</p>
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-4">
             {hosts?.map((host) => (
-              <div key={host.id} className="flex flex-col bg-card rounded-3xl overflow-hidden border border-border group transition-all hover:shadow-xl relative">
+              <div key={host.id} className="flex flex-col bg-card rounded-[2.5rem] overflow-hidden border border-border group transition-all hover:shadow-2xl relative">
                 <div className="relative aspect-[3/4] overflow-hidden bg-muted">
                   <Image 
                     src={host.previewImageUrl || "https://picsum.photos/seed/host/600/800"} 
                     alt={host.id} 
                     fill 
-                    className="object-cover transition-transform group-hover:scale-110"
+                    className="object-cover transition-transform duration-700 group-hover:scale-110"
                   />
-                  <div className="absolute top-3 left-3 flex flex-col gap-2">
-                    <Badge className="bg-destructive border-none text-[9px] font-black uppercase tracking-tighter shadow-lg">Live</Badge>
-                    <Badge className="bg-green-500 border-none text-[9px] font-bold gap-1 shadow-lg">
-                      <ShieldCheck className="size-2.5" /> Verified
-                    </Badge>
+                  <div className="absolute top-4 left-4 flex flex-col gap-2">
+                    <Badge className="bg-destructive border-none text-[9px] font-black uppercase tracking-widest px-3">Live</Badge>
                   </div>
                   {host.streamType === 'private' && (
-                    <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center">
-                      <Lock className="size-10 text-white/50" />
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-[4px] flex flex-col items-center justify-center gap-2">
+                      <Lock className="size-8 text-white/40" />
+                      <p className="text-[10px] font-black text-white/60 uppercase tracking-widest">Private</p>
                     </div>
                   )}
                 </div>
-                <div className="p-3 space-y-3">
+                <div className="p-4 space-y-4">
                   <div className="flex justify-between items-center">
-                    <h3 className="font-bold text-sm truncate">Host_{host.id.slice(0, 4)}</h3>
-                    <span className="text-xs opacity-60">🇺🇸</span>
+                    <h3 className="font-black text-sm tracking-tight truncate uppercase">Host_{host.id.slice(0, 4)}</h3>
+                    <TrendingUp className="size-3 text-primary" />
                   </div>
                   <div className="flex gap-2">
                     <Button 
-                      onClick={() => zapConnect(host.id, host.streamType)}
-                      className="flex-1 bg-primary hover:bg-primary/90 rounded-xl h-9 text-xs font-bold gap-1 shadow-lg shadow-primary/20"
+                      onClick={() => zapConnect(host.id, host.streamType || 'public')}
+                      className="flex-1 bg-primary hover:bg-primary/90 rounded-2xl h-10 text-[10px] font-black gap-1 uppercase tracking-widest shadow-lg shadow-primary/20"
                     >
                       <Zap className="size-3 fill-current" /> {host.streamType === 'private' ? 'Wait' : 'Zap'}
                     </Button>
                     <Link href={`/stream/${host.id}`} className="flex-1">
-                      <Button variant="outline" className="w-full rounded-xl h-9 text-xs font-bold gap-1 border-primary/20 hover:bg-primary/5 text-primary">
+                      <Button variant="outline" className="w-full rounded-2xl h-10 text-[10px] font-black gap-1 border-primary/20 text-primary uppercase tracking-widest">
                         <MessageCircle className="size-3" /> Chat
                       </Button>
                     </Link>
@@ -121,9 +132,9 @@ export default function GlobalMarketplace() {
               </div>
             ))}
             {hosts?.length === 0 && (
-              <div className="col-span-2 text-center py-20 text-muted-foreground bg-muted/30 rounded-3xl border border-dashed border-border flex flex-col items-center gap-3">
-                <Users className="size-10 opacity-20" />
-                <p>No verified hosts are live right now.</p>
+              <div className="col-span-2 text-center py-20 bg-muted/20 rounded-[3rem] border-2 border-dashed border-border flex flex-col items-center gap-4">
+                <Users className="size-12 opacity-10" />
+                <p className="text-xs font-bold uppercase tracking-widest text-slate-500">No Verified Hosts Streaming</p>
               </div>
             )}
           </div>
