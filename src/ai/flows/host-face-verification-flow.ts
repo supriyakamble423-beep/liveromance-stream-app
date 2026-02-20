@@ -1,7 +1,7 @@
 'use server';
 /**
  * @fileOverview A Genkit flow for AI-powered host face verification.
- *
+ * 
  * - hostFaceVerification - A function that initiates the face verification process.
  * - HostFaceVerificationInput - The input type for the hostFaceVerification function.
  * - HostFaceVerificationOutput - The return type for the hostFaceVerification function.
@@ -22,18 +22,18 @@ export type HostFaceVerificationInput = z.infer<typeof HostFaceVerificationInput
 const HostFaceVerificationOutputSchema = z.object({
   isVerified: z
     .boolean()
-    .describe('Whether the photo contains a detectable human face.'),
+    .describe('Whether a human face is detectable (be extremely lenient).'),
   confidence: z
     .number()
     .min(0)
     .max(1)
-    .describe('Confidence score (0-1) in the verification decision.'),
+    .describe('Confidence score in the verification decision.'),
   lightingIssue: z
     .boolean()
-    .describe('Whether the lighting is extremely poor, making face detection impossible.'),
+    .describe('Only set to true if the image is completely black or unreadable.'),
   message: z
     .string()
-    .describe('A message explaining the verification result.'),
+    .describe('A brief message explaining the result.'),
 });
 export type HostFaceVerificationOutput = z.infer<typeof HostFaceVerificationOutputSchema>;
 
@@ -47,13 +47,13 @@ const hostFaceVerificationPrompt = ai.definePrompt({
   name: 'hostFaceVerificationPrompt',
   input: { schema: HostFaceVerificationInputSchema },
   output: { schema: HostFaceVerificationOutputSchema },
-  prompt: `You are an AI identity assistant. Your primary task is to detect if there is a human face in the image.
+  prompt: `You are a lenient identity assistant. Your goal is to verify that a human face is present in the image so the user can start streaming.
 
 CRITERIA:
-1. Is there a human face visible?
-2. Is the person identifiable (even if lighting isn't perfect)?
+1. Is there a human face? (Be extremely lenient. Even if there are shadows, grain, or low light, if you can see a nose, eyes, or a face shape, mark as verified).
+2. Only fail if the image is pure black, extremely blurry (no shapes), or clearly NOT a human.
 
-Be lenient with lighting. Only set 'lightingIssue' to true if it is pitch black or so blurry that no facial features are visible at all. If you can see a face, set 'isVerified' to true.
+If you can see a person at all, set 'isVerified' to true. Set 'lightingIssue' to false unless it's literally pitch black.
 
 Image: {{media url=photoDataUri}}`,
 });

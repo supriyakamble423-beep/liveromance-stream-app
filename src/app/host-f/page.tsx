@@ -75,38 +75,39 @@ export default function HostFaceVerification() {
       if (res.isVerified && auth?.currentUser) {
         const hostId = auth.currentUser.uid;
         
-        // Record verification attempt in Firestore
+        // Record verification attempt
         addDoc(collection(firestore, 'hostVerificationAttempts'), {
           hostId,
           status: 'approved',
           timestamp: serverTimestamp(),
           aiConfidenceScore: res.confidence || 0.9,
-          photoUrl: photoDataUri.slice(0, 100) + '...' // Storage optimized record
+          photoUrl: photoDataUri.slice(0, 100) + '...' 
         });
 
-        // Update Host Profile in real-time
+        // Update Host Profile - Real-time verified status
         const hostRef = doc(firestore, 'hosts', hostId);
         await setDoc(hostRef, { 
           verified: true,
-          previewImageUrl: photoDataUri, // Use captured photo as profile preview
+          previewImageUrl: photoDataUri, 
           updatedAt: serverTimestamp() 
         }, { merge: true });
 
-        toast({ title: 'Face Verified!', description: 'Verification successful!' });
-      } else if (res.lightingIssue) {
-        toast({
-          title: 'Lighting Issue',
-          description: 'Please move to a brighter spot or ensure your face is visible.'
-        });
-      } else {
+        toast({ title: 'Success!', description: 'You are now verified!' });
+      } else if (res.lightingIssue && !res.isVerified) {
         toast({
           variant: 'destructive',
-          title: 'Verification Failed',
-          description: res.message || 'No human face detected. Please try again.'
+          title: 'Too Dark',
+          description: 'It is too dark to see anything. Please turn on a light.'
+        });
+      } else if (!res.isVerified) {
+        toast({
+          variant: 'destructive',
+          title: 'Not Detected',
+          description: 'We could not detect a face. Please try again.'
         });
       }
     } catch (err) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Verification failed. Try again.' });
+      toast({ variant: 'destructive', title: 'Error', description: 'System busy. Try again.' });
     } finally {
       setIsVerifying(false);
     }
@@ -120,7 +121,7 @@ export default function HostFaceVerification() {
             <ArrowLeft className="size-5" />
           </Button>
         </Link>
-        <h1 className="flex-1 text-center text-lg font-bold tracking-tight font-headline">Face Verification</h1>
+        <h1 className="flex-1 text-center text-lg font-bold tracking-tight font-headline">Fast Verify</h1>
       </header>
 
       <main className="flex-1 flex flex-col items-center justify-center px-6 space-y-6">
@@ -144,17 +145,17 @@ export default function HostFaceVerification() {
           )}
         </div>
 
-        {result?.lightingIssue && (
-          <Alert variant="destructive" className="bg-destructive/10 border-destructive/20">
+        {result?.lightingIssue && !result?.isVerified && (
+          <Alert variant="destructive" className="bg-destructive/10 border-destructive/20 max-w-xs">
             <AlertCircle className="size-4" />
-            <AlertTitle>Low Light Detected</AlertTitle>
-            <AlertDescription>The AI is struggling to see you. Please move to a brighter area.</AlertDescription>
+            <AlertTitle>Image too dark</AlertTitle>
+            <AlertDescription>Please move to a brighter spot.</AlertDescription>
           </Alert>
         )}
 
         <div className="text-center space-y-2">
-          <p className="text-sm font-bold">Look directly at the camera</p>
-          <p className="text-xs text-muted-foreground">We just need to confirm you are a real person.</p>
+          <p className="text-sm font-bold">Show your face to the camera</p>
+          <p className="text-xs text-muted-foreground">Verification is now faster and easier.</p>
         </div>
       </main>
 
@@ -165,11 +166,11 @@ export default function HostFaceVerification() {
           className="w-full bg-primary hover:bg-primary/90 h-14 rounded-2xl shadow-xl shadow-primary/25 font-bold gap-2 text-base"
         >
           {isVerifying ? (
-            <><Loader2 className="size-5 animate-spin" /> Checking...</>
+            <><Loader2 className="size-5 animate-spin" /> Verifying...</>
           ) : result?.isVerified ? (
-            <><CheckCircle className="size-5" /> Verified Successfully</>
+            <><CheckCircle className="size-5" /> Success</>
           ) : (
-            <><Camera className="size-5" /> Capture & Verify</>
+            <><Camera className="size-5" /> Verify Me</>
           )}
         </Button>
       </footer>
