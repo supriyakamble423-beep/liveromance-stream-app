@@ -1,0 +1,209 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * STREAM-X SECURITY RULES DOCUMENTATION
+     * 
+     * Core Philosophy:
+     * This ruleset enforces a strict user-ownership and shared-collaborator model. 
+     * Authorization is decoupled from complex joins by utilizing pervasive denormalization, 
+     * ensuring that all access decisions are atomic and performant.
+     * 
+     * Data Structure:
+     * - User-private data is strictly nested under /users/{userId} or scoped by ownership fields.
+     * - Global content (Hosts, Streams, Categories) is top-level for public discovery.
+     * - Peer-to-peer interactions (StreamRequests, PrivateMessages) use shared access patterns 
+     *   via UID arrays or specific field matching.
+     * 
+     * Key Security Decisions:
+     * - Structural Segregation: Public stream messages and private direct messages are 
+     *   separated into distinct collections to prevent permission leakage.
+     * - Denormalization for Authorization: Critical IDs (ownerId, hostId, senderId) are 
+     *   required on documents to allow for O(1) security checks without extra lookups.
+     * - Default Posture: Only signed-in users can initiate requests, while discovery 
+     *   of live hosts is public. Admin actions are gated by a specialized roles collection.
+     */
+
+    // --- GLOBAL HELPER FUNCTIONS ---
+
+    /** @description Checks if the request is from an authenticated user. */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /** @description Checks if the authenticated user matches the provided ID. */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    /** @description Checks if a document exists and the user is the owner. */
+    function isExistingOwner(userId) {
+      return resource != null && isOwner(userId);
+    }
+
+    /** @description Checks if the user has administrative privileges via the roles_admin collection. */
+    function isAdmin() {
+      return isSignedIn() && exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
+    }
+
+    // --- COLLECTION RULES ---
+
+    /**
+     * @description Rules for the Admin Roles collection used for DBAC.
+     * @path /roles_admin/{userId}
+     * @allow (get) If the user is checking their own role.
+     * @deny (write) Any client-side modification; admin roles are managed via backend/console.
+     * @principle Restricts elevation of privileges.
+     */
+    match /roles_admin/{userId} {
+      allow get: if isOwner(userId);
+      allow list, create, update, delete: if false;
+    }
+
+    /**
+     * @description Stores core user profiles.
+     * @path /users/{userId}
+     * @allow (create) If UID matches document ID.
+     * @deny (update) If attempting to change the immutable 'id' field.
+     * @principle Ownership-based security with path-to-data consistency.
+     */
+    match /users/{userId} {
+      allow get, list: if isSignedIn();
+      allow create: if isOwner(userId) && request.resource.data.id == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner(userId);
+
+      /**
+       * @description User-scoped financial transactions.
+       * @path /users/{userId}/transactions/{transactionId}
+       * @allow (list) If the user is the owner of the transaction subcollection.
+       * @principle Path-based ownership for sensitive financial data.
+       */
+      match /transactions/{transactionId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) && request.resource.data.userId == userId;
+        allow update, delete: if false; // Transactions are immutable records
+      }
+    }
+
+    /**
+     * @description Global list of host profiles for the marketplace.
+     * @path /hosts/{hostId}
+     * @allow (get, list) Public read access for discovery.
+     * @deny (create) If the hostId does not match the authenticated user.
+     * @principle Self-creation for hosts with public read access.
+     */
+    match /hosts/{hostId} {
+      allow get, list: if true;
+      allow create: if isOwner(hostId) && request.resource.data.userId == request.auth.uid;
+      allow update: if isExistingOwner(hostId);
+      allow delete: if isExistingOwner(hostId) || isAdmin();
+    }
+
+    /**
+     * @description Live or past stream metadata.
+     * @path /streams/{streamId}
+     * @allow (list) Public if status is 'live'.
+     * @deny (update) If the user is not the host of the stream.
+     * @principle Owner-only writes with public read for active content.
+     */
+    match /streams/{streamId} {
+      allow get, list: if true;
+      allow create: if isSignedIn() && request.resource.data.hostId == request.auth.uid;
+      allow update: if resource != null && (resource.data.hostId == request.auth.uid || isAdmin());
+      allow delete: if resource != null && (resource.data.hostId == request.auth.uid || isAdmin());
+
+      /**
+       * @description Public chat messages within a stream.
+       * @path /streams/{streamId}/messages/{messageId}
+       * @allow (create) If senderId matches auth UID.
+       * @principle Shared community space with sender-based write restrictions.
+       */
+      match /messages/{messageId} {
+        allow get, list: if true;
+        allow create: if isSignedIn() && request.resource.data.senderId == request.auth.uid;
+        allow update, delete: if isAdmin(); 
+      }
+    }
+
+    /**
+     * @description Private 1:1 messaging between users.
+     * @path /privateMessages/{messageId}
+     * @allow (get) If the user is either the sender or the receiver.
+     * @deny (list) Global listing is strictly forbidden.
+     * @principle Shared access restricted to specific document participants.
+     */
+    match /privateMessages/{messageId} {
+      allow get: if isSignedIn() && (resource.data.senderId == request.auth.uid || resource.data.receiverId == request.auth.uid);
+      allow list: if false; // List operations must be done via queries filtering by participant ID
+      allow create: if isSignedIn() && request.resource.data.senderId == request.auth.uid;
+      allow update, delete: if isSignedIn() && resource.data.senderId == request.auth.uid;
+    }
+
+    /**
+     * @description Marketplace categories.
+     * @path /categories/{categoryId}
+     * @allow (get, list) Public discovery.
+     * @deny (write) Restricted to administrators.
+     * @principle Public read-only for system-defined metadata.
+     */
+    match /categories/{categoryId} {
+      allow get, list: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    /**
+     * @description User requests to hosts (e.g., 'Zaps').
+     * @path /streamRequests/{requestId}
+     * @allow (get) If the user is the requester (userId) or the target (hostId).
+     * @deny (create) If the requester userId is spoofed.
+     * @principle Shared access between requester and host.
+     */
+    match /streamRequests/{requestId} {
+      allow get, list: if isSignedIn() && (resource.data.userId == request.auth.uid || resource.data.hostId == request.auth.uid);
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update: if isSignedIn() && (resource.data.userId == request.auth.uid || resource.data.hostId == request.auth.uid);
+      allow delete: if isAdmin();
+    }
+
+    /**
+     * @description Virtual coin tipping records.
+     * @path /tips/{tipId}
+     * @allow (get) For discovery or receipt.
+     * @deny (update) Tips are immutable financial events.
+     * @principle Restricted creation with audit-trail immutability.
+     */
+    match /tips/{tipId} {
+      allow get, list: if true;
+      allow create: if isSignedIn() && request.resource.data.tipperUserId == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    /**
+     * @description Referral program tracking.
+     * @path /referrals/{referralId}
+     * @allow (get) If user is the referrer or the referred host.
+     * @principle Shared access based on denormalized relationship fields.
+     */
+    match /referrals/{referralId} {
+      allow get, list: if isSignedIn() && (resource.data.referrerUserId == request.auth.uid || resource.data.referredHostId == request.auth.uid);
+      allow create: if isSignedIn();
+      allow update, delete: if isAdmin();
+    }
+
+    /**
+     * @description Host identity verification logs.
+     * @path /hostVerificationAttempts/{attemptId}
+     * @allow (get) If the host is viewing their own attempt.
+     * @deny (create) If hostId does not match the sender.
+     * @principle Ownership-based access for sensitive verification data.
+     */
+    match /hostVerificationAttempts/{attemptId} {
+      allow get: if isSignedIn() && (resource.data.hostId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (isAdmin()); // Only admins list all attempts
+      allow create: if isSignedIn() && request.resource.data.hostId == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+  }
+}

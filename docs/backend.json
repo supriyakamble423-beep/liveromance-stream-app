@@ -1,0 +1,695 @@
+{
+  "entities": {
+    "UserProfile": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "UserProfile",
+      "type": "object",
+      "description": "Represents a user within the Global Social Marketplace application. This entity stores core user information, distinct from authentication credentials which are managed externally.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the UserProfile entity."
+        },
+        "username": {
+          "type": "string",
+          "description": "The user's chosen display name."
+        },
+        "email": {
+          "type": "string",
+          "description": "The user's email address.",
+          "format": "email"
+        },
+        "profileImageUrl": {
+          "type": "string",
+          "description": "URL to the user's profile image.",
+          "format": "uri"
+        },
+        "bio": {
+          "type": "string",
+          "description": "A short biographical description provided by the user."
+        },
+        "country": {
+          "type": "string",
+          "description": "The user's country of residence, often represented by a country code or flag emoji."
+        },
+        "age": {
+          "type": "number",
+          "description": "The user's age."
+        },
+        "gender": {
+          "type": "string",
+          "description": "The user's self-identified gender. Can be used for categorization like 'Boys', 'Girls', 'Couples', 'Groups', 'LGBTQ+'."
+        },
+        "language": {
+          "type": "string",
+          "description": "The primary language spoken by the user."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the user profile was created.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "username",
+        "email",
+        "createdAt"
+      ]
+    },
+    "HostProfile": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "HostProfile",
+      "type": "object",
+      "description": "Extends UserProfile to include details specific to users who act as hosts/streamers on the platform.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the HostProfile entity. This typically corresponds to a UserProfile ID. (Relationship: UserProfile 1:1 HostProfile)"
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to the associated UserProfile. (Relationship: UserProfile 1:1 HostProfile)"
+        },
+        "isLive": {
+          "type": "boolean",
+          "description": "Indicates if the host is currently live streaming."
+        },
+        "viewers": {
+          "type": "number",
+          "description": "Current number of viewers on the host's active stream. Only relevant if isLive is true."
+        },
+        "coinsPerMin": {
+          "type": "number",
+          "description": "The rate at which viewers are charged coins per minute to interact with this host in a private session."
+        },
+        "boostExpiry": {
+          "type": "string",
+          "description": "Timestamp when any active boost or promotion for the host expires.",
+          "format": "date-time"
+        },
+        "verified": {
+          "type": "boolean",
+          "description": "Indicates if the host's identity has been successfully verified (e.g., via face verification)."
+        },
+        "rating": {
+          "type": "number",
+          "description": "The average rating of the host, typically from 1 to 5."
+        },
+        "previewImageUrl": {
+          "type": "string",
+          "description": "URL to an image that serves as a preview for the host's profile or stream.",
+          "format": "uri"
+        },
+        "categoryIds": {
+          "type": "array",
+          "description": "References to categories that this host belongs to. (Relationship: HostProfile N:N Category)",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "isLive",
+        "verified"
+      ]
+    },
+    "Stream": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Stream",
+      "type": "object",
+      "description": "Represents an active or past live stream by a host.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Stream entity."
+        },
+        "hostId": {
+          "type": "string",
+          "description": "Reference to the HostProfile who is broadcasting this stream. (Relationship: HostProfile 1:N Stream)"
+        },
+        "title": {
+          "type": "string",
+          "description": "The title of the live stream."
+        },
+        "description": {
+          "type": "string",
+          "description": "A brief description of the stream content."
+        },
+        "streamUrl": {
+          "type": "string",
+          "description": "URL for accessing the live stream video feed.",
+          "format": "uri"
+        },
+        "thumbnailUrl": {
+          "type": "string",
+          "description": "URL to a thumbnail image for the stream.",
+          "format": "uri"
+        },
+        "status": {
+          "type": "string",
+          "description": "The current status of the stream (e.g., 'live', 'ended', 'scheduled')."
+        },
+        "currentViewers": {
+          "type": "number",
+          "description": "The number of concurrent viewers on the stream."
+        },
+        "startTime": {
+          "type": "string",
+          "description": "Timestamp when the stream started.",
+          "format": "date-time"
+        },
+        "endTime": {
+          "type": "string",
+          "description": "Timestamp when the stream ended. Null if still live.",
+          "format": "date-time"
+        },
+        "isFeatured": {
+          "type": "boolean",
+          "description": "Indicates if this stream is promoted as a featured stream on the platform."
+        }
+      },
+      "required": [
+        "id",
+        "hostId",
+        "title",
+        "streamUrl",
+        "status",
+        "startTime"
+      ]
+    },
+    "Category": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Category",
+      "type": "object",
+      "description": "Defines categories for organizing hosts and streams, such as 'Boys', 'Girls', 'Couples', 'Groups', 'LGBTQ+'.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Category entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the category (e.g., 'Couples', 'LGBTQ+')."
+        },
+        "description": {
+          "type": "string",
+          "description": "A brief description of what the category represents."
+        }
+      },
+      "required": [
+        "id",
+        "name"
+      ]
+    },
+    "StreamRequest": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "StreamRequest",
+      "type": "object",
+      "description": "Records a user's request to interact with a host, such as initiating a private chat or 'zap'.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the StreamRequest entity."
+        },
+        "hostId": {
+          "type": "string",
+          "description": "Reference to the HostProfile receiving the request. (Relationship: HostProfile 1:N StreamRequest)"
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to the UserProfile making the request. (Relationship: UserProfile 1:N StreamRequest)"
+        },
+        "status": {
+          "type": "string",
+          "description": "The current status of the request (e.g., 'pending', 'accepted', 'rejected', 'completed')."
+        },
+        "requestType": {
+          "type": "string",
+          "description": "The type of interaction requested (e.g., 'chat', 'private_stream', 'zap')."
+        },
+        "coins": {
+          "type": "number",
+          "description": "The number of coins involved in this request, if applicable."
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "Timestamp when the request was made.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "hostId",
+        "userId",
+        "status",
+        "requestType",
+        "timestamp"
+      ]
+    },
+    "Message": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Message",
+      "type": "object",
+      "description": "Represents a chat message sent within a live stream or private conversation.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Message entity."
+        },
+        "streamId": {
+          "type": "string",
+          "description": "Reference to the Stream where the message was sent, if public chat. Null for private chat. (Relationship: Stream 1:N Message)"
+        },
+        "senderId": {
+          "type": "string",
+          "description": "Reference to the UserProfile who sent the message. (Relationship: UserProfile 1:N Message)"
+        },
+        "receiverId": {
+          "type": "string",
+          "description": "Reference to the UserProfile who received the message, if private. Null for public chat. (Relationship: UserProfile 1:N Message)"
+        },
+        "content": {
+          "type": "string",
+          "description": "The text content of the message."
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "Timestamp when the message was sent.",
+          "format": "date-time"
+        },
+        "isSystemMessage": {
+          "type": "boolean",
+          "description": "Indicates if the message is from the system (e.g., 'Welcome to the room!')."
+        }
+      },
+      "required": [
+        "id",
+        "senderId",
+        "content",
+        "timestamp"
+      ]
+    },
+    "Tip": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Tip",
+      "type": "object",
+      "description": "Records an instance of a user sending virtual coins or a gift to a host during a stream.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Tip entity."
+        },
+        "tipperUserId": {
+          "type": "string",
+          "description": "Reference to the UserProfile who sent the tip. (Relationship: UserProfile 1:N Tip)"
+        },
+        "hostId": {
+          "type": "string",
+          "description": "Reference to the HostProfile who received the tip. (Relationship: HostProfile 1:N Tip)"
+        },
+        "streamId": {
+          "type": "string",
+          "description": "Reference to the Stream during which the tip was sent. (Relationship: Stream 1:N Tip)"
+        },
+        "amount": {
+          "type": "number",
+          "description": "The amount of virtual coins tipped."
+        },
+        "tipMessage": {
+          "type": "string",
+          "description": "An optional message included with the tip."
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "Timestamp when the tip was sent.",
+          "format": "date-time"
+        },
+        "tipAction": {
+          "type": "string",
+          "description": "Describes the specific action or item purchased with the tip (e.g., 'Bite Lips', 'Strip Show', 'DM')."
+        }
+      },
+      "required": [
+        "id",
+        "tipperUserId",
+        "hostId",
+        "streamId",
+        "amount",
+        "timestamp"
+      ]
+    },
+    "Transaction": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Transaction",
+      "type": "object",
+      "description": "A general record of financial movements on the platform, including coin purchases, host earnings, and referral commissions.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Transaction entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to the UserProfile involved in the transaction (payer or recipient). (Relationship: UserProfile 1:N Transaction)"
+        },
+        "type": {
+          "type": "string",
+          "description": "The type of transaction (e.g., 'coin_purchase', 'host_earning', 'referral_commission', 'tip_sent', 'tip_received')."
+        },
+        "amount": {
+          "type": "number",
+          "description": "The amount of virtual coins involved in the transaction. Positive for gains, negative for expenses."
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "Timestamp when the transaction occurred.",
+          "format": "date-time"
+        },
+        "relatedHostId": {
+          "type": "string",
+          "description": "Optional: Reference to a HostProfile if the transaction relates to a host's earnings or a tip received. (Relationship: HostProfile 1:N Transaction)"
+        },
+        "relatedReferralId": {
+          "type": "string",
+          "description": "Optional: Reference to a Referral if the transaction is a commission. (Relationship: Referral 1:N Transaction)"
+        },
+        "description": {
+          "type": "string",
+          "description": "A brief description of the transaction."
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "type",
+        "amount",
+        "timestamp"
+      ]
+    },
+    "Referral": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Referral",
+      "type": "object",
+      "description": "Manages the host referral program, linking a referrer user to a referred host and tracking commission rates.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Referral entity."
+        },
+        "referrerUserId": {
+          "type": "string",
+          "description": "Reference to the UserProfile who made the referral. (Relationship: UserProfile 1:N Referral)"
+        },
+        "referredHostId": {
+          "type": "string",
+          "description": "Reference to the HostProfile who was referred. (Relationship: HostProfile 1:1 Referral)"
+        },
+        "referralCode": {
+          "type": "string",
+          "description": "The unique code or link used for this referral."
+        },
+        "commissionRate": {
+          "type": "number",
+          "description": "The percentage commission the referrer earns from the referred host's earnings (e.g., 0.01 for 1%)."
+        },
+        "status": {
+          "type": "string",
+          "description": "The current status of the referral (e.g., 'active', 'pending_verification', 'inactive')."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the referral was established.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "referrerUserId",
+        "referredHostId",
+        "referralCode",
+        "commissionRate",
+        "status",
+        "createdAt"
+      ]
+    },
+    "HostVerificationAttempt": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "HostVerificationAttempt",
+      "type": "object",
+      "description": "Records details and outcome of a host's identity verification attempt, typically using face recognition.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the HostVerificationAttempt entity."
+        },
+        "hostId": {
+          "type": "string",
+          "description": "Reference to the HostProfile attempting verification. (Relationship: HostProfile 1:N HostVerificationAttempt)"
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "Timestamp when the verification attempt was made.",
+          "format": "date-time"
+        },
+        "status": {
+          "type": "string",
+          "description": "The outcome of the verification attempt (e.g., 'pending', 'approved', 'rejected', 'manual_review')."
+        },
+        "reason": {
+          "type": "string",
+          "description": "Optional: A brief reason if the verification was rejected or requires manual review."
+        },
+        "verificationImageUrl": {
+          "type": "string",
+          "description": "URL to the image submitted for face verification.",
+          "format": "uri"
+        },
+        "aiConfidenceScore": {
+          "type": "number",
+          "description": "The confidence score provided by the AI verification system, typically between 0 and 1."
+        }
+      },
+      "required": [
+        "id",
+        "hostId",
+        "timestamp",
+        "status",
+        "verificationImageUrl"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "UserProfile",
+          "schema": {
+            "$ref": "#/backend/entities/UserProfile"
+          },
+          "description": "Stores core user profile data. Document ID (`userId`) must match `request.auth.uid`. The 'id' field within the document is denormalized and should also match `userId` for explicit authorization.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user, matching Firebase Authentication UID."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/hosts/{hostId}",
+        "definition": {
+          "entityName": "HostProfile",
+          "schema": {
+            "$ref": "#/backend/entities/HostProfile"
+          },
+          "description": "Stores host-specific profile data. Document ID (`hostId`) must match the associated `UserProfile.id` (which is `request.auth.uid` for the host). Publicly readable for live hosts (filtered by `isLive`). Denormalizes `id` and `userId` fields which should match the document ID for Authorization Independence.",
+          "params": [
+            {
+              "name": "hostId",
+              "description": "The unique identifier of the host, matching their UserProfile ID and Firebase Authentication UID."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/streams/{streamId}",
+        "definition": {
+          "entityName": "Stream",
+          "schema": {
+            "$ref": "#/backend/entities/Stream"
+          },
+          "description": "Stores active or past live stream details. Publicly readable when `status` is 'live'. Includes denormalized `hostId` for Authorization Independence, allowing the host to manage their own streams without `get()` calls.",
+          "params": [
+            {
+              "name": "streamId",
+              "description": "The unique identifier for the stream."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/streams/{streamId}/messages/{messageId}",
+        "definition": {
+          "entityName": "Message",
+          "schema": {
+            "$ref": "#/backend/entities/Message"
+          },
+          "description": "Stores public chat messages for a specific stream. Each message document must include denormalized `senderId` and `hostId` (from the parent stream) for Authorization Independence in rules. `streamId` is implicit in the path.",
+          "params": [
+            {
+              "name": "streamId",
+              "description": "The unique identifier of the parent stream."
+            },
+            {
+              "name": "messageId",
+              "description": "The unique identifier for the message within the stream."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/privateMessages/{messageId}",
+        "definition": {
+          "entityName": "Message",
+          "schema": {
+            "$ref": "#/backend/entities/Message"
+          },
+          "description": "Stores private 1:1 chat messages. Each message document includes denormalized `senderId` and `receiverId` for Authorization Independence, enabling direct access checks by either participant without `get()` calls. The `streamId` field will be null for these messages.",
+          "params": [
+            {
+              "name": "messageId",
+              "description": "The unique identifier for the private message."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/categories/{categoryId}",
+        "definition": {
+          "entityName": "Category",
+          "schema": {
+            "$ref": "#/backend/entities/Category"
+          },
+          "description": "Stores predefined categories for hosts and streams. Publicly readable, typically admin-managed.",
+          "params": [
+            {
+              "name": "categoryId",
+              "description": "The unique identifier for the category."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/streamRequests/{requestId}",
+        "definition": {
+          "entityName": "StreamRequest",
+          "schema": {
+            "$ref": "#/backend/entities/StreamRequest"
+          },
+          "description": "Records user requests to interact with hosts (e.g., 'zap', 'chat'). Includes denormalized `hostId` and `userId` for Authorization Independence, allowing both parties to manage the request efficiently.",
+          "params": [
+            {
+              "name": "requestId",
+              "description": "The unique identifier for the stream request."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/tips/{tipId}",
+        "definition": {
+          "entityName": "Tip",
+          "schema": {
+            "$ref": "#/backend/entities/Tip"
+          },
+          "description": "Records virtual coin tips sent to hosts during streams. Includes denormalized `tipperUserId`, `hostId`, and `streamId` for Authorization Independence and efficient querying by sender or receiver.",
+          "params": [
+            {
+              "name": "tipId",
+              "description": "The unique identifier for the tip."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/transactions/{transactionId}",
+        "definition": {
+          "entityName": "Transaction",
+          "schema": {
+            "$ref": "#/backend/entities/Transaction"
+          },
+          "description": "Stores financial transaction records for individual users. Path-based ownership (`userId`) and denormalized `userId` field ensure secure, user-scoped access. Also includes `relatedHostId` and `relatedReferralId` for Authorization Independence to link to other entities.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user who owns this transaction."
+            },
+            {
+              "name": "transactionId",
+              "description": "The unique identifier for the transaction."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/referrals/{referralId}",
+        "definition": {
+          "entityName": "Referral",
+          "schema": {
+            "$ref": "#/backend/entities/Referral"
+          },
+          "description": "Manages host referral program entries. Includes denormalized `referrerUserId` and `referredHostId` for Authorization Independence, allowing referrers and referred hosts to access relevant data.",
+          "params": [
+            {
+              "name": "referralId",
+              "description": "The unique identifier for the referral."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/hostVerificationAttempts/{attemptId}",
+        "definition": {
+          "entityName": "HostVerificationAttempt",
+          "schema": {
+            "$ref": "#/backend/entities/HostVerificationAttempt"
+          },
+          "description": "Records host identity verification attempts. Includes denormalized `hostId` for Authorization Independence, enabling hosts to view their own attempts and for administrators to review.",
+          "params": [
+            {
+              "name": "attemptId",
+              "description": "The unique identifier for the host verification attempt."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/roles_admin/{userId}",
+        "definition": {
+          "entityName": "AdminRole",
+          "schema": {
+            "$ref": "#/backend/entities/UserProfile"
+          },
+          "description": "A lightweight collection for Database Access Control (DBAC). A document's existence at `/roles_admin/{userId}` signifies that `userId` has administrative privileges. 'schema' refers to UserProfile as it's an extension of user identity.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of a user with administrative privileges."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure is designed to adhere strictly to the CORE DESIGN PRINCIPLES and DESIGN STRATEGY MANDATES, prioritizing Authorization Independence and Structural Segregation for robust security rules and efficient queries.Each top-level collection serves a distinct purpose, grouping documents with homogeneous security postures. User-specific data is generally structured under `/users/{userId}/...` where applicable, providing inherent ownership-based security. Collaborative and global data is placed in root collections with explicit denormalization.\n\nAuthorization Independence is achieved primarily through pervasive denormalization. For instance:\n*   In `hosts/{hostId}`, `id` (which is `hostId` or `userId`) explicitly identifies the owner, making rules like `request.auth.uid == resource.data.id` atomic.\n*   `streams/{streamId}` documents include `hostId`, linking the stream directly to its owner without requiring a `get()` call to a parent `HostProfile`.\n*   `streamRequests/{requestId}` documents include both `hostId` and `userId`, allowing both the requester and the target host to authorize actions on the document independently.\n*   Public `streamMessages` under `streams/{streamId}/messages/{messageId}` will denormalize the `hostId` from their parent stream, ensuring message-level authorization can check against `hostId` and `senderId` without a `get()` to the `streams` collection. This also applies to `privateMessages/{messageId}` which include both `senderId` and `receiverId`.\n*   `tips/{tipId}`, `referrals/{referralId}`, and `hostVerificationAttempts/{attemptId}` documents contain all necessary user (`tipperUserId`, `hostId`, `referrerUserId`, `referredHostId`) references within themselves, eliminating hierarchical dependencies for authorization.\n*   `transactions` are stored under `/users/{userId}/transactions/{transactionId}`, with `userId` explicitly in the document, ensuring atomic, user-scoped access.\n\nQAPs (Query Across Parents/Subcollections) are supported through a combination of root-level collections and strategic denormalization:\n*   The 'Global Live' (marketplace) and 'Trends' pages will query the `/hosts` collection, filtering on `isLive: true` and `categoryIds`. Since `HostProfile` is a root collection with `isLive` and `categoryIds` fields, these queries are efficient and secure.\n*   The 'Zap Connect' feature directly creates documents in the root `streamRequests` collection, which is queryable by `hostId` or `userId` for notifications.\n*   Host dashboards will query related collections (`/streams`, `/streamRequests`, `/hostVerificationAttempts`) using the `hostId` field, which is denormalized in each document.\n*   The 'Lifetime Referral Program' (`lifetime` page) can efficiently query the `referrals` and user-specific `transactions` collections using `referrerUserId` and `userId` fields respectively.\n\nStructural Segregation is applied by separating public stream messages from private direct messages into distinct collections, even though they share the underlying `Message` schema. This ensures that the security rules for a public, ephemeral chat are distinct and not conflated with the more sensitive rules for private 1:1 communications."
+  }
+}
