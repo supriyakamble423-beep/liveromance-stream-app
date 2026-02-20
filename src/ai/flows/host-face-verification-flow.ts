@@ -1,4 +1,3 @@
-
 'use server';
 /**
  * @fileOverview A Genkit flow for AI-powered host face verification.
@@ -48,20 +47,17 @@ const hostFaceVerificationPrompt = ai.definePrompt({
   name: 'hostFaceVerificationPrompt',
   input: { schema: HostFaceVerificationInputSchema },
   output: { schema: HostFaceVerificationOutputSchema },
-  prompt: `You are an AI assistant specialized in facial verification for identity checks.
-Your task is to analyze a provided image and determine if it contains a clear, well-lit human face suitable for verification.
+  prompt: `You are an AI identity assistant. Analyze the image to confirm if it is a REAL HUMAN FACE.
 
-CRITICAL ASSESSMENT:
-1. LIGHTING: Is the face evenly lit? Harsh shadows, backlighting, or extreme darkness must set 'lightingIssue' to true.
-2. ORIENTATION: Is the face looking directly at the camera?
-3. CLARITY: Is the image sharp or blurry?
-4. OBSTRUCTIONS: Are there hats, sunglasses, or hands covering the face?
+CRITERIA:
+1. Is it a human face? (Not an object, animal, or screen photo).
+2. Is the lighting sufficient to see features?
+3. Is the face clear and centered?
 
-Based on your analysis, set 'isVerified' to true only if ALL criteria are met. 
-If the failure is primarily due to lighting (too dark, too bright, harsh shadows), set 'lightingIssue' to true.
-Provide a concise 'message' explaining why if verification fails.
+If there is a person present but it's too dark or blurry, set 'lightingIssue' to true and 'isVerified' to false. 
+Provide a friendly message like "Face detected but please move to a brighter area" or "Verification successful".
 
-Image for analysis: {{media url=photoDataUri}}`,
+Image: {{media url=photoDataUri}}`,
 });
 
 const hostFaceVerificationFlow = ai.defineFlow(

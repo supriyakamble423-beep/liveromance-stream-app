@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useRef, useEffect } from "react";
@@ -10,7 +9,7 @@ import { hostFaceVerification } from "@/ai/flows/host-face-verification-flow";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 import { useFirebase } from "@/firebase";
-import { collection, addDoc, serverTimestamp, doc, updateDoc, setDoc } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp, doc, setDoc } from "firebase/firestore";
 import { cn } from "@/lib/utils";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
@@ -55,63 +54,54 @@ export default function HostFaceVerification() {
     return canvas.toDataURL('image/jpeg');
   };
 
-  const showLightingGuide = () => {
-    toast({
-      variant: "destructive",
-      title: "💡 LIGHTING FIX REQUIRED",
-      description: "• Face camera ke saamne baitho\n• Room lights ON karo\n• Window se direct sunlight avoid\n• Phone 30cm door rakho",
-    });
-  };
-
   const handleVerify = async () => {
     if (!hasCameraPermission) {
-      toast({ variant: "destructive", title: "Camera Error", description: "Camera access is required for verification." });
+      toast({ variant: 'destructive', title: 'Camera Error', description: 'Camera access is required.' });
       return;
     }
 
     const photoDataUri = capturePhoto();
     if (!photoDataUri) {
-      toast({ variant: "destructive", title: "Capture Error", description: "Could not capture image." });
+      toast({ variant: 'destructive', title: 'Capture Error', description: 'Could not capture photo.' });
       return;
     }
 
     setIsVerifying(true);
     setResult(null);
+
     try {
       const res = await hostFaceVerification({ photoDataUri });
       setResult(res);
-      
+
       if (res.isVerified && auth?.currentUser) {
         const hostId = auth.currentUser.uid;
         
-        // Record attempt
+        // Record verification attempt in Firestore
         addDoc(collection(firestore, 'hostVerificationAttempts'), {
           hostId,
           status: 'approved',
           timestamp: serverTimestamp(),
-          verificationImageUrl: photoDataUri,
-          aiConfidenceScore: res.confidence || 0.95
+          aiConfidenceScore: res.confidence || 0.9,
+          photoUrl: photoDataUri.slice(0, 100) + '...' // Storage optimized record
         });
 
-        // Update Host Profile
+        // Update Host Profile in real-time
         const hostRef = doc(firestore, 'hosts', hostId);
-        setDoc(hostRef, { 
+        await setDoc(hostRef, { 
           verified: true,
-          userId: hostId,
-          id: hostId,
           updatedAt: serverTimestamp() 
         }, { merge: true });
 
-        toast({ title: "Verification Successful", description: "Your identity has been confirmed." });
+        toast({ title: 'Face Verified!', description: 'You are now a verified host!' });
       } else {
-        if (res.lightingIssue) {
-          showLightingGuide();
-        } else {
-          toast({ variant: "destructive", title: "Verification Failed", description: res.message });
-        }
+        toast({
+          variant: res.lightingIssue ? 'default' : 'destructive',
+          title: res.lightingIssue ? 'Lighting Guide' : 'Verification Failed',
+          description: res.message
+        });
       }
     } catch (err) {
-      toast({ variant: "destructive", title: "Error", description: "Process failed. Please try again." });
+      toast({ variant: 'destructive', title: 'Error', description: 'Verification failed. Try again.' });
     } finally {
       setIsVerifying(false);
     }
@@ -125,23 +115,16 @@ export default function HostFaceVerification() {
             <ArrowLeft className="size-5" />
           </Button>
         </Link>
-        <h1 className="flex-1 text-center text-lg font-bold tracking-tight font-headline">AI Face Identity</h1>
+        <h1 className="flex-1 text-center text-lg font-bold tracking-tight font-headline">Live Face Check</h1>
       </header>
-
-      <div className="px-6 py-4 space-y-4">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-bold text-primary uppercase tracking-widest">Host Onboarding</span>
-          <Progress value={result?.isVerified ? 100 : 50} className="h-1.5 w-32" />
-        </div>
-      </div>
 
       <main className="flex-1 flex flex-col items-center justify-center px-6 space-y-6">
         <div className="relative size-72 rounded-full border-4 border-primary/40 overflow-hidden bg-black shadow-2xl">
           <video 
             ref={videoRef} 
             className={cn(
-              "w-full h-full object-cover transition-all duration-500",
-              isVerifying ? "grayscale opacity-50 scale-105" : "grayscale-0 opacity-100 scale-100"
+              "w-full h-full object-cover",
+              isVerifying && "opacity-50"
             )} 
             autoPlay 
             muted 
@@ -154,31 +137,19 @@ export default function HostFaceVerification() {
               <div className="absolute top-0 left-0 w-full h-1 bg-primary/60 shadow-[0_0_15px_#895af6] animate-scan" />
             </div>
           )}
-          <div className="absolute bottom-6 left-0 right-0 flex justify-center">
-            <Badge variant="secondary" className="glass-effect px-4 py-1.5 rounded-full uppercase text-[10px] font-bold gap-2 tracking-widest text-primary">
-              {isVerifying ? <Loader2 className="size-3 animate-spin" /> : result?.isVerified ? "Verified" : "Live View"}
-            </Badge>
-          </div>
         </div>
 
         {result?.lightingIssue && (
           <Alert variant="destructive" className="bg-destructive/10 border-destructive/20">
             <AlertCircle className="size-4" />
-            <AlertTitle>Lighting Issue Detected</AlertTitle>
-            <AlertDescription className="text-[11px]">
-              The environment is too dark or has harsh shadows. Please follow the lighting guide.
-            </AlertDescription>
+            <AlertTitle>Poor Lighting</AlertTitle>
+            <AlertDescription>Please move to a brighter spot for better face detection.</AlertDescription>
           </Alert>
         )}
 
-        <div className="w-full glass-effect rounded-2xl p-4 flex items-center gap-4">
-          <div className="size-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-            <Lightbulb className="size-5" />
-          </div>
-          <div className="flex-1">
-            <p className="text-xs font-bold">Face Recognition</p>
-            <p className="text-[11px] text-muted-foreground">Look directly at the camera. Ensure even lighting without shadows.</p>
-          </div>
+        <div className="text-center space-y-2">
+          <p className="text-sm font-bold">Position your face within the frame</p>
+          <p className="text-xs text-muted-foreground">This helps us verify you are a real person.</p>
         </div>
       </main>
 
@@ -189,11 +160,11 @@ export default function HostFaceVerification() {
           className="w-full bg-primary hover:bg-primary/90 h-14 rounded-2xl shadow-xl shadow-primary/25 font-bold gap-2 text-base"
         >
           {isVerifying ? (
-            <><Loader2 className="size-5 animate-spin" /> Analyzing...</>
+            <><Loader2 className="size-5 animate-spin" /> Verifying...</>
           ) : result?.isVerified ? (
             <><CheckCircle className="size-5" /> Verified</>
           ) : (
-            <><Camera className="size-5" /> Capture & Verify</>
+            <><Camera className="size-5" /> Confirm Live Face</>
           )}
         </Button>
       </footer>
