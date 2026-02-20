@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { 
   Bell, Globe, TrendingUp, Cpu, AlertTriangle, 
   ArrowUp, Download, LayoutDashboard, BarChart2, 
-  Bolt, UserCircle, Settings, RefreshCcw, Wifi
+  Bolt, UserCircle, Settings, RefreshCcw, Wifi, Users
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +13,7 @@ import { adminAIErrorReports, type AdminAIErrorReportsOutput } from "@/ai/flows/
 import Image from "next/image";
 import Link from "next/link";
 import { BottomNav } from "@/components/BottomNav";
+import { cn } from "@/lib/utils";
 
 export default function DashboardPage() {
   const [reports, setReports] = useState<AdminAIErrorReportsOutput["autoReports"]>([]);
@@ -199,5 +200,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
-import { cn } from "@/lib/utils";
