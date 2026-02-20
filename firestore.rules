@@ -104,7 +104,7 @@ service cloud.firestore {
     /**
      * @description Live or past stream metadata.
      * @path /streams/{streamId}
-     * @allow (list) Public if status is 'live'.
+     * @allow (get, list) Public if status is 'live'.
      * @deny (update) If the user is not the host of the stream.
      * @principle Owner-only writes with public read for active content.
      */
@@ -203,6 +203,18 @@ service cloud.firestore {
       allow get: if isSignedIn() && (resource.data.hostId == request.auth.uid || isAdmin());
       allow list: if isSignedIn() && (isAdmin()); // Only admins list all attempts
       allow create: if isSignedIn() && request.resource.data.hostId == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+
+    /**
+     * @description Direct messages from admin to hosts.
+     * @path /adminMessages/{messageId}
+     * @allow (get, list) If the user is the recipient (hostId) or an admin.
+     * @allow (create) If the user is signed in (Admin-GodMode shortcut).
+     */
+    match /adminMessages/{messageId} {
+      allow get, list: if isSignedIn() && (resource.data.hostId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn();
       allow update, delete: if isAdmin();
     }
   }

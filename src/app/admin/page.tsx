@@ -13,6 +13,7 @@ import { collection, addDoc, serverTimestamp, query, limit, orderBy } from "fire
 import { cn } from "@/lib/utils";
 import { BottomNav } from "@/components/BottomNav";
 import { useToast } from "@/hooks/use-toast";
+import Image from "next/image";
 
 export default function AdminControlRoom() {
   const [reports, setReports] = useState<AdminAIErrorReportsOutput["autoReports"]>([]);
