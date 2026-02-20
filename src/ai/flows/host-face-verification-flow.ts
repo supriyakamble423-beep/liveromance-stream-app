@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview A Genkit flow for AI-powered host face verification.
@@ -28,6 +29,9 @@ const HostFaceVerificationOutputSchema = z.object({
     .min(0)
     .max(1)
     .describe('Confidence score (0-1) in the verification decision.'),
+  lightingIssue: z
+    .boolean()
+    .describe('Whether the verification failed specifically due to lighting issues.'),
   message: z
     .string()
     .describe('A message explaining the verification result or any issues.'),
@@ -44,19 +48,18 @@ const hostFaceVerificationPrompt = ai.definePrompt({
   name: 'hostFaceVerificationPrompt',
   input: { schema: HostFaceVerificationInputSchema },
   output: { schema: HostFaceVerificationOutputSchema },
-  prompt: `You are an AI assistant specialized in facial verification for identity checks during host onboarding.
+  prompt: `You are an AI assistant specialized in facial verification for identity checks.
 Your task is to analyze a provided image and determine if it contains a clear, well-lit human face suitable for verification.
 
-Critically assess the quality of the image for facial recognition. Consider factors like:
-- Is a face clearly visible and centered?
-- Is the lighting sufficient and even, without harsh shadows or overexposure?
-- Are there any obstructions (e.g., hats, sunglasses, hands) covering the face?
-- Does the image appear to be of a real person, not a photo of a photo or a screen?
-- Is the face oriented correctly (e.g., looking straight at the camera)?
+CRITICAL ASSESSMENT:
+1. LIGHTING: Is the face evenly lit? Harsh shadows, backlighting, or extreme darkness must set 'lightingIssue' to true.
+2. ORIENTATION: Is the face looking directly at the camera?
+3. CLARITY: Is the image sharp or blurry?
+4. OBSTRUCTIONS: Are there hats, sunglasses, or hands covering the face?
 
-Based on your analysis, set 'isVerified' to true if the face meets high-quality standards for verification, otherwise set it to false.
-Provide a 'confidence' score (0-1) reflecting your certainty in the 'isVerified' decision. A score closer to 1 indicates higher confidence.
-Write a concise 'message' explaining the outcome, highlighting any issues found if 'isVerified' is false.
+Based on your analysis, set 'isVerified' to true only if ALL criteria are met. 
+If the failure is primarily due to lighting (too dark, too bright, harsh shadows), set 'lightingIssue' to true.
+Provide a concise 'message' explaining why if verification fails.
 
 Image for analysis: {{media url=photoDataUri}}`,
 });

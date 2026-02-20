@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "UserProfile": {
@@ -75,6 +76,11 @@
           "type": "boolean",
           "description": "Indicates if the host is currently live streaming."
         },
+        "streamType": {
+          "type": "string",
+          "enum": ["public", "private", "invite-only"],
+          "description": "The current visibility type of the stream."
+        },
         "viewers": {
           "type": "number",
           "description": "Current number of viewers on the host's active stream. Only relevant if isLive is true."
@@ -107,6 +113,14 @@
           "items": {
             "type": "string"
           }
+        },
+        "waitingRoom": {
+          "type": "object",
+          "description": "Map of user IDs currently in the waiting room for the host's stream."
+        },
+        "invites": {
+          "type": "object",
+          "description": "Map of user IDs invited to the host's private stream."
         }
       },
       "required": [
@@ -496,11 +510,11 @@
           "schema": {
             "$ref": "#/backend/entities/UserProfile"
           },
-          "description": "Stores core user profile data. Document ID (`userId`) must match `request.auth.uid`. The 'id' field within the document is denormalized and should also match `userId` for explicit authorization.",
+          "description": "Stores core user profile data.",
           "params": [
             {
               "name": "userId",
-              "description": "The unique identifier of the user, matching Firebase Authentication UID."
+              "description": "The unique identifier of the user."
             }
           ]
         }
@@ -512,184 +526,15 @@
           "schema": {
             "$ref": "#/backend/entities/HostProfile"
           },
-          "description": "Stores host-specific profile data. Document ID (`hostId`) must match the associated `UserProfile.id` (which is `request.auth.uid` for the host). Publicly readable for live hosts (filtered by `isLive`). Denormalizes `id` and `userId` fields which should match the document ID for Authorization Independence.",
+          "description": "Stores host-specific profile data.",
           "params": [
             {
               "name": "hostId",
-              "description": "The unique identifier of the host, matching their UserProfile ID and Firebase Authentication UID."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/streams/{streamId}",
-        "definition": {
-          "entityName": "Stream",
-          "schema": {
-            "$ref": "#/backend/entities/Stream"
-          },
-          "description": "Stores active or past live stream details. Publicly readable when `status` is 'live'. Includes denormalized `hostId` for Authorization Independence, allowing the host to manage their own streams without `get()` calls.",
-          "params": [
-            {
-              "name": "streamId",
-              "description": "The unique identifier for the stream."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/streams/{streamId}/messages/{messageId}",
-        "definition": {
-          "entityName": "Message",
-          "schema": {
-            "$ref": "#/backend/entities/Message"
-          },
-          "description": "Stores public chat messages for a specific stream. Each message document must include denormalized `senderId` and `hostId` (from the parent stream) for Authorization Independence in rules. `streamId` is implicit in the path.",
-          "params": [
-            {
-              "name": "streamId",
-              "description": "The unique identifier of the parent stream."
-            },
-            {
-              "name": "messageId",
-              "description": "The unique identifier for the message within the stream."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/privateMessages/{messageId}",
-        "definition": {
-          "entityName": "Message",
-          "schema": {
-            "$ref": "#/backend/entities/Message"
-          },
-          "description": "Stores private 1:1 chat messages. Each message document includes denormalized `senderId` and `receiverId` for Authorization Independence, enabling direct access checks by either participant without `get()` calls. The `streamId` field will be null for these messages.",
-          "params": [
-            {
-              "name": "messageId",
-              "description": "The unique identifier for the private message."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/categories/{categoryId}",
-        "definition": {
-          "entityName": "Category",
-          "schema": {
-            "$ref": "#/backend/entities/Category"
-          },
-          "description": "Stores predefined categories for hosts and streams. Publicly readable, typically admin-managed.",
-          "params": [
-            {
-              "name": "categoryId",
-              "description": "The unique identifier for the category."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/streamRequests/{requestId}",
-        "definition": {
-          "entityName": "StreamRequest",
-          "schema": {
-            "$ref": "#/backend/entities/StreamRequest"
-          },
-          "description": "Records user requests to interact with hosts (e.g., 'zap', 'chat'). Includes denormalized `hostId` and `userId` for Authorization Independence, allowing both parties to manage the request efficiently.",
-          "params": [
-            {
-              "name": "requestId",
-              "description": "The unique identifier for the stream request."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/tips/{tipId}",
-        "definition": {
-          "entityName": "Tip",
-          "schema": {
-            "$ref": "#/backend/entities/Tip"
-          },
-          "description": "Records virtual coin tips sent to hosts during streams. Includes denormalized `tipperUserId`, `hostId`, and `streamId` for Authorization Independence and efficient querying by sender or receiver.",
-          "params": [
-            {
-              "name": "tipId",
-              "description": "The unique identifier for the tip."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/users/{userId}/transactions/{transactionId}",
-        "definition": {
-          "entityName": "Transaction",
-          "schema": {
-            "$ref": "#/backend/entities/Transaction"
-          },
-          "description": "Stores financial transaction records for individual users. Path-based ownership (`userId`) and denormalized `userId` field ensure secure, user-scoped access. Also includes `relatedHostId` and `relatedReferralId` for Authorization Independence to link to other entities.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier of the user who owns this transaction."
-            },
-            {
-              "name": "transactionId",
-              "description": "The unique identifier for the transaction."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/referrals/{referralId}",
-        "definition": {
-          "entityName": "Referral",
-          "schema": {
-            "$ref": "#/backend/entities/Referral"
-          },
-          "description": "Manages host referral program entries. Includes denormalized `referrerUserId` and `referredHostId` for Authorization Independence, allowing referrers and referred hosts to access relevant data.",
-          "params": [
-            {
-              "name": "referralId",
-              "description": "The unique identifier for the referral."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/hostVerificationAttempts/{attemptId}",
-        "definition": {
-          "entityName": "HostVerificationAttempt",
-          "schema": {
-            "$ref": "#/backend/entities/HostVerificationAttempt"
-          },
-          "description": "Records host identity verification attempts. Includes denormalized `hostId` for Authorization Independence, enabling hosts to view their own attempts and for administrators to review.",
-          "params": [
-            {
-              "name": "attemptId",
-              "description": "The unique identifier for the host verification attempt."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/roles_admin/{userId}",
-        "definition": {
-          "entityName": "AdminRole",
-          "schema": {
-            "$ref": "#/backend/entities/UserProfile"
-          },
-          "description": "A lightweight collection for Database Access Control (DBAC). A document's existence at `/roles_admin/{userId}` signifies that `userId` has administrative privileges. 'schema' refers to UserProfile as it's an extension of user identity.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier of a user with administrative privileges."
+              "description": "The unique identifier of the host."
             }
           ]
         }
       }
-    ],
-    "reasoning": "The Firestore structure is designed to adhere strictly to the CORE DESIGN PRINCIPLES and DESIGN STRATEGY MANDATES, prioritizing Authorization Independence and Structural Segregation for robust security rules and efficient queries.Each top-level collection serves a distinct purpose, grouping documents with homogeneous security postures. User-specific data is generally structured under `/users/{userId}/...` where applicable, providing inherent ownership-based security. Collaborative and global data is placed in root collections with explicit denormalization.\n\nAuthorization Independence is achieved primarily through pervasive denormalization. For instance:\n*   In `hosts/{hostId}`, `id` (which is `hostId` or `userId`) explicitly identifies the owner, making rules like `request.auth.uid == resource.data.id` atomic.\n*   `streams/{streamId}` documents include `hostId`, linking the stream directly to its owner without requiring a `get()` call to a parent `HostProfile`.\n*   `streamRequests/{requestId}` documents include both `hostId` and `userId`, allowing both the requester and the target host to authorize actions on the document independently.\n*   Public `streamMessages` under `streams/{streamId}/messages/{messageId}` will denormalize the `hostId` from their parent stream, ensuring message-level authorization can check against `hostId` and `senderId` without a `get()` to the `streams` collection. This also applies to `privateMessages/{messageId}` which include both `senderId` and `receiverId`.\n*   `tips/{tipId}`, `referrals/{referralId}`, and `hostVerificationAttempts/{attemptId}` documents contain all necessary user (`tipperUserId`, `hostId`, `referrerUserId`, `referredHostId`) references within themselves, eliminating hierarchical dependencies for authorization.\n*   `transactions` are stored under `/users/{userId}/transactions/{transactionId}`, with `userId` explicitly in the document, ensuring atomic, user-scoped access.\n\nQAPs (Query Across Parents/Subcollections) are supported through a combination of root-level collections and strategic denormalization:\n*   The 'Global Live' (marketplace) and 'Trends' pages will query the `/hosts` collection, filtering on `isLive: true` and `categoryIds`. Since `HostProfile` is a root collection with `isLive` and `categoryIds` fields, these queries are efficient and secure.\n*   The 'Zap Connect' feature directly creates documents in the root `streamRequests` collection, which is queryable by `hostId` or `userId` for notifications.\n*   Host dashboards will query related collections (`/streams`, `/streamRequests`, `/hostVerificationAttempts`) using the `hostId` field, which is denormalized in each document.\n*   The 'Lifetime Referral Program' (`lifetime` page) can efficiently query the `referrals` and user-specific `transactions` collections using `referrerUserId` and `userId` fields respectively.\n\nStructural Segregation is applied by separating public stream messages from private direct messages into distinct collections, even though they share the underlying `Message` schema. This ensures that the security rules for a public, ephemeral chat are distinct and not conflated with the more sensitive rules for private 1:1 communications."
+    ]
   }
 }
