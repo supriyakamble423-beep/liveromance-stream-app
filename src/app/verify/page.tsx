@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react";
-import { ArrowLeft, HelpCircle, Lightbulb, FaceIcon, CheckCircle, Loader2 } from "lucide-react";
+import { ArrowLeft, HelpCircle, Lightbulb, User, CheckCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -36,6 +36,8 @@ export default function VerifyPage() {
       setIsVerifying(false);
     }
   };
+
+  const verifyUserImage = PlaceHolderImages.find(img => img.id === "host-1")?.imageUrl || "https://picsum.photos/seed/verify/600/600";
 
   return (
     <div className="relative w-full max-w-lg h-screen bg-background flex flex-col overflow-hidden border-x border-border mx-auto">
@@ -76,7 +78,7 @@ export default function VerifyPage() {
           <div className="absolute -inset-4 rounded-full border border-primary/20 animate-pulse" />
           <div className="relative w-72 h-72 rounded-full border-4 border-primary/40 overflow-hidden bg-muted shadow-2xl">
             <Image 
-              src={PlaceHolderImages.find(img => img.id === "host-1")?.imageUrl || ""} 
+              src={verifyUserImage} 
               alt="Viewfinder" 
               fill 
               className="object-cover grayscale opacity-70"
@@ -123,7 +125,7 @@ export default function VerifyPage() {
           onClick={handleVerify}
           className="w-full bg-primary hover:bg-primary/90 h-14 rounded-2xl shadow-xl shadow-primary/25 font-bold gap-2 text-base"
         >
-          {isVerifying ? <Loader2 className="size-5 animate-spin" /> : <FaceIcon className="size-5" />}
+          {isVerifying ? <Loader2 className="size-5 animate-spin" /> : <User className="size-5" />}
           {result?.isVerified ? "Retry Scan" : "Scan Face"}
         </Button>
         <Button variant="ghost" className="w-full text-sm text-muted-foreground">

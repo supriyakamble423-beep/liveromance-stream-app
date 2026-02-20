@@ -1,8 +1,7 @@
-
 'use client';
 
 import { useState, useRef, useEffect } from "react";
-import { ArrowLeft, FaceIcon, CheckCircle, Loader2, Lightbulb } from "lucide-react";
+import { ArrowLeft, User, CheckCircle, Loader2, Lightbulb } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -15,7 +14,7 @@ import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 
 export default function HostFaceVerification() {
   const [isVerifying, setIsVerifying] = useState(false);
-  const [result, setResult] = useState<{ isVerified: boolean; message: string } | null>(null);
+  const [result, setResult] = useState<{ isVerified: boolean; message: string; confidence?: number } | null>(null);
   const [hasCameraPermission, setHasCameraPermission] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const { toast } = useToast();
@@ -119,7 +118,7 @@ export default function HostFaceVerification() {
           onClick={handleVerify}
           className="w-full bg-primary hover:bg-primary/90 h-14 rounded-2xl shadow-xl shadow-primary/25 font-bold gap-2 text-base"
         >
-          {isVerifying ? <Loader2 className="size-5 animate-spin" /> : <FaceIcon className="size-5" />}
+          {isVerifying ? <Loader2 className="size-5 animate-spin" /> : <User className="size-5" />}
           {result?.isVerified ? "Verified Successfully" : "Scan Face"}
         </Button>
       </footer>
