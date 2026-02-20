@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter, Spline_Sans } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
+import { FirebaseClientProvider } from "@/firebase/client-provider";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -34,8 +35,10 @@ export default function RootLayout({
   return (
     <html lang="en" className={`dark ${inter.variable} ${splineSans.variable}`} suppressHydrationWarning>
       <body className="font-body antialiased selection:bg-primary/30 selection:text-primary" suppressHydrationWarning>
-        {children}
-        <Toaster />
+        <FirebaseClientProvider>
+          {children}
+          <Toaster />
+        </FirebaseClientProvider>
       </body>
     </html>
   );
