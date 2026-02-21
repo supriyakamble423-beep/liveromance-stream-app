@@ -2,7 +2,7 @@
 
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 import { collection, query, where, limit } from 'firebase/firestore';
-import { Globe, Zap, Users, Gift, TrendingUp, ShieldCheck } from "lucide-react";
+import { Globe, Zap, Users, TrendingUp, ShieldCheck } from "lucide-react"; // Removed duplicate Gift import
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { BottomNav } from "@/components/BottomNav";
