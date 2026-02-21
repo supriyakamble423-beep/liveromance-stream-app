@@ -1,7 +1,8 @@
+
 'use client';
 
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
-import { collection, doc, setDoc, serverTimestamp, query, where, limit } from 'firebase/firestore';
+import { collection, doc, setDoc, serverTimestamp, query, where, limit, addDoc } from 'firebase/firestore';
 import { Header } from "@/components/Header";
 import { BottomNav } from "@/components/BottomNav";
 import { MessageCircle, Zap, Users, ShieldCheck, Lock, TrendingUp, Sparkles, RefreshCw } from "lucide-react";
@@ -13,6 +14,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useState } from 'react';
 import { MOCK_HOSTS } from '@/lib/mock-data';
 import { cn } from "@/lib/utils";
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 export default function GlobalMarketplace() {
   const { firestore, auth } = useFirebase();
@@ -36,7 +39,7 @@ export default function GlobalMarketplace() {
     try {
       for (const mock of MOCK_HOSTS) {
         const hostRef = doc(firestore, 'hosts', `fake_${mock.id}`);
-        await setDoc(hostRef, {
+        setDoc(hostRef, {
           id: `fake_${mock.id}`,
           username: mock.name,
           isLive: true,
@@ -48,38 +51,50 @@ export default function GlobalMarketplace() {
           country: mock.country,
           updatedAt: serverTimestamp(),
           createdAt: serverTimestamp()
-        }, { merge: true });
+        }, { merge: true }).catch(err => {
+          errorEmitter.emit('permission-error', new FirestorePermissionError({
+            path: hostRef.path,
+            operation: 'write',
+            requestResourceData: mock
+          }));
+        });
       }
-      toast({ title: "Live Simulation Active", description: "Global nodes have been populated with live streams." });
+      toast({ title: "Live Simulation Active", description: "Global nodes have been populated." });
     } catch (e) {
       console.error(e);
-      toast({ variant: "destructive", title: "Seed Failed", description: "Could not initiate live simulation." });
     } finally {
       setIsSeeding(false);
     }
   };
 
-  const zapConnect = async (hostId: string, streamType: string) => {
-    if (!auth?.currentUser) {
+  const zapConnect = (hostId: string, streamType: string) => {
+    if (!auth?.currentUser || !firestore) {
       toast({ variant: "destructive", title: "Sign in required", description: "Please log in to interact." });
       return;
     }
 
-    try {
-      const requestRef = doc(collection(firestore!, 'streamRequests'));
-      await setDoc(requestRef, {
-        hostId,
-        userId: auth.currentUser.uid,
-        status: 'pending',
-        requestType: 'zap',
-        coins: 50,
-        streamType,
-        timestamp: serverTimestamp()
+    const requestData = {
+      hostId,
+      userId: auth.currentUser.uid,
+      status: 'pending',
+      requestType: 'zap',
+      coins: 50,
+      streamType,
+      timestamp: serverTimestamp()
+    };
+
+    const requestRef = collection(firestore, 'streamRequests');
+    addDoc(requestRef, requestData)
+      .then(() => {
+        toast({ title: "🎉 Zap Sent!", description: streamType === 'private' ? "50 Coins deducted. Waiting for host." : "Host notified!" });
+      })
+      .catch((err) => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: 'streamRequests',
+          operation: 'create',
+          requestResourceData: requestData
+        }));
       });
-      toast({ title: "🎉 Zap Sent!", description: streamType === 'private' ? "Added to waiting room." : "Host has been notified!" });
-    } catch (e) {
-      toast({ variant: "destructive", title: "Error", description: "Could not send Zap." });
-    }
   };
 
   return (
@@ -156,7 +171,7 @@ export default function GlobalMarketplace() {
                   <div className="flex gap-2">
                     <Button 
                       onClick={() => zapConnect(host.id, host.streamType || 'public')}
-                      className="flex-1 bg-primary hover:bg-primary/90 rounded-2xl h-10 text-[10px] font-black gap-1 uppercase tracking-widest shadow-lg shadow-primary/20"
+                      className="flex-1 bg-primary hover:bg-primary/90 rounded-2xl h-10 text-[10px] font-black gap-1 uppercase tracking-widest shadow-lg shadow-primary/20 text-white"
                     >
                       <Zap className="size-3 fill-current" /> {host.streamType === 'private' ? 'Wait' : 'Zap'}
                     </Button>
@@ -169,15 +184,6 @@ export default function GlobalMarketplace() {
                 </div>
               </div>
             ))}
-            {hosts?.length === 0 && (
-              <div className="col-span-2 text-center py-20 bg-muted/20 rounded-[3rem] border-2 border-dashed border-border flex flex-col items-center gap-4">
-                <Sparkles className="size-12 opacity-10 text-primary" />
-                <div className="space-y-1">
-                  <p className="text-xs font-bold uppercase tracking-widest text-slate-500">Market Currently Idle</p>
-                  <p className="text-[10px] text-slate-400 uppercase">Click "Simulate Live" to populate global traffic</p>
-                </div>
-              </div>
-            )}
           </div>
         )}
       </main>
