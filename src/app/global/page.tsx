@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
@@ -13,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from 'react';
 import { MOCK_HOSTS } from '@/lib/mock-data';
+import { cn } from "@/lib/utils";
 
 export default function GlobalMarketplace() {
   const { firestore, auth } = useFirebase();
