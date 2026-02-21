@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useFirebase, useDoc, useMemoFirebase, useCollection } from "@/firebase";
@@ -5,7 +6,7 @@ import { BottomNav } from "@/components/BottomNav";
 import { 
   ShieldCheck, Wallet, Settings, Radio, 
   Star, Lock, Globe, Users, Loader2, Zap, Sparkles, Camera, Power, TrendingUp, Gift as GiftIcon, Copy,
-  ImagePlus, Video, ChevronRight
+  ImagePlus, Video, ChevronRight, Share2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -43,12 +44,6 @@ export default function HostProfileDashboard() {
 
   const { data: adminMessages } = useCollection(msgQuery);
   const latestAdminMsg = adminMessages?.[0];
-
-  const copyReferralLink = () => {
-    const link = `stream.ai/ref/${userId?.slice(0, 8)}`;
-    navigator.clipboard.writeText(link);
-    toast({ title: "Link Copied", description: "Referral node connected." });
-  };
 
   const updateStreamType = async (type: 'public' | 'private' | 'invite-only') => {
     if (!hostRef) return;
@@ -180,7 +175,19 @@ export default function HostProfileDashboard() {
       </header>
 
       <main className="px-6 space-y-6">
-        {/* GO LIVE BUTTON (Prominent) */}
+        {/* Referral System Highlight (Viral Engine) */}
+        <section className="bg-gradient-to-br from-primary/10 to-secondary/10 border border-primary/20 rounded-[2.5rem] p-6 flex items-center justify-between">
+          <div className="space-y-1">
+             <h3 className="text-sm font-black uppercase tracking-tight italic">Viral Engine</h3>
+             <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">A → B Lifetime Residual (1%)</p>
+          </div>
+          <Link href="/lifetime">
+            <Button size="icon" className="rounded-full bg-primary shadow-lg shadow-primary/20">
+              <Share2 className="size-5" />
+            </Button>
+          </Link>
+        </section>
+
         {!hostProfile?.verified ? (
           <section className="bg-primary/20 border border-primary/30 rounded-[2.5rem] p-6 text-center space-y-4 shadow-xl">
             <h3 className="text-xl font-black uppercase tracking-tight">Identity Required</h3>
@@ -258,7 +265,7 @@ export default function HostProfileDashboard() {
           </div>
         </section>
 
-        <section className="space-y-4">
+        <section className="space-y-4 pb-12">
           <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-500 ml-2">AI Optimizer</h3>
           <div className="bg-gradient-to-br from-primary/10 to-transparent border border-primary/20 rounded-[2.5rem] p-6 space-y-4">
             <div className="flex items-center gap-3">
@@ -276,42 +283,6 @@ export default function HostProfileDashboard() {
               {isOptimizing ? <Loader2 className="size-4 animate-spin mr-2" /> : <Zap className="size-4 mr-2" />}
               Generate Analysis
             </Button>
-          </div>
-        </section>
-
-        <section className="space-y-4 pb-12">
-          <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-500 ml-2">Referral Hub</h3>
-          <div className="bg-gradient-to-br from-secondary/10 to-transparent border border-secondary/20 rounded-[2.5rem] p-7 space-y-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <GiftIcon className="size-7 text-secondary" />
-                <h4 className="text-sm font-black uppercase tracking-tight">Network Commission</h4>
-              </div>
-              <Badge variant="secondary" className="bg-secondary/20 text-secondary border-none text-[9px] font-black uppercase px-3 py-1">1% LIFETIME</Badge>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-black/20 p-5 rounded-3xl border border-white/5">
-                <p className="text-3xl font-black italic tracking-tighter text-white">4.8k</p>
-                <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest mt-1">Total Invites</p>
-              </div>
-              <div className="bg-black/20 p-5 rounded-3xl border border-white/5 text-right">
-                <p className="text-3xl font-black text-green-400">$2,140</p>
-                <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest mt-1">Total Earned</p>
-              </div>
-            </div>
-
-            <div className="pt-2">
-              <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 ml-1">Invite Signal Node</p>
-              <div className="flex gap-2">
-                <div className="flex-1 bg-black/40 border border-white/10 rounded-2xl px-5 flex items-center h-14">
-                   <span className="text-[10px] font-mono text-secondary truncate">stream.ai/ref/{userId?.slice(0, 8)}</span>
-                </div>
-                <Button onClick={copyReferralLink} size="icon" className="size-14 rounded-2xl bg-secondary hover:bg-secondary/90 shrink-0 text-white">
-                  <Copy className="size-6" />
-                </Button>
-              </div>
-            </div>
           </div>
         </section>
       </main>
