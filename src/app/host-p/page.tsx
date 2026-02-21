@@ -4,13 +4,13 @@ import { useFirebase, useDoc, useMemoFirebase, useCollection } from "@/firebase"
 import { BottomNav } from "@/components/BottomNav";
 import { 
   ShieldCheck, Wallet, Settings, Radio, 
-  Star, Lock, Globe, Users, Loader2, Zap, Sparkles, Camera 
+  Star, Lock, Globe, Users, Loader2, Zap, Sparkles, Camera, Power
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Image from "next/image";
 import Link from "next/link";
-import { doc, updateDoc, serverTimestamp, query, where, orderBy, limit, collection } from "firebase/firestore";
+import { doc, setDoc, serverTimestamp, query, where, orderBy, limit, collection } from "firebase/firestore";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { aiGuidedHostProfileOptimization } from "@/ai/flows/ai-guided-host-profile-optimization-flow";
@@ -21,6 +21,7 @@ export default function HostProfileDashboard() {
   const { toast } = useToast();
   const userId = user?.uid;
   const [isOptimizing, setIsOptimizing] = useState(false);
+  const [isTogglingLive, setIsTogglingLive] = useState(false);
 
   const hostRef = useMemoFirebase(() => {
     if (!firestore || !userId) return null;
@@ -54,13 +55,39 @@ export default function HostProfileDashboard() {
     }
 
     try {
-      await updateDoc(hostRef, { 
+      await setDoc(hostRef, { 
         streamType: type,
         updatedAt: serverTimestamp()
-      });
+      }, { merge: true });
       toast({ title: "Settings Updated", description: `Privacy set to ${type}` });
     } catch (err) {
       toast({ variant: 'destructive', title: 'Error', description: 'Failed to update settings.' });
+    }
+  };
+
+  const toggleLiveStatus = async () => {
+    if (!hostRef || !hostProfile?.verified) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Verify identity to go live.' });
+      return;
+    }
+    
+    setIsTogglingLive(true);
+    const newStatus = !hostProfile?.isLive;
+    
+    try {
+      await setDoc(hostRef, {
+        isLive: newStatus,
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+      
+      toast({ 
+        title: newStatus ? "🚀 You are LIVE!" : "Stream Ended", 
+        description: newStatus ? "Your stream is now visible globally." : "Stream has been closed." 
+      });
+    } catch (err) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Failed to toggle status.' });
+    } finally {
+      setIsTogglingLive(false);
     }
   };
 
@@ -132,6 +159,9 @@ export default function HostProfileDashboard() {
               )}>
                 {hostProfile?.verified ? "IDENTITY VERIFIED" : "UNVERIFIED"}
               </Badge>
+              {hostProfile?.isLive && (
+                <Badge className="h-6 text-[9px] px-3 font-black bg-red-600 animate-pulse border-none">LIVE NOW</Badge>
+              )}
             </div>
           </div>
         </div>
@@ -155,7 +185,7 @@ export default function HostProfileDashboard() {
       </header>
 
       <main className="px-6 space-y-6">
-        {!hostProfile?.verified && (
+        {!hostProfile?.verified ? (
           <section className="bg-primary/20 border border-primary/30 rounded-[2.5rem] p-6 text-center space-y-4 shadow-[0_0_30px_rgba(137,92,246,0.1)]">
             <h3 className="text-xl font-black uppercase tracking-tight">Identity Required</h3>
             <p className="text-xs text-slate-400 font-medium">Verify your face to unlock global streaming privileges and start earning.</p>
@@ -164,6 +194,22 @@ export default function HostProfileDashboard() {
                 <Camera className="size-5" /> Start 1-Sec Selfie
               </Button>
             </Link>
+          </section>
+        ) : (
+          <section className="space-y-4">
+            <Button 
+              onClick={toggleLiveStatus}
+              disabled={isTogglingLive}
+              className={cn(
+                "w-full h-20 rounded-[2rem] font-black text-xl uppercase tracking-widest gap-3 shadow-2xl transition-all active:scale-95",
+                hostProfile?.isLive 
+                  ? "bg-red-600 hover:bg-red-700 shadow-red-500/20" 
+                  : "bg-green-500 hover:bg-green-600 shadow-green-500/20"
+              )}
+            >
+              {isTogglingLive ? <Loader2 className="size-6 animate-spin" /> : <Power className="size-7" />}
+              {hostProfile?.isLive ? "End Stream" : "Start Live Stream"}
+            </Button>
           </section>
         )}
 

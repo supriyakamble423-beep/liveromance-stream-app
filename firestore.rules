@@ -38,10 +38,9 @@ service cloud.firestore {
 
     match /hosts/{hostId} {
       allow get, list: if true;
-      allow create: if isOwner(hostId) && request.resource.data.userId == request.auth.uid;
-      allow update: if isExistingOwner(hostId);
-      allow set: if isOwner(hostId);
-      allow delete: if isExistingOwner(hostId) || isAdmin();
+      allow create: if isOwner(hostId);
+      allow update: if isOwner(hostId);
+      allow delete: if isOwner(hostId) || isAdmin();
     }
 
     match /streams/{streamId} {
@@ -58,8 +57,7 @@ service cloud.firestore {
     }
 
     match /adminMessages/{messageId} {
-      // Allow list if the hostId filter is applied correctly or if user is admin
-      allow list: if isSignedIn() && (request.query.limit <= 100);
+      allow list: if isSignedIn();
       allow get: if isSignedIn() && (resource.data.hostId == request.auth.uid || isAdmin());
       allow create: if isSignedIn();
       allow update, delete: if isAdmin();
