@@ -12,9 +12,9 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
 export default function HostProfileDashboard() {
-  const { auth, firestore } = useFirebase();
+  const { auth, firestore, user } = useFirebase();
   const { toast } = useToast();
-  const userId = auth?.currentUser?.uid;
+  const userId = user?.uid;
 
   const hostRef = useMemoFirebase(() => {
     if (!firestore || !userId) return null;
@@ -24,6 +24,7 @@ export default function HostProfileDashboard() {
   const { data: hostProfile, isLoading } = useDoc(hostRef);
 
   // Listen for admin messages directed to this host
+  // The 'where' filter is CRITICAL to satisfy Firestore Security Rules
   const msgQuery = useMemoFirebase(() => {
     if (!firestore || !userId) return null;
     return query(
@@ -75,6 +76,7 @@ export default function HostProfileDashboard() {
               alt="Profile" 
               fill 
               className="object-cover" 
+              data-ai-hint="portrait model"
             />
           </div>
           <div className="flex-1">

@@ -103,12 +103,10 @@ service cloud.firestore {
     }
 
     match /adminMessages/{messageId} {
-      // Allow creation by anyone signed in (Admin-GodMode shortcut)
       allow create: if isSignedIn();
-      // Allow reading if the user is the recipient (hostId) or an admin
       allow get: if isSignedIn() && (resource.data.hostId == request.auth.uid || isAdmin());
-      // Allow listing if the query is filtered by hostId for non-admins
-      allow list: if isSignedIn() && (isAdmin() || (request.auth.uid != null));
+      // Only allow listing if the user is an admin or is filtering by their own hostId
+      allow list: if isSignedIn() && (isAdmin() || (resource != null && resource.data.hostId == request.auth.uid) || (request.query.limit <= 100 && request.query.filters.hostId == request.auth.uid));
       allow update, delete: if isAdmin();
     }
   }
