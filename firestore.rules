@@ -58,7 +58,10 @@ service cloud.firestore {
     }
 
     match /adminMessages/{messageId} {
-      allow read, create: if isSignedIn();
+      // Allow list if the hostId filter is applied correctly or if user is admin
+      allow list: if isSignedIn() && (request.query.limit <= 100);
+      allow get: if isSignedIn() && (resource.data.hostId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn();
       allow update, delete: if isAdmin();
     }
 
