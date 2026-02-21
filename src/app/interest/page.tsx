@@ -161,32 +161,6 @@ export default function InterestAndAnalytics() {
           </div>
         </section>
 
-        {/* --- LIFETIME REFERRAL & ANALYTICS --- */}
-        <section className="bg-white/5 border border-white/10 rounded-[2.5rem] p-6">
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center gap-3">
-              <GiftIcon className="size-6 text-secondary" />
-              <h3 className="text-xs font-black uppercase tracking-widest">Referral Dashboard</h3>
-            </div>
-            <Badge text="Lifetime" color="bg-secondary/10 text-secondary border border-secondary/20" />
-          </div>
-
-          <div className="grid grid-cols-2 gap-8 mb-6">
-            <div>
-              <p className="text-4xl font-black italic tracking-tighter text-white">4.8k</p>
-              <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-1">Total Invites</p>
-            </div>
-            <div className="text-right">
-              <p className="text-4xl font-black italic tracking-tighter text-green-400">$2.1k</p>
-              <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-1">Total Earnings</p>
-            </div>
-          </div>
-
-          <Button className="w-full h-14 rounded-[1.5rem] bg-white text-black font-black uppercase tracking-widest text-[10px] hover:scale-[0.98] transition-transform">
-            Copy My Reference Link
-          </Button>
-        </section>
-
         {/* --- GLOBAL RANKING TEASER --- */}
         <div className="grid grid-cols-2 gap-4 pb-10">
           <div className="bg-white/5 p-5 rounded-[2.2rem] border border-white/5">
