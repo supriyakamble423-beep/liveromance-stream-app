@@ -3,7 +3,7 @@
 import { useFirebase, useDoc, useMemoFirebase, useCollection } from "@/firebase";
 import { BottomNav } from "@/components/BottomNav";
 import { 
-  ShieldCheck, Wallet, Settings, LayoutDashboard, Radio, 
+  ShieldCheck, Wallet, Settings, Radio, 
   Star, Lock, Globe, Users, Loader2, Zap, Sparkles, Camera 
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -68,7 +68,7 @@ export default function HostProfileDashboard() {
     if (!hostProfile) return;
     setIsOptimizing(true);
     try {
-      const res = await aiGuidedHostProfileOptimization({
+      await aiGuidedHostProfileOptimization({
         profileDescription: hostProfile.bio || "Passionate streamer looking to connect with the global community.",
         streamTitles: ["Daily Vibe Check", "Late Night Social Discovery"],
         contentStrategy: "Engaging with viewers through high-energy, real-time conversation and entertainment."
@@ -206,7 +206,7 @@ export default function HostProfileDashboard() {
                 </div>
                 <div className="text-left">
                   <p className="text-xs font-black uppercase">AI Optimizer</p>
-                  <p className="text-[9px] text-slate-500 font-bold uppercase tracking-tighter">Instant profile improvement suggestions</p>
+                  <p className="text-[9px] text-slate-500 font-bold uppercase tracking-tighter">Instant profile suggestions</p>
                 </div>
               </div>
               {isOptimizing && <Loader2 className="size-4 animate-spin" />}
@@ -220,7 +220,7 @@ export default function HostProfileDashboard() {
                   </div>
                   <div className="text-left">
                     <p className="text-xs font-black uppercase">Lifetime Referral</p>
-                    <p className="text-[9px] text-slate-500 font-bold uppercase tracking-tighter">Earn 1% commission from onboarded hosts</p>
+                    <p className="text-[9px] text-slate-500 font-bold uppercase tracking-tighter">Earn 1% commission</p>
                   </div>
                 </div>
               </Button>
