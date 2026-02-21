@@ -1,16 +1,15 @@
-
 'use client';
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Compass, Radio, User, Map, LayoutDashboard, Heart } from "lucide-react";
+import { Home, Radio, Map, LayoutDashboard } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { icon: Home, label: "Global", href: "/global" },
   { icon: Radio, label: "Trends", href: "/trends" },
   { icon: Map, label: "Map", href: "/interest" },
-  { icon: LayoutDashboard, label: "Host Hub", href: "/host-p" },
+  { icon: LayoutDashboard, label: "Profile", href: "/host-p" },
 ];
 
 export function BottomNav() {
