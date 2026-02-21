@@ -1,31 +1,63 @@
+
 'use client';
 
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
-import { collection, addDoc, serverTimestamp, query, where, limit } from 'firebase/firestore';
+import { collection, doc, setDoc, serverTimestamp, query, where, limit } from 'firebase/firestore';
 import { Header } from "@/components/Header";
 import { BottomNav } from "@/components/BottomNav";
-import { MessageCircle, Zap, Users, ShieldCheck, Lock, TrendingUp, Sparkles, ChevronRight } from "lucide-react";
+import { MessageCircle, Zap, Users, ShieldCheck, Lock, TrendingUp, Sparkles, RefreshCw } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { useState } from 'react';
+import { MOCK_HOSTS } from '@/lib/mock-data';
 
 export default function GlobalMarketplace() {
   const { firestore, auth } = useFirebase();
   const { toast } = useToast();
+  const [isSeeding, setIsSeeding] = useState(false);
 
   const liveHostsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return query(
       collection(firestore, 'hosts'), 
       where('isLive', '==', true),
-      where('verified', '==', true),
       limit(20)
     );
   }, [firestore]);
 
   const { data: hosts, isLoading } = useCollection(liveHostsQuery);
+
+  const seedFakeLiveHosts = async () => {
+    if (!firestore || isSeeding) return;
+    setIsSeeding(true);
+    try {
+      for (const mock of MOCK_HOSTS) {
+        const hostRef = doc(firestore, 'hosts', `fake_${mock.id}`);
+        await setDoc(hostRef, {
+          id: `fake_${mock.id}`,
+          username: mock.name,
+          isLive: true,
+          verified: true,
+          viewers: Math.floor(Math.random() * 5000),
+          rating: mock.rating,
+          streamType: Math.random() > 0.7 ? 'private' : 'public',
+          previewImageUrl: mock.imageUrl,
+          country: mock.country,
+          updatedAt: serverTimestamp(),
+          createdAt: serverTimestamp()
+        }, { merge: true });
+      }
+      toast({ title: "Live Simulation Active", description: "Global nodes have been populated with live streams." });
+    } catch (e) {
+      console.error(e);
+      toast({ variant: "destructive", title: "Seed Failed", description: "Could not initiate live simulation." });
+    } finally {
+      setIsSeeding(false);
+    }
+  };
 
   const zapConnect = async (hostId: string, streamType: string) => {
     if (!auth?.currentUser) {
@@ -34,7 +66,8 @@ export default function GlobalMarketplace() {
     }
 
     try {
-      await addDoc(collection(firestore, 'streamRequests'), {
+      const requestRef = doc(collection(firestore!, 'streamRequests'));
+      await setDoc(requestRef, {
         hostId,
         userId: auth.currentUser.uid,
         status: 'pending',
@@ -54,30 +87,11 @@ export default function GlobalMarketplace() {
       <Header />
       
       <main className="px-4 pt-6 space-y-6">
-        {/* --- Demo/Showcase Banner --- */}
-        <Link href="/demo">
-          <section className="relative overflow-hidden group bg-slate-900 border border-white/10 rounded-[2.5rem] p-6 transition-all hover:bg-slate-800">
-            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:rotate-12 transition-transform">
-              <Sparkles className="size-24 text-primary" />
-            </div>
-            <div className="relative z-10 flex items-center justify-between">
-              <div className="space-y-1">
-                <Badge className="bg-primary text-white border-none text-[8px] font-black uppercase tracking-widest px-2 mb-2">Developed Features</Badge>
-                <h2 className="text-xl font-black font-headline text-white uppercase italic tracking-tighter">System Showcase</h2>
-                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">See what was built for you</p>
-              </div>
-              <div className="size-10 rounded-full bg-primary/20 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-colors">
-                <ChevronRight className="size-6" />
-              </div>
-            </div>
-          </section>
-        </Link>
-
         {/* Marketplace Stats Banner */}
         <section className="bg-primary/5 border border-primary/10 rounded-[2rem] p-5 flex items-center justify-between">
           <div className="space-y-1">
             <p className="text-[10px] font-black uppercase tracking-widest text-primary">Global Health</p>
-            <h2 className="text-xl font-black font-headline tracking-tighter">Market Success</h2>
+            <h2 className="text-xl font-black font-headline tracking-tighter uppercase">Market Activity</h2>
           </div>
           <div className="flex gap-4 text-right">
             <div>
@@ -86,27 +100,29 @@ export default function GlobalMarketplace() {
             </div>
             <div>
               <p className="text-xs font-bold text-slate-400">Zaps</p>
-              <p className="text-lg font-black text-secondary">2.4k</p>
+              <p className="text-lg font-black text-secondary">4.2k</p>
             </div>
           </div>
         </section>
 
         <section className="flex items-center justify-between">
           <div className="flex flex-col">
-            <h2 className="text-2xl font-black font-headline tracking-tight uppercase">Top Verified</h2>
+            <h2 className="text-2xl font-black font-headline tracking-tight uppercase">Live Verified</h2>
             <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold flex items-center gap-1">
-              <ShieldCheck className="size-3 text-green-500" /> Verified Onboarding Active
+              <ShieldCheck className="size-3 text-green-500" /> Real-time Global Traffic
             </p>
           </div>
-          <Badge variant="secondary" className="bg-primary/10 text-primary border-none font-black text-[10px]">
-             LIVE FEED
-          </Badge>
+          {hosts?.length === 0 && !isLoading && (
+            <Button onClick={seedFakeLiveHosts} disabled={isSeeding} size="sm" variant="outline" className="rounded-full gap-2 text-[10px] font-black uppercase tracking-widest h-8 border-primary/20 text-primary">
+              <RefreshCw className={cn("size-3", isSeeding && "animate-spin")} /> Simulate Live
+            </Button>
+          )}
         </section>
 
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-20 space-y-4 opacity-50">
             <div className="size-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-            <p className="text-[10px] font-black uppercase tracking-widest">Syncing Nodes...</p>
+            <p className="text-[10px] font-black uppercase tracking-widest">Syncing World Nodes...</p>
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-4">
@@ -131,8 +147,11 @@ export default function GlobalMarketplace() {
                 </div>
                 <div className="p-4 space-y-4">
                   <div className="flex justify-between items-center">
-                    <h3 className="font-black text-sm tracking-tight truncate uppercase">Host_{host.id.slice(0, 4)}</h3>
-                    <TrendingUp className="size-3 text-primary" />
+                    <h3 className="font-black text-sm tracking-tight truncate uppercase">{host.username || `Host_${host.id.slice(0, 4)}`}</h3>
+                    <div className="flex items-center gap-1">
+                      <TrendingUp className="size-3 text-primary" />
+                      <span className="text-[8px] font-bold text-slate-500 uppercase">{host.country || 'Global'}</span>
+                    </div>
                   </div>
                   <div className="flex gap-2">
                     <Button 
@@ -152,8 +171,11 @@ export default function GlobalMarketplace() {
             ))}
             {hosts?.length === 0 && (
               <div className="col-span-2 text-center py-20 bg-muted/20 rounded-[3rem] border-2 border-dashed border-border flex flex-col items-center gap-4">
-                <Users className="size-12 opacity-10" />
-                <p className="text-xs font-bold uppercase tracking-widest text-slate-500">No Verified Hosts Streaming</p>
+                <Sparkles className="size-12 opacity-10 text-primary" />
+                <div className="space-y-1">
+                  <p className="text-xs font-bold uppercase tracking-widest text-slate-500">Market Currently Idle</p>
+                  <p className="text-[10px] text-slate-400 uppercase">Click "Simulate Live" to populate global traffic</p>
+                </div>
               </div>
             )}
           </div>

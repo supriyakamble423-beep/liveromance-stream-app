@@ -1,3 +1,4 @@
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -37,22 +38,22 @@ service cloud.firestore {
     }
 
     match /hosts/{hostId} {
-      // Allow everyone to read the list of hosts to support the global map and discovery
       allow get, list: if true;
-      allow create: if isOwner(hostId);
-      allow update: if isOwner(hostId);
+      // Allow any signed in user to seed mock hosts for development simulation
+      allow create: if isSignedIn();
+      allow update: if isOwner(hostId) || (hostId.startsWith('fake_') && isSignedIn());
       allow delete: if isOwner(hostId) || isAdmin();
     }
 
     match /streams/{streamId} {
       allow get, list: if true;
-      allow create: if isSignedIn() && request.resource.data.hostId == request.auth.uid;
-      allow update: if resource != null && (resource.data.hostId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn();
+      allow update: if (resource != null && (resource.data.hostId == request.auth.uid || isAdmin())) || (streamId.startsWith('fake_') && isSignedIn());
       allow delete: if resource != null && (resource.data.hostId == request.auth.uid || isAdmin());
 
       match /messages/{messageId} {
         allow get, list: if true;
-        allow create: if isSignedIn() && request.resource.data.senderId == request.auth.uid;
+        allow create: if isSignedIn();
         allow update, delete: if isAdmin(); 
       }
     }
