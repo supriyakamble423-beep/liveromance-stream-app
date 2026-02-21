@@ -89,7 +89,6 @@ export default function AdminControlRoom() {
       </header>
 
       <main className="flex-1 overflow-y-auto px-4 space-y-6 pb-24 no-scrollbar">
-        {/* Success Metrics Section */}
         <section className="grid grid-cols-2 gap-3 mt-6">
           <div className="bg-white/5 p-4 rounded-3xl border border-white/5">
             <div className="flex justify-between items-start mb-2">
@@ -109,7 +108,6 @@ export default function AdminControlRoom() {
           </div>
         </section>
 
-        {/* Live Feed Monitor */}
         <section className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-xs font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
@@ -147,7 +145,6 @@ export default function AdminControlRoom() {
           </div>
         </section>
 
-        {/* God Mode Direct Chat */}
         <section className="space-y-4">
           <h2 className="text-xs font-black uppercase tracking-widest text-slate-400 flex items-center gap-2 ml-2">
             <MessageSquare className="size-4 text-primary" /> Command Terminal
@@ -176,7 +173,6 @@ export default function AdminControlRoom() {
           </div>
         </section>
 
-        {/* AI Operational Reports */}
         <section className="pb-10">
           <div className="flex items-center justify-between mb-4 px-2">
             <h2 className="text-xs font-black uppercase tracking-widest text-slate-400">AI Intelligence Reports</h2>

@@ -23,10 +23,15 @@ export default function HostProfileDashboard() {
 
   const { data: hostProfile, isLoading } = useDoc(hostRef);
 
-  // Listen for admin messages
+  // Listen for admin messages directed to this host
   const msgQuery = useMemoFirebase(() => {
     if (!firestore || !userId) return null;
-    return query(collection(firestore, 'adminMessages'), where('hostId', '==', userId), orderBy('timestamp', 'desc'), limit(1));
+    return query(
+      collection(firestore, 'adminMessages'), 
+      where('hostId', '==', userId), 
+      orderBy('timestamp', 'desc'), 
+      limit(1)
+    );
   }, [firestore, userId]);
 
   const { data: adminMessages } = useCollection(msgQuery);
