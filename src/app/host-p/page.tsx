@@ -4,7 +4,7 @@ import { useFirebase, useDoc, useMemoFirebase, useCollection } from "@/firebase"
 import { BottomNav } from "@/components/BottomNav";
 import { 
   ShieldCheck, Wallet, Settings, Radio, 
-  Star, Lock, Globe, Users, Loader2, Zap, Sparkles, Camera, Power, TrendingUp
+  Star, Lock, Globe, Users, Loader2, Zap, Sparkles, Camera, Power, TrendingUp, Gift as GiftIcon, Copy
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -42,6 +42,12 @@ export default function HostProfileDashboard() {
 
   const { data: adminMessages } = useCollection(msgQuery);
   const latestAdminMsg = adminMessages?.[0];
+
+  const copyReferralLink = () => {
+    const link = `stream.ai/ref/${userId?.slice(0, 8)}`;
+    navigator.clipboard.writeText(link);
+    toast({ title: "Link Copied", description: "Your unique referral link is ready to share." });
+  };
 
   const updateStreamType = async (type: 'public' | 'private' | 'invite-only') => {
     if (!hostRef) return;
@@ -266,26 +272,45 @@ export default function HostProfileDashboard() {
           </div>
         </section>
 
+        {/* --- FULL REFERRAL DASHBOARD --- */}
         <section className="space-y-4 pb-10">
-          <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-500 ml-2">Network Commission Hub</h3>
-          <Link href="/lifetime" className="block">
-            <div className="bg-gradient-to-br from-secondary/10 to-transparent border border-secondary/20 rounded-[2rem] p-6 space-y-4 group active:scale-95 transition-all">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <TrendingUp className="size-6 text-secondary" />
-                  <h4 className="text-sm font-black uppercase tracking-tight">Lifetime Referral</h4>
-                </div>
-                <Badge variant="secondary" className="bg-secondary/20 text-secondary border-none text-[9px]">1% Comm.</Badge>
+          <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-500 ml-2">Network Commission Dashboard</h3>
+          <div className="bg-gradient-to-br from-secondary/10 to-transparent border border-secondary/20 rounded-[2.5rem] p-6 space-y-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <GiftIcon className="size-6 text-secondary" />
+                <h4 className="text-sm font-black uppercase tracking-tight">Referral Program</h4>
               </div>
-              <p className="text-[11px] text-slate-400 font-medium leading-relaxed uppercase">
-                Earn 1% of every diamond your referred hosts collect. Start building your legacy.
-              </p>
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-black text-slate-500 uppercase">Total Referral Earnings</span>
-                <span className="text-lg font-black text-secondary">{hostProfile?.referralEarnings || "$0.00"}</span>
+              <Badge variant="secondary" className="bg-secondary/20 text-secondary border-none text-[9px] font-black uppercase px-3 py-1">1% LIFETIME</Badge>
+            </div>
+
+            <p className="text-[11px] text-slate-400 font-medium leading-relaxed uppercase">
+              Earn 1% of every diamond your referred hosts collect. Start building your legacy by onboarding new talent.
+            </p>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-black/20 p-4 rounded-2xl border border-white/5">
+                <p className="text-2xl font-black italic tracking-tighter text-white">4.8k</p>
+                <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest mt-1">Total Invites</p>
+              </div>
+              <div className="bg-black/20 p-4 rounded-2xl border border-white/5 text-right">
+                <p className="text-2xl font-black text-green-400">$2,140</p>
+                <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest mt-1">Earned Comm.</p>
               </div>
             </div>
-          </Link>
+
+            <div className="pt-2">
+              <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">Your Unique Invite Node</p>
+              <div className="flex gap-2">
+                <div className="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 flex items-center h-12">
+                   <span className="text-[10px] font-mono text-secondary truncate">stream.ai/ref/{userId?.slice(0, 8)}</span>
+                </div>
+                <Button onClick={copyReferralLink} size="icon" className="size-12 rounded-xl bg-secondary hover:bg-secondary/90 shrink-0">
+                  <Copy className="size-5" />
+                </Button>
+              </div>
+            </div>
+          </div>
         </section>
       </main>
 
