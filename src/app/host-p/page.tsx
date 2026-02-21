@@ -1,11 +1,10 @@
-
 'use client';
 
 import { useFirebase, useDoc, useMemoFirebase, useCollection } from "@/firebase";
 import { BottomNav } from "@/components/BottomNav";
 import { 
   ShieldCheck, Wallet, Settings, Radio, 
-  Star, Lock, Globe, Users, Loader2, Zap, Sparkles, Camera, Power
+  Star, Lock, Globe, Users, Loader2, Zap, Sparkles, Camera, Power, TrendingUp
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -246,41 +245,47 @@ export default function HostProfileDashboard() {
           </div>
         </section>
 
-        <section className="space-y-4 pb-10">
-          <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-500 ml-2">Host Utilities</h3>
-          <div className="space-y-3">
+        <section className="space-y-4">
+          <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-500 ml-2">AI Optimizer Hub</h3>
+          <div className="bg-gradient-to-br from-primary/10 to-transparent border border-primary/20 rounded-[2rem] p-6 space-y-4">
+            <div className="flex items-center gap-3">
+              <Sparkles className="size-6 text-primary animate-pulse" />
+              <h4 className="text-sm font-black uppercase tracking-tight">Smart Profile Optimizer</h4>
+            </div>
+            <p className="text-[11px] text-slate-400 font-medium leading-relaxed uppercase">
+              Analyze your stream data to maximize viewer retention and diamond earnings.
+            </p>
             <Button 
               onClick={handleOptimization}
               disabled={isOptimizing}
-              variant="outline" 
-              className="w-full h-16 rounded-[1.5rem] border-white/10 bg-white/5 hover:bg-white/10 justify-between px-6"
+              className="w-full h-12 rounded-xl bg-primary font-black uppercase text-[10px] tracking-widest shadow-lg shadow-primary/20"
             >
-              <div className="flex items-center gap-4">
-                <div className="size-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                  <Sparkles className="size-5 text-primary" />
-                </div>
-                <div className="text-left">
-                  <p className="text-xs font-black uppercase">AI Optimizer</p>
-                  <p className="text-[9px] text-slate-500 font-bold uppercase tracking-tighter">Instant profile suggestions</p>
-                </div>
-              </div>
-              {isOptimizing && <Loader2 className="size-4 animate-spin" />}
+              {isOptimizing ? <Loader2 className="size-4 animate-spin mr-2" /> : <Zap className="size-4 mr-2" />}
+              Generate Optimization
             </Button>
-            
-            <Link href="/lifetime" className="block">
-              <Button variant="outline" className="w-full h-16 rounded-[1.5rem] border-white/10 bg-white/5 hover:bg-white/10 justify-between px-6">
-                <div className="flex items-center gap-4">
-                  <div className="size-10 rounded-xl bg-secondary/10 flex items-center justify-center">
-                    <Zap className="size-5 text-secondary" />
-                  </div>
-                  <div className="text-left">
-                    <p className="text-xs font-black uppercase">Lifetime Referral</p>
-                    <p className="text-[9px] text-slate-500 font-bold uppercase tracking-tighter">Earn 1% commission</p>
-                  </div>
-                </div>
-              </Button>
-            </Link>
           </div>
+        </section>
+
+        <section className="space-y-4 pb-10">
+          <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-500 ml-2">Network Commission Hub</h3>
+          <Link href="/lifetime" className="block">
+            <div className="bg-gradient-to-br from-secondary/10 to-transparent border border-secondary/20 rounded-[2rem] p-6 space-y-4 group active:scale-95 transition-all">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <TrendingUp className="size-6 text-secondary" />
+                  <h4 className="text-sm font-black uppercase tracking-tight">Lifetime Referral</h4>
+                </div>
+                <Badge variant="secondary" className="bg-secondary/20 text-secondary border-none text-[9px]">1% Comm.</Badge>
+              </div>
+              <p className="text-[11px] text-slate-400 font-medium leading-relaxed uppercase">
+                Earn 1% of every diamond your referred hosts collect. Start building your legacy.
+              </p>
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-black text-slate-500 uppercase">Total Referral Earnings</span>
+                <span className="text-lg font-black text-secondary">{hostProfile?.referralEarnings || "$0.00"}</span>
+              </div>
+            </div>
+          </Link>
         </section>
       </main>
 
