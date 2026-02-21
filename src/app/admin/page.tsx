@@ -64,6 +64,7 @@ export default function AdminControlRoom() {
       setAdminMsg("");
       toast({ title: "Signal Transmitted", description: "Direct communication established." });
     } catch (e) {
+      console.error("Admin message error:", e);
       toast({ variant: "destructive", title: "Failure", description: "Node disconnection." });
     }
   };
@@ -82,8 +83,8 @@ export default function AdminControlRoom() {
           <Button variant="secondary" size="icon" className="rounded-full bg-white/5 text-white border-white/10">
             <Bell className="size-5" />
           </Button>
-          <div className="size-10 rounded-full border-2 border-cyan-400/30 flex items-center justify-center bg-slate-900">
-            <UserCircle className="size-6 text-slate-500" />
+          <div className="size-10 rounded-full border-2 border-cyan-400/30 flex items-center justify-center bg-slate-900 overflow-hidden relative">
+             <UserCircle className="size-6 text-slate-500" />
           </div>
         </div>
       </header>
