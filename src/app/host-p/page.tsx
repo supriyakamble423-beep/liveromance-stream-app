@@ -16,6 +16,7 @@ export default function HostProfileDashboard() {
   const { toast } = useToast();
   const userId = user?.uid;
 
+  // 1. Host Profile Reference
   const hostRef = useMemoFirebase(() => {
     if (!firestore || !userId) return null;
     return doc(firestore, 'hosts', userId);
@@ -23,8 +24,7 @@ export default function HostProfileDashboard() {
 
   const { data: hostProfile, isLoading } = useDoc(hostRef);
 
-  // Listen for admin messages directed to this host
-  // The 'where' filter is CRITICAL to satisfy Firestore Security Rules
+  // 2. Filtered Query: Satisfies Security Rules by filtering by hostId
   const msgQuery = useMemoFirebase(() => {
     if (!firestore || !userId) return null;
     return query(
@@ -59,24 +59,26 @@ export default function HostProfileDashboard() {
           <Button variant="ghost" size="icon" className="text-white"><Settings className="size-5" /></Button>
         </div>
         
+        {/* Admin Message Alert Section */}
         {latestAdminMsg && (
           <div className="mb-6 bg-red-500/10 border border-red-500/30 p-4 rounded-2xl animate-pulse">
             <div className="flex items-center gap-2 mb-1">
               <ShieldCheck className="size-4 text-red-500" />
-              <span className="text-[10px] font-black uppercase text-red-500 tracking-widest">Admin Message</span>
+              <span className="text-[10px] font-black uppercase text-red-500 tracking-widest">Official Alert</span>
             </div>
-            <p className="text-xs text-slate-300 font-medium">"{latestAdminMsg.content}"</p>
+            <p className="text-xs text-slate-300 font-medium italic">
+              "{latestAdminMsg.content || latestAdminMsg.message}"
+            </p>
           </div>
         )}
 
         <div className="flex items-center gap-4 mb-8">
           <div className="relative size-24 rounded-[2rem] overflow-hidden border-4 border-primary shadow-2xl bg-slate-900">
             <Image 
-              src={hostProfile?.previewImageUrl || "https://picsum.photos/seed/hostprofile/200/200"} 
+              src={hostProfile?.previewImageUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${userId}`} 
               alt="Profile" 
               fill 
               className="object-cover" 
-              data-ai-hint="portrait model"
             />
           </div>
           <div className="flex-1">
@@ -94,7 +96,7 @@ export default function HostProfileDashboard() {
             <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Earnings</p>
             <div className="flex items-center gap-2">
               <Wallet className="size-5 text-accent" />
-              <span className="text-2xl font-black">1.2k</span>
+              <span className="text-2xl font-black">{hostProfile?.earnings || "0"}</span>
             </div>
           </div>
           <div className="bg-white/5 p-5 rounded-[1.5rem] border border-white/5">
@@ -108,6 +110,7 @@ export default function HostProfileDashboard() {
       </header>
 
       <main className="p-4 space-y-6">
+        {/* Stream Type Toggles */}
         <section className="space-y-4">
           <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-500 ml-2">Stream Type</h3>
           <div className="grid grid-cols-3 gap-3">
@@ -122,7 +125,7 @@ export default function HostProfileDashboard() {
                 onClick={() => updateStreamType(type.id as any)}
                 className={cn(
                   "flex flex-col h-24 rounded-[1.5rem] gap-2 transition-all active:scale-95",
-                  hostProfile?.streamType === type.id ? "bg-primary border-none" : "bg-white/5 border-white/10 hover:bg-white/10"
+                  hostProfile?.streamType === type.id ? "bg-primary border-none shadow-[0_0_15px_rgba(139,92,246,0.3)]" : "bg-white/5 border-white/10 hover:bg-white/10"
                 )}
               >
                 <type.icon className="size-6" />
@@ -132,6 +135,7 @@ export default function HostProfileDashboard() {
           </div>
         </section>
 
+        {/* Action Controls */}
         <section className="space-y-4">
           <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-500 ml-2">Controls</h3>
           <div className="grid grid-cols-1 gap-4">
@@ -141,16 +145,18 @@ export default function HostProfileDashboard() {
                   <div className="flex items-center gap-4">
                     <div className="size-12 rounded-2xl bg-primary/20 flex items-center justify-center text-primary"><ShieldCheck className="size-7" /></div>
                     <div>
-                      <p className="font-black text-sm uppercase tracking-tight">Identity Verification</p>
+                      <p className="font-black text-sm uppercase tracking-tight text-white">Identity Verification</p>
                       <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Required to go live</p>
                     </div>
                   </div>
-                  <Badge className="bg-primary text-white text-[9px] font-black">START</Badge>
+                  <Badge className="bg-primary text-white text-[9px] font-black px-4">START</Badge>
                 </div>
               </Link>
             )}
 
-            <div className={cn(
+            <div 
+              onClick={() => hostProfile?.verified && window.location.assign(`/stream/${userId}`)}
+              className={cn(
               "p-5 rounded-[1.5rem] border transition-all flex items-center justify-between",
               hostProfile?.verified 
                 ? "bg-white/5 border-white/10 hover:bg-white/10 cursor-pointer" 
