@@ -6,13 +6,14 @@ import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import { 
   X, Eye, Heart, Gift, MessageCircle, Share2, 
-  Info, Star, Smile, Lock, Send, ShieldCheck, CameraOff
+  Info, Star, Smile, Lock, Send, ShieldCheck, CameraOff,
+  Globe, ShieldAlert, RefreshCw
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { useFirebase, useDoc, useMemoFirebase, useCollection } from "@/firebase";
-import { doc, collection, addDoc, serverTimestamp, query, orderBy, limit } from "firebase/firestore";
+import { doc, collection, addDoc, serverTimestamp, query, orderBy, limit, setDoc } from "firebase/firestore";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -23,6 +24,8 @@ export default function StreamPage() {
   const { firestore, user } = useFirebase();
   const { toast } = useToast();
   const [inputText, setInputText] = useState("");
+  const [isUpdatingPrivacy, setIsUpdatingPrivacy] = useState(false);
+  const [cameraMode, setCameraMode] = useState<"user" | "environment">("user");
   const chatEndRef = useRef<HTMLDivElement>(null);
   
   // Camera for Host
@@ -59,9 +62,15 @@ export default function StreamPage() {
     const getCameraPermission = async () => {
       if (!isHost) return;
       try {
+        // Stop previous tracks if swapping
+        if (videoRef.current?.srcObject) {
+          const prevStream = videoRef.current.srcObject as MediaStream;
+          prevStream.getTracks().forEach(t => t.stop());
+        }
+
         stream = await navigator.mediaDevices.getUserMedia({ 
           video: { 
-            facingMode: "user",
+            facingMode: cameraMode,
             width: { ideal: 1280 },
             height: { ideal: 720 }
           }, 
@@ -91,7 +100,7 @@ export default function StreamPage() {
         stream.getTracks().forEach(track => track.stop());
       }
     };
-  }, [isHost, toast]);
+  }, [isHost, cameraMode, toast]);
 
   const sendMessage = async () => {
     if (!inputText.trim() || !user || !firestore || !id) return;
@@ -109,6 +118,32 @@ export default function StreamPage() {
     }
   };
 
+  const togglePrivacy = async () => {
+    if (!hostRef || !isHost) return;
+    setIsUpdatingPrivacy(true);
+    const newType = host?.streamType === 'private' ? 'public' : 'private';
+    
+    try {
+      await setDoc(hostRef, { 
+        streamType: newType,
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+      toast({ 
+        title: `Mode: ${newType.toUpperCase()}`, 
+        description: newType === 'public' ? "Stream is now visible to everyone." : "Stream is now private." 
+      });
+    } catch (e) {
+      toast({ variant: "destructive", title: "Error", description: "Failed to update stream mode." });
+    } finally {
+      setIsUpdatingPrivacy(false);
+    }
+  };
+
+  const swapCamera = () => {
+    setCameraMode(prev => prev === "user" ? "environment" : "user");
+    toast({ title: "Camera Swapped", description: "Switching feed perspective..." });
+  };
+
   if (isLoading) {
     return (
       <div className="h-screen w-full bg-black flex items-center justify-center">
@@ -121,8 +156,8 @@ export default function StreamPage() {
     return (
       <div className="h-screen w-full bg-black flex flex-col items-center justify-center p-6 text-center space-y-4">
         <X className="size-16 text-slate-700" />
-        <h2 className="text-xl font-bold uppercase tracking-widest">Stream Not Found</h2>
-        <Button onClick={() => router.push('/global')} className="bg-primary rounded-2xl h-14 px-8 font-black uppercase">Return to Market</Button>
+        <h2 className="text-xl font-bold uppercase tracking-widest text-white">Stream Not Found</h2>
+        <Button onClick={() => router.push('/global')} className="bg-primary rounded-2xl h-14 px-8 font-black uppercase text-white">Return to Market</Button>
       </div>
     );
   }
@@ -141,7 +176,8 @@ export default function StreamPage() {
               playsInline 
               muted 
               className={cn(
-                "w-full h-full object-cover scale-x-[-1] transition-all duration-700", 
+                "w-full h-full object-cover transition-all duration-700", 
+                cameraMode === "user" && "scale-x-[-1]",
                 isPrivate && "blur-2xl opacity-50"
               )} 
             />
@@ -187,18 +223,31 @@ export default function StreamPage() {
               <span className="text-[10px] font-black text-white">{host.viewers || 0}</span>
             </div>
           </div>
-          <Button size="sm" className="ml-2 h-7 rounded-full bg-primary hover:bg-primary/90 text-[10px] font-black uppercase tracking-widest px-4">
+          <Button size="sm" className="ml-2 h-7 rounded-full bg-primary hover:bg-primary/90 text-[10px] font-black uppercase tracking-widest px-4 text-white">
             Follow
           </Button>
         </div>
-        <Button 
-          variant="secondary" 
-          size="icon" 
-          onClick={() => router.back()}
-          className="glass-effect size-10 rounded-full text-white border-none bg-white/10 hover:bg-white/20"
-        >
-          <X className="size-5" />
-        </Button>
+        
+        <div className="flex gap-2">
+          {isHost && (
+             <Button 
+                onClick={swapCamera}
+                variant="secondary" 
+                size="icon" 
+                className="glass-effect size-10 rounded-full text-white border-none bg-white/10 hover:bg-white/20"
+              >
+                <RefreshCw className="size-5" />
+              </Button>
+          )}
+          <Button 
+            variant="secondary" 
+            size="icon" 
+            onClick={() => router.back()}
+            className="glass-effect size-10 rounded-full text-white border-none bg-white/10 hover:bg-white/20"
+          >
+            <X className="size-5" />
+          </Button>
+        </div>
       </header>
 
       {/* Private Overlay for Viewers */}
@@ -208,10 +257,10 @@ export default function StreamPage() {
             <Lock className="size-12 text-primary" />
           </div>
           <div className="space-y-2">
-            <h2 className="text-3xl font-black uppercase tracking-tighter italic">Private Room</h2>
+            <h2 className="text-3xl font-black uppercase tracking-tighter italic text-white">Private Room</h2>
             <p className="text-xs text-slate-400 font-bold uppercase tracking-widest max-w-[200px] mx-auto">This host is in a private session. Send a Zap to enter.</p>
           </div>
-          <Button className="h-16 w-full max-w-[280px] rounded-2xl bg-primary text-sm font-black uppercase tracking-widest gap-2 shadow-2xl shadow-primary/40 active:scale-95 transition-all">
+          <Button className="h-16 w-full max-w-[280px] rounded-2xl bg-primary text-sm font-black uppercase tracking-widest gap-2 shadow-2xl shadow-primary/40 active:scale-95 transition-all text-white">
             Request Zap Access
           </Button>
         </div>
@@ -242,6 +291,18 @@ export default function StreamPage() {
 
         {/* Right Floating Actions */}
         <div className="absolute right-4 bottom-28 flex flex-col gap-4">
+          {isHost && (
+            <button 
+              onClick={togglePrivacy}
+              disabled={isUpdatingPrivacy}
+              className={cn(
+                "size-12 rounded-full flex items-center justify-center text-white shadow-2xl active:scale-90 transition-all border-none",
+                host.streamType === 'private' ? "bg-red-500" : "bg-green-500"
+              )}
+            >
+              {host.streamType === 'private' ? <Lock className="size-6" /> : <Globe className="size-6" />}
+            </button>
+          )}
           <button className="size-12 glass-effect rounded-full flex items-center justify-center text-white shadow-2xl active:scale-90 transition-all border-none bg-white/10">
             <Heart className="size-6 hover:fill-destructive transition-colors" />
           </button>
@@ -309,12 +370,19 @@ export default function StreamPage() {
 
       {/* Host Status Indicator */}
       {isHost && (
-        <div className="absolute top-28 left-4 z-10 animate-pulse">
-          <Badge className="bg-red-600 border-none text-[10px] font-black uppercase tracking-[0.2em] px-4 py-1.5 shadow-xl">
+        <div className="absolute top-28 left-4 z-10 flex flex-col gap-2">
+          <Badge className="bg-red-600 border-none text-[10px] font-black uppercase tracking-[0.2em] px-4 py-1.5 shadow-xl text-white">
              Broadcast Active
+          </Badge>
+          <Badge className={cn(
+            "border-none text-[8px] font-black uppercase tracking-widest px-3 py-1 shadow-lg",
+            host.streamType === 'private' ? "bg-amber-500 text-black" : "bg-cyan-500 text-white"
+          )}>
+            {host.streamType === 'private' ? "PRIVATE MODE" : "PUBLIC MODE"}
           </Badge>
         </div>
       )}
     </div>
   );
 }
+
