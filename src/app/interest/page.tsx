@@ -1,119 +1,131 @@
-
 'use client';
 
-import { BottomNav } from "@/components/BottomNav";
-import { Search, Bell, Target, Layers, Eye } from "lucide-react";
-import Image from "next/image";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { useCollection, useFirebase, useMemoFirebase } from "@/firebase";
+import { useFirebase, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, query, where } from "firebase/firestore";
-import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
+import { Globe, Zap, Users, Gift, TrendingUp, ShieldCheck } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { BottomNav } from "@/components/BottomNav";
 
-const MapHotspot = ({ top, left, avatar, isLive }: { top: string, left: string, avatar: string, isLive: boolean }) => (
-  <div className="absolute animate-pulse" style={{ top, left }}>
-    <div className="relative group">
-      <div className={cn("size-4 rounded-full shadow-[0_0_15px_rgba(137,90,246,0.6)]", isLive ? "bg-primary" : "bg-muted")} />
-      <div className="absolute -top-14 -left-6 bg-background/80 border border-primary/30 rounded-xl p-1.5 backdrop-blur-md transition-transform group-hover:scale-110">
-        <div className="relative size-10 rounded-full border-2 border-primary overflow-hidden">
-          <Image src={avatar} alt="Host" fill className="object-cover" />
-        </div>
-        {isLive && <div className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-destructive rounded-full border-2 border-background" />}
-      </div>
-    </div>
-  </div>
-);
-
-export default function MapViewPage() {
+export default function InterestAndAnalytics() {
   const { firestore } = useFirebase();
-
-  const liveQuery = useMemoFirebase(() => {
+  
+  // 1. Fetching Live Hosts for Global Map logic
+  const liveHostsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return query(collection(firestore, 'hosts'), where('isLive', '==', true));
   }, [firestore]);
-
-  const { data: hosts } = useCollection(liveQuery);
+  
+  const { data: liveHosts } = useCollection(liveHostsQuery);
 
   return (
-    <div className="relative h-screen w-full max-w-lg mx-auto bg-background overflow-hidden border-x border-border flex flex-col">
-      <header className="absolute top-0 left-0 right-0 z-30 p-4 space-y-4">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-            <Input 
-              className="bg-background/60 border-primary/20 rounded-full py-2 pl-10 pr-4 text-sm backdrop-blur-md" 
-              placeholder="Search global interest..." 
-            />
+    <div className="min-h-screen bg-[#050505] text-white pb-28 max-w-lg mx-auto border-x border-white/10">
+      {/* --- Global Live Traffic (World Map Logic) --- */}
+      <header className="p-6 bg-gradient-to-b from-primary/20 to-transparent">
+        <div className="flex items-center gap-2 mb-4">
+          <Globe className="size-5 text-primary animate-spin" />
+          <h1 className="text-xl font-black uppercase tracking-tighter">Live World Traffic</h1>
+        </div>
+        <div className="relative h-48 w-full bg-slate-900/50 rounded-[2.5rem] border border-white/5 overflow-hidden flex items-center justify-center shadow-2xl">
+          {/* Abstract Map Background */}
+          <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/world-map.png')] bg-center bg-no-repeat" />
+          
+          {/* Pulsing Location Markers */}
+          <div className="relative flex gap-8">
+            <div className="flex flex-col items-center">
+              <div className="size-3 bg-primary rounded-full animate-ping" />
+              <span className="text-[10px] font-bold mt-1 uppercase text-slate-400">Asia</span>
+            </div>
+            <div className="flex flex-col items-center">
+              <div className="size-3 bg-secondary rounded-full animate-ping delay-75" />
+              <span className="text-[10px] font-bold mt-1 uppercase text-slate-400">Americas</span>
+            </div>
+            <div className="flex flex-col items-center">
+              <div className="size-3 bg-green-500 rounded-full animate-ping delay-150" />
+              <span className="text-[10px] font-bold mt-1 uppercase text-slate-400">Europe</span>
+            </div>
           </div>
-          <Button variant="outline" size="icon" className="rounded-full size-10 bg-background/60 backdrop-blur-md border-primary/20">
-            <Bell className="size-5 text-primary" />
-          </Button>
+
+          <div className="absolute bottom-6 right-6 text-right">
+            <p className="text-3xl font-black text-primary">{liveHosts?.length || 0}</p>
+            <p className="text-[9px] font-bold text-slate-500 uppercase tracking-[0.2em]">Active Hosts</p>
+          </div>
         </div>
       </header>
 
-      <div className="flex-1 relative bg-slate-950">
-        <Image 
-          src="https://picsum.photos/seed/globalmap/1200/800" 
-          alt="World Map" 
-          fill 
-          className="object-cover opacity-40 mix-blend-lighten" 
-        />
-        {/* Synthetic distribution of hosts for visual map */}
-        {hosts?.map((h, i) => (
-          <MapHotspot 
-            key={h.id} 
-            top={`${30 + (i * 15) % 40}%`} 
-            left={`${20 + (i * 25) % 60}%`} 
-            avatar={h.previewImageUrl || "https://picsum.photos/seed/avatar/200/200"}
-            isLive={h.isLive}
-          />
-        ))}
-        
-        <div className="absolute bottom-40 right-4 flex flex-col gap-2">
-          <Button variant="secondary" size="icon" className="size-12 rounded-2xl glass-effect shadow-xl">
-            <Target className="size-6" />
-          </Button>
-          <Button variant="secondary" size="icon" className="size-12 rounded-2xl glass-effect shadow-xl">
-            <Layers className="size-6" />
-          </Button>
-        </div>
-      </div>
-
-      <div className="h-[40%] glass-effect rounded-t-[2.5rem] flex flex-col pt-4 px-6 relative z-40 border-t border-primary/20">
-        <div className="w-12 h-1 bg-muted rounded-full mx-auto mb-6 opacity-50" />
-        
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold tracking-tight font-headline">
-            Active Streams <span className="text-primary ml-1">• {hosts?.length || 0}</span>
-          </h2>
-          <Button variant="link" className="text-primary text-sm font-semibold p-0 h-auto">
-            View All
-          </Button>
-        </div>
-
-        <div className="flex-1 overflow-x-auto no-scrollbar flex items-start gap-4 pb-8">
-          {hosts?.map((host) => (
-            <div key={host.id} className="flex-shrink-0 w-72 bg-card/60 border border-primary/20 rounded-2xl overflow-hidden relative shadow-lg">
-              <div className="h-32 relative">
-                <Image src={host.previewImageUrl || ""} alt="Preview" fill className="object-cover" />
-                <div className="absolute top-3 left-3 flex gap-2">
-                  <Badge className="bg-destructive text-[10px] uppercase gap-1">Live</Badge>
-                  <Badge variant="secondary" className="bg-black/40 backdrop-blur-md text-white text-[10px] gap-1">
-                    <Eye className="size-3" /> {host.viewers || "0"}
-                  </Badge>
-                </div>
+      <main className="p-4 space-y-6">
+        {/* --- AI Optimizer Section --- */}
+        <section className="bg-white/5 border border-white/10 rounded-[2rem] p-6 shadow-inner">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className="size-10 rounded-2xl bg-primary/20 flex items-center justify-center text-primary shadow-lg shadow-primary/10">
+                <Zap className="size-6 fill-current" />
               </div>
-              <div className="p-4">
-                <h3 className="font-bold text-lg leading-tight truncate">Host_{host.id.slice(0, 4)}</h3>
-                <Button className="w-full bg-primary hover:bg-primary/90 rounded-xl font-bold mt-4">
-                  Connect Now
-                </Button>
+              <div>
+                <h2 className="text-sm font-black uppercase tracking-tight">AI Optimizer</h2>
+                <p className="text-[9px] text-slate-400 font-bold uppercase">Smart Traffic Analysis</p>
               </div>
             </div>
-          ))}
+            <Button size="sm" className="h-8 rounded-full text-[9px] font-black bg-primary px-4 shadow-lg shadow-primary/20">SCAN</Button>
+          </div>
+          
+          <div className="space-y-5">
+            <div>
+              <div className="flex justify-between text-[10px] font-black mb-2 uppercase tracking-widest">
+                <span>Peak Traffic Probability</span>
+                <span className="text-primary">88%</span>
+              </div>
+              <Progress value={88} className="h-2.5 bg-white/5" />
+            </div>
+            <div className="p-4 rounded-2xl bg-primary/5 border border-primary/10">
+              <p className="text-[11px] text-slate-300 italic leading-relaxed">
+                "AI Suggestion: Go live at <span className="text-primary font-black">9:00 PM IST</span> to reach maximum Indian and Middle-East audiences for better engagement."
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* --- Lifetime Referral & Earnings --- */}
+        <section className="grid grid-cols-1 gap-4">
+          <div className="bg-gradient-to-br from-secondary/20 to-transparent border border-white/5 rounded-[2.5rem] p-7 relative overflow-hidden group">
+            <Gift className="absolute -bottom-6 -right-6 size-28 text-white/5 rotate-12 transition-transform group-hover:scale-110" />
+            
+            <div className="flex items-center gap-2 mb-8 text-secondary">
+              <TrendingUp className="size-4" />
+              <span className="text-[10px] font-black uppercase tracking-widest">Lifetime Referral</span>
+            </div>
+
+            <div className="flex justify-between items-end relative z-10">
+              <div>
+                <p className="text-4xl font-black tracking-tighter">142</p>
+                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Total Invites</p>
+              </div>
+              <div className="text-right">
+                <p className="text-3xl font-black text-green-400">+$1,240</p>
+                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Lifetime Commission</p>
+              </div>
+            </div>
+
+            <Button variant="secondary" className="w-full mt-8 rounded-2xl font-black uppercase text-[10px] tracking-widest h-14 bg-secondary shadow-lg shadow-secondary/20 active:scale-95 transition-all">
+              Share Referral Link
+            </Button>
+          </div>
+        </section>
+
+        {/* --- Quick Analytics Grid --- */}
+        <div className="grid grid-cols-2 gap-4">
+          <div className="bg-white/5 p-6 rounded-[2.5rem] border border-white/5 shadow-xl">
+            <Users className="size-6 text-blue-400 mb-3" />
+            <p className="text-2xl font-black tracking-tighter">2.4k</p>
+            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Social Reach</p>
+          </div>
+          <div className="bg-white/5 p-6 rounded-[2.5rem] border border-white/5 shadow-xl">
+            <ShieldCheck className="size-6 text-green-400 mb-3" />
+            <p className="text-2xl font-black tracking-tighter">100%</p>
+            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Trust Score</p>
+          </div>
         </div>
-      </div>
+      </main>
 
       <BottomNav />
     </div>
