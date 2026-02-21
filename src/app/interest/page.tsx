@@ -4,6 +4,7 @@ import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 import { collection, query, where, limit, orderBy } from 'firebase/firestore';
 import { Globe, Zap, Users, TrendingUp, ShieldCheck, MapPin, Eye, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { BottomNav } from "@/components/BottomNav";
 import { cn } from "@/lib/utils";
