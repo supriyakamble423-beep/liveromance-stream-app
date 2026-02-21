@@ -6,7 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import { 
   X, Eye, Heart, Gift, MessageCircle, Share2, 
-  Info, Star, Smile, Lock, Send, ShieldCheck
+  Info, Star, Smile, Lock, Send, ShieldCheck, CameraOff
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +15,7 @@ import { useFirebase, useDoc, useMemoFirebase, useCollection } from "@/firebase"
 import { doc, collection, addDoc, serverTimestamp, query, orderBy, limit } from "firebase/firestore";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function StreamPage() {
   const { id } = useParams();
@@ -23,6 +24,11 @@ export default function StreamPage() {
   const { toast } = useToast();
   const [inputText, setInputText] = useState("");
   const chatEndRef = useRef<HTMLDivElement>(null);
+  
+  // Camera for Host
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
+  const isHost = user?.uid === id;
 
   const hostRef = useMemoFirebase(() => {
     if (!firestore || !id) return null;
@@ -45,6 +51,47 @@ export default function StreamPage() {
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // Camera initialization for Host
+  useEffect(() => {
+    let stream: MediaStream | null = null;
+    
+    const getCameraPermission = async () => {
+      if (!isHost) return;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ 
+          video: { 
+            facingMode: "user",
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          }, 
+          audio: false 
+        });
+        setHasCameraPermission(true);
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
+      } catch (error) {
+        console.error('Error accessing camera:', error);
+        setHasCameraPermission(false);
+        toast({
+          variant: 'destructive',
+          title: 'Camera Access Denied',
+          description: 'Please enable camera permissions in your browser settings to stream.',
+        });
+      }
+    };
+
+    if (isHost) {
+      getCameraPermission();
+    }
+
+    return () => {
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, [isHost, toast]);
 
   const sendMessage = async () => {
     if (!inputText.trim() || !user || !firestore || !id) return;
@@ -74,8 +121,8 @@ export default function StreamPage() {
     return (
       <div className="h-screen w-full bg-black flex flex-col items-center justify-center p-6 text-center space-y-4">
         <X className="size-16 text-slate-700" />
-        <h2 className="text-xl font-bold">Stream Not Found</h2>
-        <Button onClick={() => router.push('/global')}>Return to Market</Button>
+        <h2 className="text-xl font-bold uppercase tracking-widest">Stream Not Found</h2>
+        <Button onClick={() => router.push('/global')} className="bg-primary rounded-2xl h-14 px-8 font-black uppercase">Return to Market</Button>
       </div>
     );
   }
@@ -84,15 +131,41 @@ export default function StreamPage() {
 
   return (
     <div className="relative h-screen w-full flex flex-col overflow-hidden bg-black mx-auto max-w-lg border-x border-white/10">
-      {/* Video Background */}
-      <div className="absolute inset-0 z-0">
-        <Image 
-          src={host.previewImageUrl || "https://picsum.photos/seed/stream/800/1200"} 
-          alt="Stream" 
-          fill 
-          className={cn("object-cover opacity-90", isPrivate && "blur-xl")} 
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/80" />
+      {/* Video / Image Background */}
+      <div className="absolute inset-0 z-0 bg-black">
+        {isHost ? (
+          <>
+            <video 
+              ref={videoRef} 
+              autoPlay 
+              playsInline 
+              muted 
+              className={cn(
+                "w-full h-full object-cover scale-x-[-1] transition-all duration-700", 
+                isPrivate && "blur-2xl opacity-50"
+              )} 
+            />
+            {hasCameraPermission === false && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center space-y-4">
+                <CameraOff className="size-16 text-destructive/50" />
+                <Alert variant="destructive" className="bg-destructive/10 border-destructive/20 rounded-3xl">
+                  <AlertTitle className="font-black uppercase tracking-widest">Camera Disabled</AlertTitle>
+                  <AlertDescription className="text-xs">
+                    Please allow camera access in your browser settings to broadcast your stream.
+                  </AlertDescription>
+                </Alert>
+              </div>
+            )}
+          </>
+        ) : (
+          <Image 
+            src={host.previewImageUrl || "https://picsum.photos/seed/stream/800/1200"} 
+            alt="Stream" 
+            fill 
+            className={cn("object-cover opacity-90 transition-all duration-700", isPrivate && "blur-2xl")} 
+          />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/80" />
       </div>
 
       {/* Stream Header */}
@@ -108,13 +181,13 @@ export default function StreamPage() {
             <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-slate-900 rounded-full" />
           </div>
           <div>
-            <h3 className="text-xs font-bold leading-none text-white uppercase tracking-tight">Host_{host.id.slice(0, 4)}</h3>
+            <h3 className="text-[11px] font-black leading-none text-white uppercase tracking-tighter">Host_{host.id.slice(0, 4)}</h3>
             <div className="flex items-center gap-1 mt-1 opacity-70">
               <Eye className="size-3 text-white" />
               <span className="text-[10px] font-black text-white">{host.viewers || 0}</span>
             </div>
           </div>
-          <Button size="sm" className="ml-2 h-7 rounded-full bg-primary hover:bg-primary/90 text-[10px] font-black uppercase tracking-widest">
+          <Button size="sm" className="ml-2 h-7 rounded-full bg-primary hover:bg-primary/90 text-[10px] font-black uppercase tracking-widest px-4">
             Follow
           </Button>
         </div>
@@ -128,17 +201,17 @@ export default function StreamPage() {
         </Button>
       </header>
 
-      {/* Private Overlay */}
-      {isPrivate && (
-        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center p-8 bg-black/60 backdrop-blur-md text-center space-y-6">
-          <div className="size-24 rounded-full bg-white/5 border border-white/10 flex items-center justify-center">
+      {/* Private Overlay for Viewers */}
+      {isPrivate && !isHost && (
+        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center p-8 bg-black/40 backdrop-blur-3xl text-center space-y-6">
+          <div className="size-24 rounded-[2.5rem] bg-white/5 border border-white/10 flex items-center justify-center shadow-2xl">
             <Lock className="size-12 text-primary" />
           </div>
           <div className="space-y-2">
             <h2 className="text-3xl font-black uppercase tracking-tighter italic">Private Room</h2>
-            <p className="text-sm text-slate-400 font-medium">This host is currently in a private session. Send a Zap to request access.</p>
+            <p className="text-xs text-slate-400 font-bold uppercase tracking-widest max-w-[200px] mx-auto">This host is in a private session. Send a Zap to enter.</p>
           </div>
-          <Button className="h-16 w-full rounded-2xl bg-primary text-lg font-black uppercase tracking-widest gap-2 shadow-2xl shadow-primary/20">
+          <Button className="h-16 w-full max-w-[280px] rounded-2xl bg-primary text-sm font-black uppercase tracking-widest gap-2 shadow-2xl shadow-primary/40 active:scale-95 transition-all">
             Request Zap Access
           </Button>
         </div>
@@ -149,18 +222,18 @@ export default function StreamPage() {
         {/* Chat Messages */}
         <div className="w-full max-w-[85%] flex flex-col gap-2 overflow-y-auto max-h-[40vh] mb-4 no-scrollbar">
           <div className="bg-primary/20 border-l-4 border-primary px-3 py-2 rounded-r-2xl backdrop-blur-md">
-            <p className="text-[11px] font-black text-primary uppercase tracking-widest flex items-center gap-2">
+            <p className="text-[10px] font-black text-primary uppercase tracking-widest flex items-center gap-2">
               <ShieldCheck className="size-3" /> System: Welcome to the live feed!
             </p>
           </div>
           
           {messages?.map((m) => (
             <div key={m.id} className="px-3 py-2 rounded-2xl max-w-fit bg-black/40 backdrop-blur-md border border-white/5 transition-all animate-in slide-in-from-left-2">
-              <p className="text-sm text-white">
-                <span className="font-black mr-1.5 text-secondary text-[10px] uppercase tracking-tighter">
+              <p className="text-xs text-white">
+                <span className="font-black mr-2 text-secondary text-[10px] uppercase tracking-tighter">
                   {m.senderName}:
                 </span>
-                <span className="opacity-90 font-medium">{m.text}</span>
+                <span className="opacity-90 font-medium tracking-tight">{m.text}</span>
               </p>
             </div>
           ))}
@@ -175,21 +248,23 @@ export default function StreamPage() {
           <button className="size-12 bg-secondary/80 backdrop-blur-md rounded-full flex items-center justify-center text-white shadow-lg active:scale-90 transition-all">
             <Gift className="size-6" />
           </button>
-          <button className="flex items-center gap-2 bg-primary px-5 py-3 rounded-full text-white shadow-2xl active:scale-95 transition-all">
-            <MessageCircle className="size-5" />
-            <span className="text-[10px] font-black uppercase tracking-widest">Private Chat</span>
-          </button>
+          {!isHost && (
+            <button className="flex items-center gap-2 bg-primary px-5 py-3 rounded-full text-white shadow-2xl active:scale-95 transition-all">
+              <MessageCircle className="size-5" />
+              <span className="text-[10px] font-black uppercase tracking-widest">Private Chat</span>
+            </button>
+          )}
         </div>
 
         {/* Interaction Footer */}
-        {!isPrivate && (
+        {!isPrivate || isHost ? (
           <footer className="flex items-center gap-3 w-full">
             <div className="flex-1 flex items-center glass-effect rounded-full px-5 py-3 h-14 bg-white/10 border-white/10">
               <Input 
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
-                className="bg-transparent border-none focus-visible:ring-0 text-white placeholder-slate-400 h-full p-0 font-bold" 
+                className="bg-transparent border-none focus-visible:ring-0 text-white placeholder-slate-400 h-full p-0 font-bold text-sm" 
                 placeholder="Say something..." 
               />
               <button onClick={sendMessage} className="ml-2 text-primary hover:text-white transition-colors">
@@ -200,11 +275,11 @@ export default function StreamPage() {
               <Share2 className="size-5" />
             </button>
           </footer>
-        )}
+        ) : null}
       </div>
 
       {/* Tip Menu Overlay */}
-      {!isPrivate && (
+      {!isHost && (
         <div className="absolute top-28 right-4 z-10 w-44 animate-in slide-in-from-right-4">
           <div className="glass-effect rounded-3xl p-4 flex flex-col gap-3 shadow-2xl border-white/10 bg-black/60">
             <div className="flex items-center justify-between mb-1">
@@ -218,7 +293,7 @@ export default function StreamPage() {
                 { label: "Strip Show", cost: "1000" }
               ].map((tip) => (
                 <div key={tip.label} className="flex items-center justify-between text-[10px] hover:bg-white/5 p-2 rounded-xl transition-all cursor-pointer group">
-                  <span className="text-slate-100 font-bold">{tip.label}</span>
+                  <span className="text-slate-100 font-bold uppercase tracking-tighter">{tip.label}</span>
                   <span className="bg-primary/20 text-primary font-black px-2 py-0.5 rounded-lg group-hover:bg-primary group-hover:text-white transition-colors">
                     {tip.cost}
                   </span>
@@ -229,6 +304,15 @@ export default function StreamPage() {
               View More
             </Button>
           </div>
+        </div>
+      )}
+
+      {/* Host Status Indicator */}
+      {isHost && (
+        <div className="absolute top-28 left-4 z-10 animate-pulse">
+          <Badge className="bg-red-600 border-none text-[10px] font-black uppercase tracking-[0.2em] px-4 py-1.5 shadow-xl">
+             Broadcast Active
+          </Badge>
         </div>
       )}
     </div>
