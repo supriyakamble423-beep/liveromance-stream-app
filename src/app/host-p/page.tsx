@@ -4,7 +4,8 @@ import { useFirebase, useDoc, useMemoFirebase, useCollection } from "@/firebase"
 import { BottomNav } from "@/components/BottomNav";
 import { 
   ShieldCheck, Wallet, Settings, Radio, 
-  Star, Lock, Globe, Users, Loader2, Zap, Sparkles, Camera, Power, TrendingUp, Gift as GiftIcon, Copy
+  Star, Lock, Globe, Users, Loader2, Zap, Sparkles, Camera, Power, TrendingUp, Gift as GiftIcon, Copy,
+  ImagePlus, Video
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -129,7 +130,7 @@ export default function HostProfileDashboard() {
     <div className="min-h-screen bg-black text-white pb-24 max-w-lg mx-auto border-x border-white/10">
       <header className="p-6 pt-12 bg-gradient-to-b from-primary/15 to-transparent">
         <div className="flex items-center justify-between mb-8">
-          <h1 className="text-2xl font-black tracking-tighter uppercase italic">Host Hub</h1>
+          <h1 className="text-2xl font-black tracking-tighter uppercase italic">Profile</h1>
           <Button variant="ghost" size="icon" className="rounded-full bg-white/5 border border-white/10">
             <Settings className="size-5" />
           </Button>
@@ -191,12 +192,29 @@ export default function HostProfileDashboard() {
       </header>
 
       <main className="px-6 space-y-6">
+        {/* MEDIA UPLOAD SECTION (For Coins) */}
+        <section className="bg-white/5 p-6 rounded-[2.5rem] border border-dashed border-white/10">
+          <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4">Paid Media Gallery</h3>
+          <div className="grid grid-cols-2 gap-3">
+            <Button variant="outline" className="h-24 rounded-2xl flex flex-col gap-1 border-white/5 bg-white/5 hover:bg-white/10 group transition-all">
+              <ImagePlus className="size-6 text-primary group-hover:scale-110 transition-transform" />
+              <span className="text-[10px] font-black uppercase tracking-tight">Add Photo</span>
+              <span className="text-[9px] font-bold text-primary">Price: 10 Coins</span>
+            </Button>
+            <Button variant="outline" className="h-24 rounded-2xl flex flex-col gap-1 border-white/5 bg-white/5 hover:bg-white/10 group transition-all">
+              <Video className="size-6 text-secondary group-hover:scale-110 transition-transform" />
+              <span className="text-[10px] font-black uppercase tracking-tight">Add Video</span>
+              <span className="text-[9px] font-bold text-secondary">Price: 50 Coins</span>
+            </Button>
+          </div>
+        </section>
+
         {!hostProfile?.verified ? (
           <section className="bg-primary/20 border border-primary/30 rounded-[2.5rem] p-6 text-center space-y-4 shadow-[0_0_30px_rgba(137,92,246,0.1)]">
             <h3 className="text-xl font-black uppercase tracking-tight">Identity Required</h3>
             <p className="text-xs text-slate-400 font-medium">Verify your face to unlock global streaming privileges and start earning.</p>
             <Link href="/host-f" className="block">
-              <Button className="w-full h-14 rounded-2xl bg-primary hover:bg-primary/90 font-black uppercase tracking-widest gap-2">
+              <Button className="w-full h-14 rounded-2xl bg-primary hover:bg-primary/90 font-black uppercase tracking-widest gap-2 text-white">
                 <Camera className="size-5" /> Start 1-Sec Selfie
               </Button>
             </Link>
@@ -207,7 +225,7 @@ export default function HostProfileDashboard() {
               onClick={toggleLiveStatus}
               disabled={isTogglingLive}
               className={cn(
-                "w-full h-20 rounded-[2rem] font-black text-xl uppercase tracking-widest gap-3 shadow-2xl transition-all active:scale-95",
+                "w-full h-20 rounded-[2rem] font-black text-xl uppercase tracking-widest gap-3 shadow-2xl transition-all active:scale-95 text-white",
                 hostProfile?.isLive 
                   ? "bg-red-600 hover:bg-red-700 shadow-red-500/20" 
                   : "bg-green-500 hover:bg-green-600 shadow-green-500/20"
@@ -241,7 +259,7 @@ export default function HostProfileDashboard() {
                 variant={hostProfile?.streamType === mode.id ? 'default' : 'secondary'}
                 className={cn(
                   "h-20 flex flex-col items-center justify-center gap-2 rounded-3xl border border-white/5",
-                  hostProfile?.streamType === mode.id ? "bg-primary border-primary/50 shadow-lg shadow-primary/20" : "bg-white/5"
+                  hostProfile?.streamType === mode.id ? "bg-primary border-primary/50 shadow-lg shadow-primary/20 text-white" : "bg-white/5"
                 )}
               >
                 <mode.icon className="size-5" />
@@ -264,7 +282,7 @@ export default function HostProfileDashboard() {
             <Button 
               onClick={handleOptimization}
               disabled={isOptimizing}
-              className="w-full h-12 rounded-xl bg-primary font-black uppercase text-[10px] tracking-widest shadow-lg shadow-primary/20"
+              className="w-full h-12 rounded-xl bg-primary font-black uppercase text-[10px] tracking-widest shadow-lg shadow-primary/20 text-white"
             >
               {isOptimizing ? <Loader2 className="size-4 animate-spin mr-2" /> : <Zap className="size-4 mr-2" />}
               Generate Optimization
@@ -272,7 +290,6 @@ export default function HostProfileDashboard() {
           </div>
         </section>
 
-        {/* --- FULL REFERRAL DASHBOARD --- */}
         <section className="space-y-4 pb-10">
           <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-500 ml-2">Network Commission Dashboard</h3>
           <div className="bg-gradient-to-br from-secondary/10 to-transparent border border-secondary/20 rounded-[2.5rem] p-6 space-y-6">
@@ -305,7 +322,7 @@ export default function HostProfileDashboard() {
                 <div className="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 flex items-center h-12">
                    <span className="text-[10px] font-mono text-secondary truncate">stream.ai/ref/{userId?.slice(0, 8)}</span>
                 </div>
-                <Button onClick={copyReferralLink} size="icon" className="size-12 rounded-xl bg-secondary hover:bg-secondary/90 shrink-0">
+                <Button onClick={copyReferralLink} size="icon" className="size-12 rounded-xl bg-secondary hover:bg-secondary/90 shrink-0 text-white">
                   <Copy className="size-5" />
                 </Button>
               </div>

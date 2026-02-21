@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useEffect, useRef } from "react";
@@ -55,7 +54,7 @@ export default function StreamPage() {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Camera initialization for Host
+  // Improved Camera initialization for Host
   useEffect(() => {
     let stream: MediaStream | null = null;
     
@@ -74,11 +73,18 @@ export default function StreamPage() {
             width: { ideal: 1280 },
             height: { ideal: 720 }
           }, 
-          audio: false 
+          audio: true // Enabled audio for streaming
         });
+        
         setHasCameraPermission(true);
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
+          // Force play to handle browser autoplay restrictions
+          try {
+            await videoRef.current.play();
+          } catch (playErr) {
+            console.warn("Autoplay was blocked or failed", playErr);
+          }
         }
       } catch (error) {
         console.error('Error accessing camera:', error);
@@ -174,7 +180,7 @@ export default function StreamPage() {
               ref={videoRef} 
               autoPlay 
               playsInline 
-              muted 
+              muted // Keep muted for host local preview to avoid feedback loop
               className={cn(
                 "w-full h-full object-cover transition-all duration-700", 
                 cameraMode === "user" && "scale-x-[-1]",
@@ -185,8 +191,8 @@ export default function StreamPage() {
               <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center space-y-4">
                 <CameraOff className="size-16 text-destructive/50" />
                 <Alert variant="destructive" className="bg-destructive/10 border-destructive/20 rounded-3xl">
-                  <AlertTitle className="font-black uppercase tracking-widest">Camera Disabled</AlertTitle>
-                  <AlertDescription className="text-xs">
+                  <AlertTitle className="font-black uppercase tracking-widest text-white">Camera Disabled</AlertTitle>
+                  <AlertDescription className="text-xs text-white">
                     Please allow camera access in your browser settings to broadcast your stream.
                   </AlertDescription>
                 </Alert>
@@ -355,7 +361,7 @@ export default function StreamPage() {
               ].map((tip) => (
                 <div key={tip.label} className="flex items-center justify-between text-[10px] hover:bg-white/5 p-2 rounded-xl transition-all cursor-pointer group">
                   <span className="text-slate-100 font-bold uppercase tracking-tighter">{tip.label}</span>
-                  <span className="bg-primary/20 text-primary font-black px-2 py-0.5 rounded-lg group-hover:bg-primary group-hover:text-white transition-colors">
+                  <span className="bg-primary/20 text-primary font-black px-2 py-0.5 rounded-lg group-hover:bg-primary group-hover:text-white transition-colors text-white">
                     {tip.cost}
                   </span>
                 </div>
@@ -385,4 +391,3 @@ export default function StreamPage() {
     </div>
   );
 }
-
