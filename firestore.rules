@@ -48,6 +48,7 @@ service cloud.firestore {
       allow get, list: if true;
       allow create: if isOwner(hostId) && request.resource.data.userId == request.auth.uid;
       allow update: if isExistingOwner(hostId);
+      allow set: if isOwner(hostId);
       allow delete: if isExistingOwner(hostId) || isAdmin();
     }
 
@@ -104,7 +105,8 @@ service cloud.firestore {
 
     match /adminMessages/{messageId} {
       allow create: if isSignedIn();
-      allow get, list: if isSignedIn() && (isAdmin() || (resource != null && resource.data.hostId == request.auth.uid) || (request.query.filters.hostId == request.auth.uid));
+      allow get: if isSignedIn() && (isAdmin() || resource.data.hostId == request.auth.uid);
+      allow list: if isSignedIn() && (isAdmin() || request.query.filters.hostId == request.auth.uid);
       allow update, delete: if isAdmin();
     }
   }

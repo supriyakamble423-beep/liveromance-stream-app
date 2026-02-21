@@ -5,35 +5,37 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
 /**
- * An invisible component that listens for globally emitted 'permission-error' events.
- * It throws any received error to be caught by Next.js's global-error.tsx.
+ * FirebaseErrorListener
+ * Ek invisible component jo globally 'permission-error' events ko sunta hai.
+ * Jab bhi Firestore permission deny karta hai, ye component error throw karta hai
+ * taaki Next.js ka Error Boundary (global-error.tsx) usey handle kar sake.
  */
 export function FirebaseErrorListener() {
-  // Use the specific error type for the state for type safety.
+  // FirestorePermissionError ko state mein save karne ke liye
   const [error, setError] = useState<FirestorePermissionError | null>(null);
 
   useEffect(() => {
-    // The callback now expects a strongly-typed error, matching the event payload.
+    // Ye function tab chalega jab errorEmitter koi error bhejega
     const handleError = (error: FirestorePermissionError) => {
-      // Set error in state to trigger a re-render.
+      console.error("FirebaseErrorListener caught an error:", error.message);
+      // State update hote hi component re-render hoga aur niche error throw hoga
       setError(error);
     };
 
-    // The typed emitter will enforce that the callback for 'permission-error'
-    // matches the expected payload type (FirestorePermissionError).
+    // Event listener ko subscribe karein
     errorEmitter.on('permission-error', handleError);
 
-    // Unsubscribe on unmount to prevent memory leaks.
+    // Cleanup: Jab component unmount ho, toh listener hata dein
     return () => {
       errorEmitter.off('permission-error', handleError);
     };
   }, []);
 
-  // On re-render, if an error exists in state, throw it.
+  // Agar state mein error hai, toh Next.js ko batao (Error Boundary trigger karo)
   if (error) {
     throw error;
   }
 
-  // This component renders nothing.
+  // Ye component UI mein kuch nahi dikhata
   return null;
 }
