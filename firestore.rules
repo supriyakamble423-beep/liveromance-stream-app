@@ -37,6 +37,7 @@ service cloud.firestore {
     }
 
     match /hosts/{hostId} {
+      // Allow everyone to read the list of hosts to support the global map and discovery
       allow get, list: if true;
       allow create: if isOwner(hostId);
       allow update: if isOwner(hostId);

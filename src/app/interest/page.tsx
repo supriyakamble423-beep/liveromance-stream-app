@@ -1,8 +1,8 @@
 'use client';
 
-import { useCollection, useFirebase, useMemoFirebase } from "@/firebase";
-import { collection, query, where } from "firebase/firestore";
-import { Globe, Zap, Users, Gift, TrendingUp, ShieldCheck, MapPin } from "lucide-react";
+import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
+import { collection, query, where, limit } from 'firebase/firestore';
+import { Globe, Zap, Users, Gift, TrendingUp, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { BottomNav } from "@/components/BottomNav";
@@ -14,7 +14,11 @@ export default function InterestAndAnalytics() {
   // Fetching Live Hosts for Global Map logic
   const liveHostsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    return query(collection(firestore, 'hosts'), where('<=', 'isLive', true));
+    return query(
+      collection(firestore, 'hosts'), 
+      where('isLive', '==', true),
+      limit(50)
+    );
   }, [firestore]);
   
   const { data: liveHosts } = useCollection(liveHostsQuery);
@@ -47,7 +51,6 @@ export default function InterestAndAnalytics() {
             {/* Real Map Layer with Countries/Cities */}
             <div 
               className="absolute inset-0 opacity-40 bg-[url('https://picsum.photos/seed/worldmap3d/1600/1000')] bg-cover bg-center grayscale mix-blend-screen"
-              data-ai-hint="world map"
             />
             
             {/* Scanline Effect */}
@@ -91,7 +94,7 @@ export default function InterestAndAnalytics() {
           <div className="absolute bottom-4 right-10 z-20 bg-black/60 backdrop-blur-2xl p-6 rounded-[2.5rem] border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] transform translate-y-4">
             <div className="flex items-center gap-4">
               <div className="text-right">
-                <p className="text-4xl font-black text-primary tracking-tighter leading-none">{liveHosts?.length || 12}</p>
+                <p className="text-4xl font-black text-primary tracking-tighter leading-none">{liveHosts?.length || 0}</p>
                 <p className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] mt-2">Active Nodes</p>
               </div>
               <div className="h-10 w-px bg-white/10" />
@@ -184,10 +187,25 @@ export default function InterestAndAnalytics() {
   );
 }
 
-function Badge({ children, className }: { children: React.ReactNode, className?: string }) {
+function Gift(props: any) {
   return (
-    <div className={cn("px-2.5 py-1 rounded-full border text-[10px] font-bold", className)}>
-      {children}
-    </div>
+    <svg
+      {...props}
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <polyline points="20 12 20 22 4 22 4 12" />
+      <rect width="20" height="5" x="2" y="7" />
+      <line x1="12" x2="12" y1="22" y2="7" />
+      <path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z" />
+      <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z" />
+    </svg>
   );
 }
