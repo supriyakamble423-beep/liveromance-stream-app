@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useFirebase, useDoc, useMemoFirebase, useCollection } from "@/firebase";
@@ -210,6 +211,14 @@ export default function HostProfileDashboard() {
               {isTogglingLive ? <Loader2 className="size-6 animate-spin" /> : <Power className="size-7" />}
               {hostProfile?.isLive ? "End Stream" : "Start Live Stream"}
             </Button>
+            
+            {hostProfile?.isLive && (
+              <Link href={`/stream/${userId}`} className="block">
+                <Button variant="outline" className="w-full h-14 rounded-2xl border-primary text-primary font-black uppercase tracking-widest gap-2">
+                  <Radio className="size-5" /> View My Stream
+                </Button>
+              </Link>
+            )}
           </section>
         )}
 
