@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
@@ -6,6 +7,7 @@ import { Globe, Zap, Users, Gift as GiftIcon, MapPin, TrendingUp, ShieldCheck, L
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { BottomNav } from "@/components/BottomNav";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import Link from "next/link";
@@ -41,7 +43,7 @@ export default function InterestAndAnalytics() {
             <div className="size-2 bg-red-500 rounded-full animate-pulse" />
             <h1 className="text-xs font-black uppercase tracking-[0.3em] text-slate-400">Global Command Center</h1>
           </div>
-          <Badge text="Live Satellite" color="bg-primary/20 text-primary" />
+          <Badge variant="secondary" className="bg-primary/20 text-primary border-none text-[8px] font-black uppercase tracking-widest">Live Satellite</Badge>
         </div>
 
         {/* 3D Tilted Map Container */}
@@ -83,7 +85,7 @@ export default function InterestAndAnalytics() {
             <h2 className="text-xs font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
               <MapPin className="size-4 text-primary" /> Global Nodes Explorer
             </h2>
-            <Badge text="By Location" color="bg-white/5 border border-white/10" />
+            <Badge variant="outline" className="text-[8px] font-black uppercase border-white/10">By Location</Badge>
           </div>
 
           <div className="grid grid-cols-1 gap-3">
@@ -110,7 +112,7 @@ export default function InterestAndAnalytics() {
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <h3 className="text-xs font-black uppercase tracking-tight">Host_{host.id.slice(0, 4)}</h3>
+                        <h3 className="text-xs font-black uppercase tracking-tight">{host.username || `Host_${host.id.slice(0, 4)}`}</h3>
                         <span className="size-1.5 rounded-full bg-green-500 animate-pulse" />
                       </div>
                       <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest flex items-center gap-1 mt-1">
@@ -178,15 +180,5 @@ export default function InterestAndAnalytics() {
 
       <BottomNav />
     </div>
-  );
-}
-
-// --- REUSABLE COMPONENTS ---
-
-function Badge({ text, color }: { text: string; color: string }) {
-  return (
-    <span className={cn("px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest", color)}>
-      {text}
-    </span>
   );
 }

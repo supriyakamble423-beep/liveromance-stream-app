@@ -3,6 +3,7 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // Helper functions
     function isSignedIn() {
       return request.auth != null;
     }
@@ -19,13 +20,15 @@ service cloud.firestore {
       return isSignedIn() && exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
     }
 
+    // Trigger deployment comment: Updated permissions for global discovery
+    
     match /roles_admin/{userId} {
       allow get: if isOwner(userId);
       allow list, create, update, delete: if false;
     }
 
     match /users/{userId} {
-      allow get, list: if isSignedIn();
+      allow read: if true;
       allow create: if isOwner(userId) && request.resource.data.id == userId;
       allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
       allow delete: if isExistingOwner(userId);
@@ -38,7 +41,7 @@ service cloud.firestore {
     }
 
     match /hosts/{hostId} {
-      allow get, list: if true;
+      allow read: if true;
       // Allow any signed in user to seed mock hosts for development simulation
       allow create: if isSignedIn();
       allow update: if isOwner(hostId) || (hostId.startsWith('fake_') && isSignedIn());
@@ -46,13 +49,13 @@ service cloud.firestore {
     }
 
     match /streams/{streamId} {
-      allow get, list: if true;
+      allow read: if true;
       allow create: if isSignedIn();
       allow update: if (resource != null && (resource.data.hostId == request.auth.uid || isAdmin())) || (streamId.startsWith('fake_') && isSignedIn());
       allow delete: if resource != null && (resource.data.hostId == request.auth.uid || isAdmin());
 
       match /messages/{messageId} {
-        allow get, list: if true;
+        allow read: if true;
         allow create: if isSignedIn();
         allow update, delete: if isAdmin(); 
       }
@@ -72,7 +75,7 @@ service cloud.firestore {
     }
 
     match /categories/{categoryId} {
-      allow get, list: if true;
+      allow read: if true;
       allow create, update, delete: if isAdmin();
     }
   }
