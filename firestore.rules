@@ -104,8 +104,7 @@ service cloud.firestore {
 
     match /adminMessages/{messageId} {
       allow create: if isSignedIn();
-      allow get: if isSignedIn() && (resource.data.hostId == request.auth.uid || isAdmin());
-      allow list: if isSignedIn() && (isAdmin() || request.query.filters.hostId == request.auth.uid);
+      allow get, list: if isSignedIn() && (isAdmin() || (resource != null && resource.data.hostId == request.auth.uid) || (request.query.filters.hostId == request.auth.uid));
       allow update, delete: if isAdmin();
     }
   }
