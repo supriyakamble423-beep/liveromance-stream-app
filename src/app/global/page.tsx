@@ -4,7 +4,7 @@ import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 import { collection, addDoc, serverTimestamp, query, where, limit } from 'firebase/firestore';
 import { Header } from "@/components/Header";
 import { BottomNav } from "@/components/BottomNav";
-import { MessageCircle, Zap, Users, ShieldCheck, Lock, TrendingUp } from "lucide-react";
+import { MessageCircle, Zap, Users, ShieldCheck, Lock, TrendingUp, Sparkles, ChevronRight } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -54,6 +54,25 @@ export default function GlobalMarketplace() {
       <Header />
       
       <main className="px-4 pt-6 space-y-6">
+        {/* --- Demo/Showcase Banner --- */}
+        <Link href="/demo">
+          <section className="relative overflow-hidden group bg-slate-900 border border-white/10 rounded-[2.5rem] p-6 transition-all hover:bg-slate-800">
+            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:rotate-12 transition-transform">
+              <Sparkles className="size-24 text-primary" />
+            </div>
+            <div className="relative z-10 flex items-center justify-between">
+              <div className="space-y-1">
+                <Badge className="bg-primary text-white border-none text-[8px] font-black uppercase tracking-widest px-2 mb-2">Developed Features</Badge>
+                <h2 className="text-xl font-black font-headline text-white uppercase italic tracking-tighter">System Showcase</h2>
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">See what was built for you</p>
+              </div>
+              <div className="size-10 rounded-full bg-primary/20 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-colors">
+                <ChevronRight className="size-6" />
+              </div>
+            </div>
+          </section>
+        </Link>
+
         {/* Marketplace Stats Banner */}
         <section className="bg-primary/5 border border-primary/10 rounded-[2rem] p-5 flex items-center justify-between">
           <div className="space-y-1">
