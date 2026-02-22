@@ -1,4 +1,3 @@
-
 'use client';
 
 import { BottomNav } from "@/components/BottomNav";
@@ -15,6 +14,7 @@ import { cn } from "@/lib/utils";
 export default function TrendsPage() {
   const { firestore } = useFirebase();
 
+  // Top Rated Live Hosts
   const topRatedQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return query(
@@ -25,6 +25,7 @@ export default function TrendsPage() {
     );
   }, [firestore]);
 
+  // Newly Registered Live Hosts
   const newestLiveQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return query(
@@ -70,14 +71,14 @@ export default function TrendsPage() {
           
           <div className="space-y-3">
             {loadingTop ? (
-              [1, 2, 3].map(i => <div key={i} className="h-24 bg-muted/30 animate-pulse rounded-[2rem]" />)
-            ) : topHosts?.map((host) => (
+              [1, 2, 3].map(i => <div key={i} className="h-24 bg-muted/30 animate-pulse rounded-[2rem] border border-border" />)
+            ) : topHosts && topHosts.length > 0 ? topHosts.map((host) => (
               <Link key={host.id} href={`/stream/${host.id}`}>
                 <div className="flex items-center gap-4 bg-card p-4 rounded-[2rem] border border-border group transition-all hover:shadow-xl active:scale-95 mb-3">
                   <div className="relative size-20 rounded-[1.5rem] overflow-hidden flex-shrink-0 border-2 border-primary/20">
                     <Image 
                       src={host.previewImageUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${host.id}`} 
-                      alt={host.id} 
+                      alt={host.username || host.id} 
                       fill 
                       className="object-cover group-hover:scale-110 transition-transform duration-500" 
                     />
@@ -107,7 +108,9 @@ export default function TrendsPage() {
                   </div>
                 </div>
               </Link>
-            ))}
+            )) : (
+              <p className="text-center py-10 text-[10px] font-black uppercase text-slate-500">No top rated hosts currently live</p>
+            )}
           </div>
         </section>
 
@@ -121,14 +124,14 @@ export default function TrendsPage() {
 
           <div className="space-y-3">
             {loadingNew ? (
-              [1, 2].map(i => <div key={i} className="h-24 bg-muted/30 animate-pulse rounded-[2rem]" />)
-            ) : newHosts?.map((host) => (
+              [1, 2].map(i => <div key={i} className="h-24 bg-muted/30 animate-pulse rounded-[2rem] border border-border" />)
+            ) : newHosts && newHosts.length > 0 ? newHosts.map((host) => (
               <Link key={host.id} href={`/stream/${host.id}`}>
                 <div className="flex items-center gap-4 bg-white/5 p-4 rounded-[2rem] border border-white/5 group transition-all hover:bg-white/10 active:scale-95 mb-3">
                   <div className="relative size-16 rounded-[1.2rem] overflow-hidden flex-shrink-0 border border-white/10">
                     <Image 
                       src={host.previewImageUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${host.id}`} 
-                      alt={host.id} 
+                      alt={host.username || host.id} 
                       fill 
                       className="object-cover" 
                     />
@@ -139,7 +142,7 @@ export default function TrendsPage() {
                     </h3>
                     <div className="flex items-center gap-3">
                        <span className="text-[9px] text-slate-500 font-bold uppercase tracking-widest flex items-center gap-1">
-                        Joined Just Now
+                        Joined Recently
                       </span>
                     </div>
                   </div>
@@ -148,7 +151,9 @@ export default function TrendsPage() {
                   </div>
                 </div>
               </Link>
-            ))}
+            )) : (
+              <p className="text-center py-10 text-[10px] font-black uppercase text-slate-500">No new hosts currently live</p>
+            )}
           </div>
         </section>
 
@@ -158,10 +163,10 @@ export default function TrendsPage() {
           </div>
           <h3 className="text-xl font-black uppercase tracking-tight mb-2 italic">Rising Market</h3>
           <p className="text-xs text-slate-400 font-medium mb-5 uppercase leading-relaxed tracking-tight">
-            Our AI detected a 40% surge in global traffic. <br/>Launch your signal now to catch the wave.
+            Our AI detected a surge in global traffic. <br/>Launch your signal now to catch the wave.
           </p>
           <Link href="/host-p">
-            <Button className="bg-white text-black font-black uppercase tracking-widest text-[10px] px-8 h-12 rounded-xl shadow-xl hover:scale-105 transition-transform">
+            <Button className="bg-white text-black font-black uppercase tracking-widest text-[10px] px-8 h-12 rounded-xl shadow-xl hover:scale-105 transition-transform border-none">
               Boost My Rank
             </Button>
           </Link>
