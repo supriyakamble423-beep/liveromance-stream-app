@@ -1,12 +1,11 @@
-
 'use client';
 
 import { useFirebase, useDoc, useMemoFirebase, useCollection } from "@/firebase";
 import { BottomNav } from "@/components/BottomNav";
 import { 
   ShieldCheck, Wallet, Settings, Radio, 
-  Star, Lock, Globe, Users, Loader2, Zap, Sparkles, Camera, Power, TrendingUp, Gift as GiftIcon, Copy,
-  ImagePlus, Video, ChevronRight, Share2
+  Star, Lock, Globe, Users, Loader2, Zap, Sparkles, Camera, Power, TrendingUp,
+  ImagePlus, Video, ChevronRight, Share2, ShieldAlert, AlertTriangle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -54,7 +53,10 @@ export default function HostProfileDashboard() {
 
     try {
       await setDoc(hostRef, { streamType: type, updatedAt: serverTimestamp() }, { merge: true });
-      toast({ title: "Settings Updated", description: `Mode: ${type.toUpperCase()}` });
+      toast({ 
+        title: "Mode Updated", 
+        description: type === 'public' ? "SFW Mode: AI auto-cuts nudity." : "Adult Mode: Paid access active." 
+      });
     } catch (err) {
       toast({ variant: 'destructive', title: 'Error', description: 'Update failed.' });
     }
@@ -70,10 +72,14 @@ export default function HostProfileDashboard() {
     const newStatus = !hostProfile?.isLive;
     
     try {
-      await setDoc(hostRef, { isLive: newStatus, updatedAt: serverTimestamp() }, { merge: true });
+      await setDoc(hostRef, { 
+        isLive: newStatus, 
+        updatedAt: serverTimestamp(),
+        streamType: hostProfile.streamType || 'public' 
+      }, { merge: true });
       toast({ 
         title: newStatus ? "🚀 BROADCAST ACTIVE" : "STREAM OFFLINE", 
-        description: newStatus ? "You are now visible in the Global Marketplace." : "Broadcasting terminated." 
+        description: newStatus ? `Mode: ${hostProfile.streamType?.toUpperCase()}` : "Broadcasting terminated." 
       });
     } catch (err) {
       toast({ variant: 'destructive', title: 'Error', description: 'Status toggle failed.' });
@@ -175,7 +181,13 @@ export default function HostProfileDashboard() {
       </header>
 
       <main className="px-6 space-y-6">
-        {/* Referral System Highlight (Viral Engine) */}
+        {hostProfile?.streamType === 'public' && hostProfile?.isLive && (
+          <div className="p-4 bg-red-500/20 border border-red-500/30 rounded-2xl flex items-center gap-3">
+             <ShieldAlert className="size-5 text-red-500 animate-pulse" />
+             <p className="text-[10px] font-black text-red-500 uppercase leading-tight">AI Active Monitoring: Public streams must remain SFW. Nudity will trigger auto-cut.</p>
+          </div>
+        )}
+
         <section className="bg-gradient-to-br from-primary/10 to-secondary/10 border border-primary/20 rounded-[2.5rem] p-6 flex items-center justify-between">
           <div className="space-y-1">
              <h3 className="text-sm font-black uppercase tracking-tight italic">Viral Engine</h3>
@@ -224,6 +236,35 @@ export default function HostProfileDashboard() {
           </section>
         )}
 
+        <section className="space-y-4">
+          <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-500 ml-2">Privacy & Content Mode</h3>
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              { id: 'public', label: 'Public (SFW)', icon: Globe, color: 'text-green-500' },
+              { id: 'private', label: 'Adult (Paid)', icon: Lock, color: 'text-primary' },
+              { id: 'invite-only', label: 'Invite', icon: Star, color: 'text-secondary' }
+            ].map((mode) => (
+              <Button
+                key={mode.id}
+                onClick={() => updateStreamType(mode.id as any)}
+                variant={hostProfile?.streamType === mode.id ? 'default' : 'secondary'}
+                className={cn(
+                  "h-24 flex flex-col items-center justify-center gap-2 rounded-3xl border border-white/5 transition-all",
+                  hostProfile?.streamType === mode.id ? "bg-primary border-primary/50 shadow-xl shadow-primary/20 text-white" : "bg-white/5"
+                )}
+              >
+                <mode.icon className={cn("size-6", hostProfile?.streamType !== mode.id && mode.color)} />
+                <span className="text-[10px] font-black uppercase tracking-widest text-center px-1">{mode.label}</span>
+              </Button>
+            ))}
+          </div>
+          {hostProfile?.streamType === 'private' && (
+            <p className="text-[9px] text-center font-bold text-slate-500 uppercase tracking-widest">
+              Private sessions cost <span className="text-primary">50 Coins</span> for viewers.
+            </p>
+          )}
+        </section>
+
         {/* MEDIA UPLOAD SECTION (For Coins) */}
         <section className="bg-white/5 p-6 rounded-[2.5rem] border border-dashed border-white/10">
           <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4">Paid Media Marketplace</h3>
@@ -238,30 +279,6 @@ export default function HostProfileDashboard() {
               <span className="text-[10px] font-black uppercase tracking-tight">Add Video</span>
               <span className="text-[9px] font-black text-secondary uppercase">Price: 50 Coins</span>
             </Button>
-          </div>
-        </section>
-
-        <section className="space-y-4">
-          <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-500 ml-2">Privacy Control</h3>
-          <div className="grid grid-cols-3 gap-3">
-            {[
-              { id: 'public', label: 'Public', icon: Globe },
-              { id: 'private', label: 'Private', icon: Lock },
-              { id: 'invite-only', label: 'Invite', icon: Star }
-            ].map((mode) => (
-              <Button
-                key={mode.id}
-                onClick={() => updateStreamType(mode.id as any)}
-                variant={hostProfile?.streamType === mode.id ? 'default' : 'secondary'}
-                className={cn(
-                  "h-24 flex flex-col items-center justify-center gap-2 rounded-3xl border border-white/5 transition-all",
-                  hostProfile?.streamType === mode.id ? "bg-primary border-primary/50 shadow-xl shadow-primary/20 text-white" : "bg-white/5"
-                )}
-              >
-                <mode.icon className="size-6" />
-                <span className="text-[10px] font-black uppercase tracking-widest">{mode.label}</span>
-              </Button>
-            ))}
           </div>
         </section>
 

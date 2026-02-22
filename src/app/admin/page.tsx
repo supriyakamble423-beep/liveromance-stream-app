@@ -2,14 +2,14 @@
 
 import { useState, useEffect } from "react";
 import { 
-  Bell, Monitor, MessageSquare, ShieldAlert, Send, Eye, ShieldCheck, UserCircle, Download, Wifi, Activity, Zap
+  Bell, Monitor, MessageSquare, ShieldAlert, Send, Eye, ShieldCheck, UserCircle, Download, Wifi, Activity, Zap, Trash2, PowerOff, Ban
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { adminAIErrorReports, type AdminAIErrorReportsOutput } from "@/ai/flows/admin-ai-error-reports";
 import { useFirebase, useCollection, useMemoFirebase } from "@/firebase";
-import { collection, addDoc, serverTimestamp, query, limit, orderBy } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp, query, limit, orderBy, doc, setDoc, where } from "firebase/firestore";
 import { cn } from "@/lib/utils";
 import { BottomNav } from "@/components/BottomNav";
 import { useToast } from "@/hooks/use-toast";
@@ -22,21 +22,23 @@ export default function AdminControlRoom() {
   const { firestore } = useFirebase();
   const { toast } = useToast();
 
-  const liveHostsQuery = useMemoFirebase(() => {
+  const activeStreamsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    return query(collection(firestore, 'hosts'), orderBy('updatedAt', 'desc'), limit(1));
+    return query(collection(firestore, 'hosts'), where('isLive', '==', true), orderBy('updatedAt', 'desc'));
   }, [firestore]);
 
-  const { data: hosts } = useCollection(liveHostsQuery);
-  const activeHost = hosts?.[0];
+  const { data: activeStreams } = useCollection(activeStreamsQuery);
+  const [selectedStreamId, setSelectedStreamId] = useState<string | null>(null);
+  
+  const activeHost = activeStreams?.find(h => h.id === selectedStreamId) || activeStreams?.[0];
 
   useEffect(() => {
     async function fetchReports() {
       setIsLoading(true);
       try {
         const res = await adminAIErrorReports({
-          systemLogs: "Global success rate: 99.8%. Nodes scaling in US-EAST-1.",
-          hostVerificationIssues: ["User #442: High shadow count during capture"]
+          systemLogs: "Global success rate: 99.8%. AI scanning 14 active public nodes.",
+          hostVerificationIssues: ["Node #882: NSFW scan pending validation"]
         });
         setReports(res.autoReports);
       } catch (e) {
@@ -47,6 +49,28 @@ export default function AdminControlRoom() {
     }
     fetchReports();
   }, []);
+
+  const terminateStream = async (hostId: string) => {
+    if (!firestore) return;
+    try {
+      await setDoc(doc(firestore, 'hosts', hostId), { 
+        isLive: false, 
+        adminTermination: true,
+        terminatedAt: serverTimestamp() 
+      }, { merge: true });
+      
+      await addDoc(collection(firestore, 'adminMessages'), {
+        hostId,
+        content: "Your stream was terminated by System Overseer due to a safety violation.",
+        timestamp: serverTimestamp(),
+        sender: 'Admin-GodMode'
+      });
+      
+      toast({ title: "Stream Cut", description: "Node has been forcefully disconnected." });
+    } catch (e) {
+      toast({ variant: "destructive", title: "Failure", description: "Override failed." });
+    }
+  };
 
   const sendAdminMessage = async () => {
     if (!adminMsg.trim() || !activeHost) {
@@ -64,7 +88,6 @@ export default function AdminControlRoom() {
       setAdminMsg("");
       toast({ title: "Signal Transmitted", description: "Direct communication established." });
     } catch (e) {
-      console.error("Admin message error:", e);
       toast({ variant: "destructive", title: "Failure", description: "Node disconnection." });
     }
   };
@@ -80,104 +103,79 @@ export default function AdminControlRoom() {
           <h1 className="text-xl font-black tracking-tight font-headline">SYSTEM OVERSEER</h1>
         </div>
         <div className="flex items-center gap-3">
-          <Button variant="secondary" size="icon" className="rounded-full bg-white/5 text-white border-white/10">
-            <Bell className="size-5" />
-          </Button>
-          <div className="size-10 rounded-full border-2 border-cyan-400/30 flex items-center justify-center bg-slate-900 overflow-hidden relative">
-             <UserCircle className="size-6 text-slate-500" />
-          </div>
+          <Badge className="bg-red-500/20 text-red-500 border-none text-[8px] font-black uppercase">Admin Mode</Badge>
         </div>
       </header>
 
       <main className="flex-1 overflow-y-auto px-4 space-y-6 pb-24 no-scrollbar">
-        <section className="grid grid-cols-2 gap-3 mt-6">
-          <div className="bg-white/5 p-4 rounded-3xl border border-white/5">
-            <div className="flex justify-between items-start mb-2">
-              <p className="text-[10px] font-black uppercase text-slate-500">Success Rate</p>
-              <Activity className="size-3 text-green-500" />
-            </div>
-            <p className="text-2xl font-black">99.8%</p>
-            <p className="text-[8px] text-green-500 font-bold uppercase mt-1">+0.2% Optimal</p>
-          </div>
-          <div className="bg-white/5 p-4 rounded-3xl border border-white/5">
-            <div className="flex justify-between items-start mb-2">
-              <p className="text-[10px] font-black uppercase text-slate-500">Total Zaps</p>
-              <Zap className="size-3 text-primary" />
-            </div>
-            <p className="text-2xl font-black">1.5M</p>
-            <p className="text-[8px] text-primary font-bold uppercase mt-1">Global Revenue Active</p>
-          </div>
-        </section>
-
-        <section className="space-y-4">
+        <section className="space-y-4 pt-6">
           <div className="flex items-center justify-between">
             <h2 className="text-xs font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
-              <Monitor className="size-4 text-cyan-400" /> Satellite Feed
+              <Monitor className="size-4 text-cyan-400" /> Surveillance Grid
             </h2>
-            <Badge className="bg-red-500/20 text-red-500 border-none text-[8px] font-black uppercase tracking-widest">Live Surveillance</Badge>
+            <Badge variant="outline" className="text-[8px] uppercase">{activeStreams?.length || 0} Nodes Active</Badge>
           </div>
 
-          <div className="relative aspect-video rounded-[2rem] bg-black overflow-hidden border border-white/10 group shadow-2xl">
-            {activeHost ? (
-              <>
-                <Image 
-                  src={activeHost.previewImageUrl || "https://picsum.photos/seed/admin/800/450"} 
-                  alt="Monitor" 
-                  fill
-                  className="object-cover opacity-60 group-hover:opacity-100 transition-opacity"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent" />
-                <div className="absolute top-4 left-4 flex gap-2">
-                  <Badge className="bg-red-600 text-[10px] font-black uppercase shadow-lg">TARGET_{activeHost.id.slice(0,4)}</Badge>
-                  <Badge className="bg-black/60 backdrop-blur-md text-[10px] uppercase border border-white/10">{activeHost.streamType || 'PUBLIC'}</Badge>
-                </div>
-                <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between">
-                  <span className="text-[10px] font-mono text-cyan-400 flex items-center gap-1 bg-black/50 px-3 py-1.5 rounded-full backdrop-blur-md">
-                    <Eye className="size-3" /> {activeHost.viewers || 0} viewers
-                  </span>
-                </div>
-              </>
-            ) : (
-              <div className="flex flex-col items-center justify-center h-full gap-4 text-slate-700">
-                <ShieldAlert className="size-12 animate-pulse" />
-                <p className="text-[10px] font-black uppercase tracking-[0.2em]">All Systems Nominal - No Active Feeds</p>
-              </div>
-            )}
+          <div className="grid grid-cols-2 gap-3">
+             {activeStreams?.map(stream => (
+               <div 
+                key={stream.id} 
+                onClick={() => setSelectedStreamId(stream.id)}
+                className={cn(
+                  "relative aspect-square rounded-3xl overflow-hidden border cursor-pointer transition-all",
+                  selectedStreamId === stream.id ? "border-cyan-400 scale-[0.98] shadow-lg shadow-cyan-400/20" : "border-white/5 opacity-60 hover:opacity-100"
+                )}
+               >
+                 <Image src={stream.previewImageUrl || "https://picsum.photos/seed/admin/400/400"} alt="Feed" fill className="object-cover" />
+                 <div className="absolute inset-0 bg-black/40" />
+                 <div className="absolute bottom-2 left-2 right-2 flex justify-between items-center">
+                    <span className="text-[8px] font-black uppercase tracking-tighter truncate max-w-[50%]">{stream.username || stream.id.slice(0,4)}</span>
+                    <Badge className={cn("text-[6px] h-3 px-1 border-none", stream.streamType === 'public' ? "bg-green-500" : "bg-primary")}>
+                      {stream.streamType?.toUpperCase() || 'PUB'}
+                    </Badge>
+                 </div>
+               </div>
+             ))}
           </div>
         </section>
 
-        <section className="space-y-4">
-          <h2 className="text-xs font-black uppercase tracking-widest text-slate-400 flex items-center gap-2 ml-2">
-            <MessageSquare className="size-4 text-primary" /> Command Terminal
-          </h2>
-          <div className="bg-slate-900/50 border border-white/10 rounded-[2.5rem] p-5 flex flex-col h-60 shadow-inner">
-            <div className="flex-grow overflow-y-auto space-y-3 mb-4 pr-2 no-scrollbar">
-              <div className="bg-primary/10 border-l-4 border-primary p-4 rounded-r-3xl">
-                <div className="flex items-center gap-2 mb-1">
-                   <ShieldCheck className="size-3 text-primary" />
-                   <p className="text-[10px] font-black text-primary uppercase tracking-widest">Overseer Message Log</p>
-                </div>
-                <p className="text-xs text-slate-400 font-medium">Ready for transmission. Select a node to initiate direct override.</p>
-              </div>
+        {activeHost && (
+          <section className="space-y-4 animate-in fade-in slide-in-from-bottom-4">
+            <div className="bg-slate-900/80 border border-white/10 rounded-[2.5rem] p-5 space-y-4">
+               <div className="flex justify-between items-start">
+                  <div>
+                    <h3 className="text-sm font-black uppercase italic">Target: @{activeHost.username || activeHost.id.slice(0,6)}</h3>
+                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Type: {activeHost.streamType || 'Public'}</p>
+                  </div>
+                  <Button 
+                    onClick={() => terminateStream(activeHost.id)}
+                    variant="destructive" 
+                    size="sm" 
+                    className="rounded-full gap-2 text-[10px] font-black uppercase h-8 px-4"
+                  >
+                    <PowerOff className="size-3" /> Cut Signal
+                  </Button>
+               </div>
+               
+               <div className="flex gap-3">
+                  <Input 
+                    value={adminMsg}
+                    onChange={(e) => setAdminMsg(e.target.value)}
+                    placeholder="Direct directive..." 
+                    className="bg-black/50 border-white/10 text-xs h-12 rounded-2xl focus-visible:ring-primary uppercase font-bold"
+                  />
+                  <Button onClick={sendAdminMessage} size="icon" className="bg-primary rounded-2xl size-12 shrink-0">
+                    <Send className="size-5" />
+                  </Button>
+               </div>
             </div>
-            <div className="flex gap-3">
-              <Input 
-                value={adminMsg}
-                onChange={(e) => setAdminMsg(e.target.value)}
-                placeholder="Command input..." 
-                className="bg-black/50 border-white/10 text-xs h-14 rounded-2xl focus-visible:ring-primary uppercase font-bold tracking-tight"
-              />
-              <Button onClick={sendAdminMessage} size="icon" className="bg-primary hover:bg-primary/90 shrink-0 rounded-2xl size-14 shadow-xl shadow-primary/20">
-                <Send className="size-6" />
-              </Button>
-            </div>
-          </div>
-        </section>
+          </section>
+        )}
 
         <section className="pb-10">
           <div className="flex items-center justify-between mb-4 px-2">
-            <h2 className="text-xs font-black uppercase tracking-widest text-slate-400">AI Intelligence Reports</h2>
-            <Download className="size-4 text-slate-600" />
+            <h2 className="text-xs font-black uppercase tracking-widest text-slate-400">AI Safety Reports</h2>
+            <ShieldAlert className="size-4 text-red-500" />
           </div>
           <div className="space-y-3">
             {isLoading ? (

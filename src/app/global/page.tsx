@@ -1,17 +1,16 @@
-
 'use client';
 
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 import { collection, doc, setDoc, serverTimestamp, query, where, limit, addDoc } from 'firebase/firestore';
 import { Header } from "@/components/Header";
 import { BottomNav } from "@/components/BottomNav";
-import { MessageCircle, Zap, ShieldCheck, Lock, TrendingUp, RefreshCw } from "lucide-react";
+import { MessageCircle, Zap, ShieldCheck, Lock, TrendingUp, RefreshCw, Sparkles, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { MOCK_HOSTS } from '@/lib/mock-data';
 import { cn } from "@/lib/utils";
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -21,6 +20,12 @@ export default function GlobalMarketplace() {
   const { firestore, auth } = useFirebase();
   const { toast } = useToast();
   const [isSeeding, setIsSeeding] = useState(false);
+  const [showAIBot, setShowAIBot] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setShowAIBot(true), 2000);
+    return () => clearTimeout(timer);
+  }, []);
 
   const liveHostsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -102,6 +107,34 @@ export default function GlobalMarketplace() {
       <Header />
       
       <main className="px-4 pt-6 space-y-6">
+        {showAIBot && (
+          <div className="relative animate-in slide-in-from-right-10 duration-500">
+            <div className="bg-primary p-5 rounded-[2rem] text-white shadow-2xl relative overflow-hidden group">
+              <div className="absolute top-0 right-0 p-4 opacity-10">
+                <Sparkles className="size-16" />
+              </div>
+              <button 
+                onClick={() => setShowAIBot(false)}
+                className="absolute top-4 right-4 text-white/50 hover:text-white"
+              >
+                <X className="size-4" />
+              </button>
+              <div className="flex items-center gap-3 mb-2">
+                 <div className="size-8 rounded-full bg-white/20 flex items-center justify-center">🤖</div>
+                 <span className="text-[10px] font-black uppercase tracking-widest">Stream-X Safety Bot</span>
+              </div>
+              <p className="text-xs font-bold leading-relaxed mb-4">
+                Welcome! Filter by Boys/Girls/Couples. Public streams are strictly SFW - my AI scans frames 24/7! 👀
+              </p>
+              <div className="flex gap-2">
+                <Button size="sm" variant="secondary" className="h-8 rounded-xl text-[10px] font-black uppercase tracking-tight bg-white text-primary hover:bg-slate-100">
+                  Try Filters
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <section className="bg-primary/5 border border-primary/10 rounded-[2rem] p-5 flex items-center justify-between">
           <div className="space-y-1">
             <p className="text-[10px] font-black uppercase tracking-widest text-primary">Global Health</p>

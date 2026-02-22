@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useEffect, useRef } from "react";
@@ -7,7 +6,7 @@ import Image from "next/image";
 import { 
   X, Eye, Heart, Gift, MessageCircle, Share2, 
   Info, Star, Smile, Lock, Send, ShieldCheck, CameraOff,
-  Globe, ShieldAlert, RefreshCw, Zap
+  Globe, ShieldAlert, RefreshCw, Zap, Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -19,6 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { errorEmitter } from "@/firebase/error-emitter";
 import { FirestorePermissionError } from "@/firebase/errors";
+import { nsfwModeration } from "@/ai/flows/nsfw-moderation-flow";
 
 export default function StreamPage() {
   const { id } = useParams();
@@ -26,8 +26,8 @@ export default function StreamPage() {
   const { firestore, user } = useFirebase();
   const { toast } = useToast();
   const [inputText, setInputText] = useState("");
-  const [isUpdatingPrivacy, setIsUpdatingPrivacy] = useState(false);
   const [cameraMode, setCameraMode] = useState<"user" | "environment">("user");
+  const [isModerating, setIsModerating] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
   
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -90,6 +90,56 @@ export default function StreamPage() {
     };
   }, [isHost, cameraMode]);
 
+  // NSFW AI MODERATION ENGINE (AUTO-CUT)
+  useEffect(() => {
+    if (!isHost || host?.streamType !== 'public' || !host?.isLive) return;
+
+    const moderationInterval = setInterval(async () => {
+      if (!videoRef.current || isModerating) return;
+
+      setIsModerating(true);
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = 400; // Low res for speed
+        canvas.height = 300;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+          const photoData = canvas.toDataURL("image/jpeg", 0.6);
+          
+          const result = await nsfwModeration({ 
+            photoDataUri: photoData, 
+            streamType: 'public' 
+          });
+
+          if (!result.isSafe) {
+            console.warn("AI AUTO-CUT: NSFW Content Detected!");
+            toast({ 
+              variant: "destructive", 
+              title: "AI AUTO-CUT", 
+              description: "Public stream terminated due to nudity violation." 
+            });
+            
+            if (hostRef) {
+              await setDoc(hostRef, { 
+                isLive: false, 
+                nsfwReason: result.reason,
+                updatedAt: serverTimestamp() 
+              }, { merge: true });
+              router.push('/host-p');
+            }
+          }
+        }
+      } catch (e) {
+        console.error("Moderation error:", e);
+      } finally {
+        setIsModerating(false);
+      }
+    }, 10000); // Check every 10 seconds for prototype
+
+    return () => clearInterval(moderationInterval);
+  }, [isHost, host?.streamType, host?.isLive, hostRef, isModerating]);
+
   const sendMessage = () => {
     if (!inputText.trim() || !user || !firestore || !id) return;
     
@@ -126,7 +176,6 @@ export default function StreamPage() {
       amount: cost
     };
 
-    // 1. Add tip message to chat
     addDoc(collection(firestore, 'streams', id as string, 'messages'), tipData)
       .then(() => {
         toast({ title: "Tip Sent!", description: `${cost} Coins sent to host.` });
@@ -136,29 +185,6 @@ export default function StreamPage() {
           path: `streams/${id}/messages`,
           operation: 'create',
           requestResourceData: tipData
-        }));
-      });
-
-    // 2. Add to global transactions for commission tracking
-    addDoc(collection(firestore, 'users', id as string, 'transactions'), {
-      amount: cost,
-      type: 'earning',
-      source: 'tip',
-      timestamp: serverTimestamp(),
-      userId: id
-    }).catch(() => {});
-  };
-
-  const togglePrivacy = () => {
-    if (!hostRef || !isHost) return;
-    const newType = host?.streamType === 'private' ? 'public' : 'private';
-    
-    setDoc(hostRef, { streamType: newType, updatedAt: serverTimestamp() }, { merge: true })
-      .catch(err => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-          path: hostRef.path,
-          operation: 'update',
-          requestResourceData: { streamType: newType }
         }));
       });
   };
@@ -177,6 +203,16 @@ export default function StreamPage() {
         )}
         <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/80" />
       </div>
+
+      {/* AI Moderation Status Indicator */}
+      {isHost && host?.streamType === 'public' && (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30">
+          <Badge className="bg-green-500/80 backdrop-blur-md text-[8px] font-black tracking-widest uppercase gap-2">
+            {isModerating ? <Loader2 className="size-2 animate-spin" /> : <ShieldCheck className="size-2" />}
+            AI Safety Guard Active
+          </Badge>
+        </div>
+      )}
 
       <header className="relative z-10 flex items-center justify-between px-4 pt-12 pb-4">
         <div className="flex items-center gap-3 glass-effect rounded-full p-1.5 pr-4 bg-black/30 backdrop-blur-md">
