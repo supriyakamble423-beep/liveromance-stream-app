@@ -20,7 +20,7 @@ service cloud.firestore {
       return isSignedIn() && exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
     }
 
-    // Trigger deployment comment: Updated permissions for global discovery
+    // Trigger deployment comment: Explicitly allowing list on hosts collection for global discovery
     
     match /roles_admin/{userId} {
       allow get: if isOwner(userId);
@@ -41,7 +41,7 @@ service cloud.firestore {
     }
 
     match /hosts/{hostId} {
-      allow read: if true;
+      allow get, list: if true;
       // Allow any signed in user to seed mock hosts for development simulation
       allow create: if isSignedIn();
       allow update: if isOwner(hostId) || (hostId.startsWith('fake_') && isSignedIn());
@@ -77,6 +77,11 @@ service cloud.firestore {
     match /categories/{categoryId} {
       allow read: if true;
       allow create, update, delete: if isAdmin();
+    }
+
+    match /transactions/{transactionId} {
+      allow read: if isSignedIn() && (resource.data.from == request.auth.uid || resource.data.to == request.auth.uid || isAdmin());
+      allow create: if isSignedIn();
     }
   }
 }
