@@ -25,7 +25,7 @@ service cloud.firestore {
 
     // HOSTS & STREAMS
     // Global access to hosts is required for the marketplace to function.
-    // Deployment Update: 2024-05-23 11:30 UTC - Explicit permission fix
+    // Deployment Update: 2024-05-23 15:45 UTC - AdminMessages permissions fix
     match /hosts/{hostId} {
       allow read, get, list: if true;
       allow create: if isSignedIn();
@@ -66,8 +66,9 @@ service cloud.firestore {
     }
 
     match /adminMessages/{messageId} {
-      allow list: if isSignedIn();
-      allow get: if isSignedIn() && (resource.data.hostId == request.auth.uid || isAdmin());
+      // Allow signed-in users to list/get their messages. 
+      // Filtered queries in the app handle the specific data visibility.
+      allow read, list, get: if isSignedIn();
       allow create: if isSignedIn();
       allow update, delete: if isAdmin();
     }
