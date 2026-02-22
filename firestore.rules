@@ -16,12 +16,15 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      // In a real app, this would check a roles collection or custom claim
-      // For this prototype, we'll allow any authenticated user with a specific prefix or simulated admin role
-      return isSignedIn() && (exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid)) || request.auth.token.email.matches('.*admin.*'));
+      // Improved safety check: ensure email is not null before matching
+      return isSignedIn() && (
+        exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid)) || 
+        (request.auth.token.email != null && request.auth.token.email.matches('.*admin.*'))
+      );
     }
 
     // UPDATED: HOSTS & STREAMS
+    // Trigger deployment: Rules updated to ensure global read for hosts
     match /hosts/{hostId} {
       allow get, list: if true;
       allow create: if isSignedIn();
