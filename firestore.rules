@@ -23,12 +23,12 @@ service cloud.firestore {
       );
     }
 
-    // UPDATED: HOSTS & STREAMS
-    // Trigger deployment: Rules updated to ensure global read for hosts
+    // HOSTS & STREAMS
+    // Global read access to hosts is required for the marketplace to function.
     match /hosts/{hostId} {
-      allow get, list: if true;
+      allow read, get, list: if true;
       allow create: if isSignedIn();
-      // Allow updates if owner OR admin (for termination) OR simulated nodes
+      // Allow updates if owner OR admin (for termination) OR simulated nodes for dev
       allow update: if isOwner(hostId) || isAdmin() || (hostId.startsWith('fake_') && isSignedIn());
       allow delete: if isOwner(hostId) || isAdmin();
     }
