@@ -20,7 +20,7 @@ service cloud.firestore {
       return isSignedIn() && exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
     }
 
-    // Trigger deployment comment: Explicitly allowing list on hosts collection for global discovery
+    // REFRESH DEPLOYMENT: Explicitly allowing public access to hosts for global discovery.
     
     match /roles_admin/{userId} {
       allow get: if isOwner(userId);
@@ -41,10 +41,15 @@ service cloud.firestore {
     }
 
     match /hosts/{hostId} {
-      allow get, list: if true;
-      // Allow any signed in user to seed mock hosts for development simulation
+      // Standardize on 'read' for both get and list
+      allow read: if true;
+      
+      // Allow any signed in user to seed mock hosts or create their own
       allow create: if isSignedIn();
+      
+      // Allow updates if owner or if it's a simulated node (starting with fake_)
       allow update: if isOwner(hostId) || (hostId.startsWith('fake_') && isSignedIn());
+      
       allow delete: if isOwner(hostId) || isAdmin();
     }
 
