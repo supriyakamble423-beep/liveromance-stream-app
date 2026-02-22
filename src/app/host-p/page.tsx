@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useFirebase, useDoc, useMemoFirebase, useCollection } from "@/firebase";
@@ -5,7 +6,7 @@ import { BottomNav } from "@/components/BottomNav";
 import { 
   ShieldCheck, Wallet, Settings, Radio, 
   Star, Lock, Globe, Users, Loader2, Zap, Sparkles, Camera, Power, TrendingUp,
-  ImagePlus, Video, ChevronRight, Share2, ShieldAlert, AlertTriangle
+  ImagePlus, Video, ChevronRight, Share2, ShieldAlert, AlertTriangle, Repeat
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -162,6 +163,38 @@ export default function HostProfileDashboard() {
           </div>
         </div>
 
+        {/* PROMINENT MODE TOGGLE ON DASHBOARD */}
+        <section className="mb-8 space-y-4">
+          <div className="flex items-center justify-between px-2">
+            <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">Quick Mode Selection</h3>
+            {hostProfile?.streamType === 'public' ? (
+              <Badge className="bg-green-500/20 text-green-500 border-none text-[8px] font-black">SFW MODE</Badge>
+            ) : (
+              <Badge className="bg-primary/20 text-primary border-none text-[8px] font-black">EARNING MODE</Badge>
+            )}
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Button
+              onClick={() => updateStreamType('public')}
+              className={cn(
+                "h-16 rounded-2xl font-black uppercase tracking-widest gap-2 text-[10px]",
+                hostProfile?.streamType === 'public' ? "bg-green-500 text-white" : "bg-white/5 text-slate-400"
+              )}
+            >
+              <Globe className="size-4" /> Public (SFW)
+            </Button>
+            <Button
+              onClick={() => updateStreamType('private')}
+              className={cn(
+                "h-16 rounded-2xl font-black uppercase tracking-widest gap-2 text-[10px]",
+                hostProfile?.streamType === 'private' ? "bg-primary text-white" : "bg-white/5 text-slate-400"
+              )}
+            >
+              <Lock className="size-4" /> Adult (Paid)
+            </Button>
+          </div>
+        </section>
+
         <div className="grid grid-cols-2 gap-4">
           <div className="bg-white/5 p-5 rounded-[2rem] border border-white/5 backdrop-blur-md">
             <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Earnings</p>
@@ -235,35 +268,6 @@ export default function HostProfileDashboard() {
             )}
           </section>
         )}
-
-        <section className="space-y-4">
-          <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-500 ml-2">Privacy & Content Mode</h3>
-          <div className="grid grid-cols-3 gap-3">
-            {[
-              { id: 'public', label: 'Public (SFW)', icon: Globe, color: 'text-green-500' },
-              { id: 'private', label: 'Adult (Paid)', icon: Lock, color: 'text-primary' },
-              { id: 'invite-only', label: 'Invite', icon: Star, color: 'text-secondary' }
-            ].map((mode) => (
-              <Button
-                key={mode.id}
-                onClick={() => updateStreamType(mode.id as any)}
-                variant={hostProfile?.streamType === mode.id ? 'default' : 'secondary'}
-                className={cn(
-                  "h-24 flex flex-col items-center justify-center gap-2 rounded-3xl border border-white/5 transition-all",
-                  hostProfile?.streamType === mode.id ? "bg-primary border-primary/50 shadow-xl shadow-primary/20 text-white" : "bg-white/5"
-                )}
-              >
-                <mode.icon className={cn("size-6", hostProfile?.streamType !== mode.id && mode.color)} />
-                <span className="text-[10px] font-black uppercase tracking-widest text-center px-1">{mode.label}</span>
-              </Button>
-            ))}
-          </div>
-          {hostProfile?.streamType === 'private' && (
-            <p className="text-[9px] text-center font-bold text-slate-500 uppercase tracking-widest">
-              Private sessions cost <span className="text-primary">50 Coins</span> for viewers.
-            </p>
-          )}
-        </section>
 
         {/* MEDIA UPLOAD SECTION (For Coins) */}
         <section className="bg-white/5 p-6 rounded-[2.5rem] border border-dashed border-white/10">

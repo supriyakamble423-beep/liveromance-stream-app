@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useEffect, useRef } from "react";
@@ -6,13 +7,13 @@ import Image from "next/image";
 import { 
   X, Eye, Heart, Gift, MessageCircle, Share2, 
   Info, Star, Smile, Lock, Send, ShieldCheck, CameraOff,
-  Globe, ShieldAlert, RefreshCw, Zap, Loader2
+  Globe, ShieldAlert, RefreshCw, Zap, Loader2, Repeat
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { useFirebase, useDoc, useMemoFirebase, useCollection } from "@/firebase";
-import { doc, collection, addDoc, serverTimestamp, query, orderBy, limit, setDoc } from "firebase/firestore";
+import { doc, collection, addDoc, serverTimestamp, query, orderBy, limit, setDoc, updateDoc } from "firebase/firestore";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -28,6 +29,7 @@ export default function StreamPage() {
   const [inputText, setInputText] = useState("");
   const [cameraMode, setCameraMode] = useState<"user" | "environment">("user");
   const [isModerating, setIsModerating] = useState(false);
+  const [isUpdatingMode, setIsUpdatingMode] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
   
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -140,6 +142,27 @@ export default function StreamPage() {
     return () => clearInterval(moderationInterval);
   }, [isHost, host?.streamType, host?.isLive, hostRef, isModerating]);
 
+  const toggleStreamMode = async () => {
+    if (!isHost || !hostRef || isUpdatingMode) return;
+    setIsUpdatingMode(true);
+    const newType = host?.streamType === 'public' ? 'private' : 'public';
+    try {
+      await updateDoc(hostRef, { 
+        streamType: newType,
+        updatedAt: serverTimestamp()
+      });
+      toast({ 
+        title: `Switched to ${newType.toUpperCase()}`, 
+        description: newType === 'public' ? "SFW Mode: AI auto-cut active." : "Private Mode: Viewers need coins."
+      });
+    } catch (err) {
+      console.error(err);
+      toast({ variant: 'destructive', title: 'Error', description: 'Failed to switch mode.' });
+    } finally {
+      setIsUpdatingMode(false);
+    }
+  };
+
   const sendMessage = () => {
     if (!inputText.trim() || !user || !firestore || !id) return;
     
@@ -211,6 +234,25 @@ export default function StreamPage() {
             {isModerating ? <Loader2 className="size-2 animate-spin" /> : <ShieldCheck className="size-2" />}
             AI Safety Guard Active
           </Badge>
+        </div>
+      )}
+
+      {/* Host Quick Switch Toggle */}
+      {isHost && (
+        <div className="absolute top-20 left-1/2 -translate-x-1/2 z-40">
+          <Button 
+            onClick={toggleStreamMode} 
+            disabled={isUpdatingMode}
+            className={cn(
+              "rounded-full h-10 px-6 gap-2 text-[10px] font-black uppercase tracking-widest shadow-2xl backdrop-blur-md border-2",
+              host?.streamType === 'public' 
+                ? "bg-green-500/20 border-green-500 text-green-500 hover:bg-green-500/30" 
+                : "bg-primary/20 border-primary text-primary hover:bg-primary/30"
+            )}
+          >
+            {isUpdatingMode ? <Loader2 className="size-3 animate-spin" /> : <Repeat className="size-3" />}
+            {host?.streamType === 'public' ? 'Public SFW' : 'Private Adult'}
+          </Button>
         </div>
       )}
 
