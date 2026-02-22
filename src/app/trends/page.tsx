@@ -1,3 +1,4 @@
+
 'use client';
 
 import { BottomNav } from "@/components/BottomNav";
@@ -9,11 +10,11 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { cn } from "@/lib/utils";
 
 export default function TrendsPage() {
   const { firestore } = useFirebase();
 
-  // 1. Top Rated Live Hosts
   const topRatedQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return query(
@@ -24,7 +25,6 @@ export default function TrendsPage() {
     );
   }, [firestore]);
 
-  // 2. Newest Live Hosts
   const newestLiveQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return query(
@@ -60,7 +60,6 @@ export default function TrendsPage() {
       </header>
 
       <main className="px-6 pt-6 space-y-10">
-        {/* TOP RATED SECTION */}
         <section className="space-y-5">
           <div className="flex items-center justify-between">
             <h2 className="text-xs font-black uppercase tracking-[0.2em] text-slate-500 flex items-center gap-2">
@@ -112,7 +111,6 @@ export default function TrendsPage() {
           </div>
         </section>
 
-        {/* NEWLY REGISTERED SECTION */}
         <section className="space-y-5">
           <div className="flex items-center justify-between">
             <h2 className="text-xs font-black uppercase tracking-[0.2em] text-slate-500 flex items-center gap-2">
@@ -154,7 +152,6 @@ export default function TrendsPage() {
           </div>
         </section>
 
-        {/* PROMO CARD */}
         <section className="bg-gradient-to-br from-primary/20 to-secondary/20 p-8 rounded-[2.5rem] border border-white/10 relative overflow-hidden">
           <div className="absolute top-0 right-0 p-4 opacity-10">
             <TrendingUp className="size-24" />

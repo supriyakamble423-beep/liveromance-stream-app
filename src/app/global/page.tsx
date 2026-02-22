@@ -5,7 +5,7 @@ import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 import { collection, doc, setDoc, serverTimestamp, query, where, limit, addDoc } from 'firebase/firestore';
 import { Header } from "@/components/Header";
 import { BottomNav } from "@/components/BottomNav";
-import { MessageCircle, Zap, Users, ShieldCheck, Lock, TrendingUp, Sparkles, RefreshCw } from "lucide-react";
+import { MessageCircle, Zap, ShieldCheck, Lock, TrendingUp, RefreshCw } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -102,7 +102,6 @@ export default function GlobalMarketplace() {
       <Header />
       
       <main className="px-4 pt-6 space-y-6">
-        {/* Marketplace Stats Banner */}
         <section className="bg-primary/5 border border-primary/10 rounded-[2rem] p-5 flex items-center justify-between">
           <div className="space-y-1">
             <p className="text-[10px] font-black uppercase tracking-widest text-primary">Global Health</p>

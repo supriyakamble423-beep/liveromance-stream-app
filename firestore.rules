@@ -20,7 +20,19 @@ service cloud.firestore {
       return isSignedIn() && exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
     }
 
-    // REFRESH DEPLOYMENT: Explicitly allowing public access to hosts for global discovery.
+    // REFRESH: ENSURING PUBLIC DISCOVERY FOR ALL HOSTS
+    // This allows the marketplace and trends pages to list all live hosts.
+    match /hosts/{hostId} {
+      allow get, list: if true;
+      
+      // Allow any signed in user to seed mock hosts or create their own profile
+      allow create: if isSignedIn();
+      
+      // Allow updates if owner or if it's a simulated node (starting with fake_)
+      allow update: if isOwner(hostId) || (hostId.startsWith('fake_') && isSignedIn());
+      
+      allow delete: if isOwner(hostId) || isAdmin();
+    }
     
     match /roles_admin/{userId} {
       allow get: if isOwner(userId);
@@ -38,19 +50,6 @@ service cloud.firestore {
         allow create: if isOwner(userId) && request.resource.data.userId == userId;
         allow update, delete: if false;
       }
-    }
-
-    match /hosts/{hostId} {
-      // Standardize on 'read' for both get and list
-      allow read: if true;
-      
-      // Allow any signed in user to seed mock hosts or create their own
-      allow create: if isSignedIn();
-      
-      // Allow updates if owner or if it's a simulated node (starting with fake_)
-      allow update: if isOwner(hostId) || (hostId.startsWith('fake_') && isSignedIn());
-      
-      allow delete: if isOwner(hostId) || isAdmin();
     }
 
     match /streams/{streamId} {
