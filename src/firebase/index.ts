@@ -3,12 +3,14 @@
 import { firebaseConfig } from '@/firebase/config';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth, Auth } from 'firebase/auth';
-import { getFirestore, Firestore } from 'firebase/firestore'
+import { getFirestore, Firestore } from 'firebase/firestore';
+import { getStorage, FirebaseStorage } from 'firebase/storage';
 
 export interface FirebaseSdks {
   firebaseApp: FirebaseApp | null;
   auth: Auth | null;
   firestore: Firestore | null;
+  storage: FirebaseStorage | null;
 }
 
 /**
@@ -17,6 +19,11 @@ export interface FirebaseSdks {
  * This prevents 'invalid-api-key' errors during SSR or when env vars are missing.
  */
 export function initializeFirebase(): FirebaseSdks {
+  // Ensure we are on the client
+  if (typeof window === 'undefined') {
+    return { firebaseApp: null, auth: null, firestore: null, storage: null };
+  }
+
   // 1. Check if already initialized
   if (getApps().length > 0) {
     const app = getApp();
@@ -30,8 +37,8 @@ export function initializeFirebase(): FirebaseSdks {
     firebaseConfig.projectId;
 
   if (!isConfigValid) {
-    console.error('CRITICAL: Firebase Configuration is missing or invalid. Check NEXT_PUBLIC_FIREBASE environment variables.');
-    return { firebaseApp: null, auth: null, firestore: null };
+    console.warn('⚠️ FIREBASE WARNING: Keys are missing or invalid. App will run in limited mode.');
+    return { firebaseApp: null, auth: null, firestore: null, storage: null };
   }
 
   // 3. Initialize App
@@ -40,7 +47,7 @@ export function initializeFirebase(): FirebaseSdks {
     return getSdks(firebaseApp);
   } catch (e) {
     console.error('Firebase initialization failed:', e);
-    return { firebaseApp: null, auth: null, firestore: null };
+    return { firebaseApp: null, auth: null, firestore: null, storage: null };
   }
 }
 
@@ -50,21 +57,23 @@ export function initializeFirebase(): FirebaseSdks {
  */
 export function getSdks(firebaseApp: FirebaseApp | null): FirebaseSdks {
   if (!firebaseApp) {
-    return { firebaseApp: null, auth: null, firestore: null };
+    return { firebaseApp: null, auth: null, firestore: null, storage: null };
   }
 
   try {
     return {
       firebaseApp,
       auth: getAuth(firebaseApp),
-      firestore: getFirestore(firebaseApp)
+      firestore: getFirestore(firebaseApp),
+      storage: getStorage(firebaseApp)
     };
   } catch (e) {
     console.error('Error retrieving Firebase services:', e);
     return {
       firebaseApp,
       auth: null,
-      firestore: null
+      firestore: null,
+      storage: null
     };
   }
 }

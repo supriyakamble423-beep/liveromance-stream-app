@@ -5,7 +5,9 @@
  */
 
 const getSafeEnv = (key: string): string => {
+  if (typeof process === 'undefined' || !process.env) return '';
   const value = process.env[key];
+  // Check for common 'missing' indicators
   if (!value || value === 'undefined' || value === 'null' || value.includes('YOUR_')) {
     return '';
   }

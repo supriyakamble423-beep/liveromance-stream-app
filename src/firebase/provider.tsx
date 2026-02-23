@@ -4,6 +4,7 @@ import React, { DependencyList, createContext, useContext, ReactNode, useMemo, u
 import { FirebaseApp } from 'firebase/app';
 import { Firestore } from 'firebase/firestore';
 import { Auth, User, onAuthStateChanged } from 'firebase/auth';
+import { FirebaseStorage } from 'firebase/storage';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener'
 
 interface FirebaseProviderProps {
@@ -11,6 +12,7 @@ interface FirebaseProviderProps {
   firebaseApp: FirebaseApp | null;
   firestore: Firestore | null;
   auth: Auth | null;
+  storage?: FirebaseStorage | null;
 }
 
 interface UserAuthState {
@@ -24,6 +26,7 @@ export interface FirebaseContextState {
   firebaseApp: FirebaseApp | null;
   firestore: Firestore | null;
   auth: Auth | null; 
+  storage: FirebaseStorage | null;
   user: User | null;
   isUserLoading: boolean; 
   userError: Error | null; 
@@ -33,6 +36,7 @@ export interface FirebaseServicesAndUser {
   firebaseApp: FirebaseApp;
   firestore: Firestore;
   auth: Auth;
+  storage: FirebaseStorage;
   user: User | null;
   isUserLoading: boolean;
   userError: Error | null;
@@ -54,15 +58,17 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
   firebaseApp,
   firestore,
   auth,
+  storage = null
 }) => {
   const [userAuthState, setUserAuthState] = useState<UserAuthState>({
     user: null,
     isUserLoading: true,
+    userError: null
   });
 
   useEffect(() => {
     if (!auth) {
-      setUserAuthState({ user: null, isUserLoading: false, userError: null });
+      setUserAuthState(prev => ({ ...prev, isUserLoading: false }));
       return;
     }
 
@@ -86,11 +92,12 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
       firebaseApp,
       firestore,
       auth,
+      storage: storage || null,
       user: userAuthState.user,
       isUserLoading: userAuthState.isUserLoading,
       userError: userAuthState.userError,
     };
-  }, [firebaseApp, firestore, auth, userAuthState]);
+  }, [firebaseApp, firestore, auth, storage, userAuthState]);
 
   return (
     <FirebaseContext.Provider value={contextValue}>
@@ -107,13 +114,14 @@ export const useFirebase = (): FirebaseServicesAndUser => {
   if (context === undefined) throw new Error('useFirebase must be used within a FirebaseProvider.');
   
   if (!context.areServicesAvailable || !context.firebaseApp || !context.firestore || !context.auth) {
-    throw new Error('Firebase core services not available. Please check your environment variables (NEXT_PUBLIC_FIREBASE_API_KEY, etc.) and ensure they are correctly set in Vercel.');
+    throw new Error('CRITICAL: Firebase services not initialized. Check your NEXT_PUBLIC_FIREBASE environment variables.');
   }
 
   return {
     firebaseApp: context.firebaseApp,
     firestore: context.firestore,
     auth: context.auth,
+    storage: context.storage as FirebaseStorage,
     user: context.user,
     isUserLoading: context.isUserLoading,
     userError: context.userError,
