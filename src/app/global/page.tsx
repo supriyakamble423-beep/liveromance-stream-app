@@ -5,7 +5,7 @@ import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 import { collection, doc, setDoc, serverTimestamp, query, where, limit, addDoc } from 'firebase/firestore';
 import { Header } from "@/components/Header";
 import { BottomNav } from "@/components/BottomNav";
-import { MessageCircle, Zap, ShieldCheck, Lock, TrendingUp, RefreshCw, Sparkles, X, Heart, ShieldAlert } from "lucide-react";
+import { MessageCircle, Zap, ShieldCheck, Lock, TrendingUp, RefreshCw, Sparkles, X, Heart, ShieldAlert, Star } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
