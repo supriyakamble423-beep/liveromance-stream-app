@@ -58,7 +58,6 @@ export default function RootLayout({
           </FirebaseClientProvider>
         </ErrorBoundary>
         
-        {/* Robust SW Registration using next/script for better lifecycle management */}
         <Script id="register-sw" strategy="afterInteractive">
           {`
             if ('serviceWorker' in navigator) {

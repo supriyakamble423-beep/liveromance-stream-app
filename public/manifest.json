@@ -1,21 +1,21 @@
 {
-  "name": "GlobalStreamX - Social Discovery",
-  "short_name": "StreamX",
-  "description": "Connect with global hosts in real-time.",
-  "start_url": "/",
+  "name": "Global Love - Social Discovery",
+  "short_name": "Global Love",
+  "description": "Connect with hosts around the world in real-time.",
+  "start_url": "/global",
   "display": "standalone",
-  "background_color": "#0F0101",
+  "background_color": "#000000",
   "theme_color": "#FF0000",
   "orientation": "portrait",
   "icons": [
     {
-      "src": "/icon-192x192.png",
+      "src": "https://picsum.photos/seed/pwa1/192/192",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/icon-512x512.png",
+      "src": "https://picsum.photos/seed/pwa2/512/512",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
