@@ -58,18 +58,43 @@ export default function RootLayout({
           </FirebaseClientProvider>
         </ErrorBoundary>
         
+        {/* --- PWA Auto-Update Registration Logic --- */}
         <Script id="register-sw" strategy="afterInteractive">
           {`
             if ('serviceWorker' in navigator) {
               window.addEventListener('load', function() {
                 navigator.serviceWorker.register('/sw.js').then(
                   function(registration) {
-                    console.log('SW registered: ', registration.scope);
+                    console.log('SW: Registered successfully');
+
+                    // Detect updates automatically
+                    registration.onupdatefound = () => {
+                      const installingWorker = registration.installing;
+                      if (installingWorker == null) return;
+
+                      installingWorker.onstatechange = () => {
+                        if (installingWorker.state === 'installed') {
+                          if (navigator.serviceWorker.controller) {
+                            console.log('SW: New version detected! Refreshing...');
+                            // Tell the new worker to skip waiting
+                            installingWorker.postMessage({ type: 'SKIP_WAITING' });
+                          }
+                        }
+                      };
+                    };
                   },
                   function(err) {
-                    console.log('SW failed: ', err);
+                    console.log('SW: Registration failed: ', err);
                   }
                 );
+
+                // Refresh the page when the new service worker takes over
+                let refreshing = false;
+                navigator.serviceWorker.addEventListener('controllerchange', () => {
+                  if (refreshing) return;
+                  refreshing = true;
+                  window.location.reload();
+                });
               });
             }
           `}
