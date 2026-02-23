@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useFirebase, useDoc, useMemoFirebase, useCollection } from "@/firebase";
@@ -29,6 +28,7 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { aiGuidedHostProfileOptimization } from "@/ai/flows/ai-guided-host-profile-optimization-flow";
 import { useState, useRef } from "react";
+import AdBanner from "@/components/Ads/AdBanner";
 
 export default function HostProfileDashboard() {
   const { firestore, storage, user } = useFirebase();
@@ -474,10 +474,12 @@ export default function HostProfileDashboard() {
             </Button>
           </div>
         </section>
+
+        {/* Adsterra Banner at the bottom of the Profile */}
+        <AdBanner />
       </main>
 
       <BottomNav />
     </div>
   );
 }
-

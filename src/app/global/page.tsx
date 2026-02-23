@@ -15,6 +15,7 @@ import { MOCK_HOSTS } from '@/lib/mock-data';
 import { cn } from "@/lib/utils";
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+import AdBanner from "@/components/Ads/AdBanner";
 
 export default function GlobalMarketplace() {
   const { firestore, auth } = useFirebase();
@@ -218,6 +219,9 @@ export default function GlobalMarketplace() {
             ))}
           </div>
         )}
+
+        {/* Adsterra Banner at the bottom of the Marketplace */}
+        <AdBanner />
       </main>
 
       <BottomNav />
