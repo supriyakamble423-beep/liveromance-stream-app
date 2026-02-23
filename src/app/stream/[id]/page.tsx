@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useEffect, useRef } from "react";
@@ -6,17 +5,16 @@ import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import { 
   X, Eye, Heart, Gift, MessageCircle, Share2, 
-  Info, Star, Smile, Lock, Send, ShieldCheck, CameraOff,
-  Globe, ShieldAlert, RefreshCw, Zap, Loader2, Repeat, Sparkles
+  Star, Lock, Send, Sparkles, CameraOff,
+  ShieldAlert, RefreshCw, Zap, Loader2, Repeat,
+  ShieldCheck, Ghost, UserCheck, UserX
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { useFirebase, useDoc, useMemoFirebase, useCollection } from "@/firebase";
 import { doc, collection, addDoc, serverTimestamp, query, orderBy, limit, setDoc, updateDoc } from "firebase/firestore";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { errorEmitter } from "@/firebase/error-emitter";
 import { FirestorePermissionError } from "@/firebase/errors";
 import { nsfwModeration } from "@/ai/flows/nsfw-moderation-flow";
@@ -30,6 +28,7 @@ export default function StreamPage() {
   const [cameraMode, setCameraMode] = useState<"user" | "environment">("user");
   const [isModerating, setIsModerating] = useState(false);
   const [isUpdatingMode, setIsUpdatingMode] = useState(false);
+  const [isMaskOn, setIsMaskOn] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
   
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -215,11 +214,34 @@ export default function StreamPage() {
 
   return (
     <div className="relative h-screen w-full flex flex-col overflow-hidden bg-black mx-auto max-w-lg border-x border-white/10">
+      {/* Video layer */}
       <div className="absolute inset-0 z-0 bg-black">
         {isHost ? (
-          <video ref={videoRef} autoPlay playsInline muted className={cn("w-full h-full object-cover scale-x-[-1]")} />
+          <div className="relative w-full h-full">
+            <video ref={videoRef} autoPlay playsInline muted className={cn("w-full h-full object-cover scale-x-[-1]")} />
+            {isMaskOn && (
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none animate-in fade-in duration-300">
+                <div className="relative romantic-glow">
+                  <Heart className="size-48 text-primary fill-current opacity-90 animate-pulse" />
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <Ghost className="size-16 text-white opacity-40" />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         ) : (
-          <Image src={host?.previewImageUrl || "https://picsum.photos/seed/stream/800/1200"} alt="Stream" fill className={cn("object-cover", isPrivate ? "blur-3xl opacity-40" : "opacity-90")} />
+          <div className="relative w-full h-full">
+            <Image 
+              src={host?.previewImageUrl || "https://picsum.photos/seed/stream/800/1200"} 
+              alt="Stream" 
+              fill 
+              className={cn("object-cover", isPrivate ? "blur-3xl opacity-40" : "opacity-90")} 
+            />
+            {isPrivate && (
+              <div className="absolute inset-0 bg-black/40 backdrop-blur-xl" />
+            )}
+          </div>
         )}
         <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-transparent to-black/80" />
       </div>
@@ -243,20 +265,35 @@ export default function StreamPage() {
       </div>
 
       {isHost && (
-        <div className="absolute top-20 left-1/2 -translate-x-1/2 z-40">
-          <Button 
-            onClick={toggleStreamMode} 
-            disabled={isUpdatingMode}
-            className={cn(
-              "rounded-full h-10 px-6 gap-2 text-[10px] font-black uppercase tracking-widest shadow-2xl backdrop-blur-md border-2 transition-all",
-              host?.streamType === 'public' 
-                ? "bg-green-500/20 border-green-500 text-green-500 hover:bg-green-500/30" 
-                : "bg-primary/20 border-primary text-primary hover:bg-primary/30"
-            )}
-          >
-            {isUpdatingMode ? <Loader2 className="size-3 animate-spin" /> : <Repeat className="size-3" />}
-            {host?.streamType === 'public' ? 'SFW Mode' : 'Adult Mode'}
-          </Button>
+        <div className="absolute top-20 left-0 right-0 z-40 flex flex-col items-center gap-3">
+          <div className="flex gap-2">
+            <Button 
+              onClick={toggleStreamMode} 
+              disabled={isUpdatingMode}
+              className={cn(
+                "rounded-full h-10 px-6 gap-2 text-[10px] font-black uppercase tracking-widest shadow-2xl backdrop-blur-md border-2 transition-all",
+                host?.streamType === 'public' 
+                  ? "bg-green-500/20 border-green-500 text-green-500 hover:bg-green-500/30" 
+                  : "bg-primary/20 border-primary text-primary hover:bg-primary/30"
+              )}
+            >
+              {isUpdatingMode ? <Loader2 className="size-3 animate-spin" /> : <Repeat className="size-3" />}
+              {host?.streamType === 'public' ? 'SFW Mode' : 'Adult Mode'}
+            </Button>
+
+            <Button 
+              onClick={() => setIsMaskOn(!isMaskOn)} 
+              className={cn(
+                "rounded-full h-10 px-6 gap-2 text-[10px] font-black uppercase tracking-widest shadow-2xl backdrop-blur-md border-2 transition-all",
+                isMaskOn 
+                  ? "bg-red-600 border-white text-white" 
+                  : "bg-white/10 border-pink-500 text-pink-500 hover:bg-pink-500/10"
+              )}
+            >
+              {isMaskOn ? <UserCheck className="size-3" /> : <UserX className="size-3" />}
+              {isMaskOn ? 'Show Face' : 'Face Mask'}
+            </Button>
+          </div>
         </div>
       )}
 
