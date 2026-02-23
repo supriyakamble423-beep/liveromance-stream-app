@@ -3,6 +3,7 @@ import { Inter, Spline_Sans } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { FirebaseClientProvider } from "@/firebase/client-provider";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -49,10 +50,12 @@ export default function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
       </head>
       <body className="font-body antialiased selection:bg-primary/30 selection:text-primary" suppressHydrationWarning>
-        <FirebaseClientProvider>
-          {children}
-          <Toaster />
-        </FirebaseClientProvider>
+        <ErrorBoundary>
+          <FirebaseClientProvider>
+            {children}
+            <Toaster />
+          </FirebaseClientProvider>
+        </ErrorBoundary>
         <script
           dangerouslySetInnerHTML={{
             __html: `

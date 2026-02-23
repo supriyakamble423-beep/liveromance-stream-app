@@ -8,9 +8,9 @@ import { FirebaseErrorListener } from '@/components/FirebaseErrorListener'
 
 interface FirebaseProviderProps {
   children: ReactNode;
-  firebaseApp: FirebaseApp;
-  firestore: Firestore;
-  auth: Auth;
+  firebaseApp: FirebaseApp | null;
+  firestore: Firestore | null;
+  auth: Auth | null;
 }
 
 interface UserAuthState {
@@ -62,7 +62,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
 
   useEffect(() => {
     if (!auth) {
-      setUserAuthState({ user: null, isUserLoading: false, userError: new Error("Auth service not provided.") });
+      setUserAuthState({ user: null, isUserLoading: false, userError: null });
       return;
     }
 
@@ -83,9 +83,9 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
     const servicesAvailable = !!(firebaseApp && firestore && auth);
     return {
       areServicesAvailable: servicesAvailable,
-      firebaseApp: servicesAvailable ? firebaseApp : null,
-      firestore: servicesAvailable ? firestore : null,
-      auth: servicesAvailable ? auth : null,
+      firebaseApp,
+      firestore,
+      auth,
       user: userAuthState.user,
       isUserLoading: userAuthState.isUserLoading,
       userError: userAuthState.userError,
@@ -94,9 +94,6 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
 
   return (
     <FirebaseContext.Provider value={contextValue}>
-      {/* IMPORTANT: FirebaseErrorListener yahan hai. 
-        Agar iske andar adminMessages listen ho raha hai, toh use check karein.
-      */}
       <FirebaseErrorListener />
       {children}
     </FirebaseContext.Provider>
@@ -108,9 +105,11 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
 export const useFirebase = (): FirebaseServicesAndUser => {
   const context = useContext(FirebaseContext);
   if (context === undefined) throw new Error('useFirebase must be used within a FirebaseProvider.');
+  
   if (!context.areServicesAvailable || !context.firebaseApp || !context.firestore || !context.auth) {
-    throw new Error('Firebase core services not available.');
+    throw new Error('Firebase core services not available. Please check your environment variables (NEXT_PUBLIC_FIREBASE_API_KEY, etc.) and ensure they are correctly set in Vercel.');
   }
+
   return {
     firebaseApp: context.firebaseApp,
     firestore: context.firestore,

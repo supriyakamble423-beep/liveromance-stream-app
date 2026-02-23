@@ -2,42 +2,71 @@
 
 import { firebaseConfig } from '@/firebase/config';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore'
+import { getAuth, Auth } from 'firebase/auth';
+import { getFirestore, Firestore } from 'firebase/firestore'
 
-// IMPORTANT: DO NOT MODIFY THIS FUNCTION
-export function initializeFirebase() {
-  if (!getApps().length) {
-    // Important! initializeApp() is called without any arguments because Firebase App Hosting
-    // integrates with the initializeApp() function to provide the environment variables needed to
-    // populate the FirebaseOptions in production. It is critical that we attempt to call initializeApp()
-    // without arguments.
-    let firebaseApp;
-    try {
-      // Attempt to initialize via Firebase App Hosting environment variables
-      firebaseApp = initializeApp();
-    } catch (e) {
-      // Only warn in production because it's normal to use the firebaseConfig to initialize
-      // during development
-      if (process.env.NODE_ENV === "production") {
-        console.warn('Automatic initialization failed. Falling back to firebase config object.', e);
-      }
-      firebaseApp = initializeApp(firebaseConfig);
-    }
-
-    return getSdks(firebaseApp);
-  }
-
-  // If already initialized, return the SDKs with the already initialized App
-  return getSdks(getApp());
+export interface FirebaseSdks {
+  firebaseApp: FirebaseApp | null;
+  auth: Auth | null;
+  firestore: Firestore | null;
 }
 
-export function getSdks(firebaseApp: FirebaseApp) {
-  return {
-    firebaseApp,
-    auth: getAuth(firebaseApp),
-    firestore: getFirestore(firebaseApp)
-  };
+/**
+ * initializeFirebase
+ * Robust initialization that checks for valid config before starting.
+ * This prevents 'invalid-api-key' errors during SSR or when env vars are missing.
+ */
+export function initializeFirebase(): FirebaseSdks {
+  // 1. Check if already initialized
+  if (getApps().length > 0) {
+    const app = getApp();
+    return getSdks(app);
+  }
+
+  // 2. Validate Config
+  const isConfigValid = 
+    firebaseConfig.apiKey && 
+    firebaseConfig.apiKey.length > 10 &&
+    firebaseConfig.projectId;
+
+  if (!isConfigValid) {
+    console.error('CRITICAL: Firebase Configuration is missing or invalid. Check NEXT_PUBLIC_FIREBASE environment variables.');
+    return { firebaseApp: null, auth: null, firestore: null };
+  }
+
+  // 3. Initialize App
+  try {
+    const firebaseApp = initializeApp(firebaseConfig);
+    return getSdks(firebaseApp);
+  } catch (e) {
+    console.error('Firebase initialization failed:', e);
+    return { firebaseApp: null, auth: null, firestore: null };
+  }
+}
+
+/**
+ * getSdks
+ * Safely attempts to get Auth and Firestore services.
+ */
+export function getSdks(firebaseApp: FirebaseApp | null): FirebaseSdks {
+  if (!firebaseApp) {
+    return { firebaseApp: null, auth: null, firestore: null };
+  }
+
+  try {
+    return {
+      firebaseApp,
+      auth: getAuth(firebaseApp),
+      firestore: getFirestore(firebaseApp)
+    };
+  } catch (e) {
+    console.error('Error retrieving Firebase services:', e);
+    return {
+      firebaseApp,
+      auth: null,
+      firestore: null
+    };
+  }
 }
 
 export * from './provider';

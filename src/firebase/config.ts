@@ -1,8 +1,22 @@
+/**
+ * Firebase Configuration
+ * Safely maps environment variables. 
+ * Ensure these are set in Vercel/Local .env with NEXT_PUBLIC_ prefix.
+ */
+
+const getSafeEnv = (key: string): string => {
+  const value = process.env[key];
+  if (!value || value === 'undefined' || value === 'null' || value.includes('YOUR_')) {
+    return '';
+  }
+  return value;
+};
+
 export const firebaseConfig = {
-  "projectId": "studio-3169873612-ad502",
-  "appId": "1:1074761045103:web:6a623b6a0775c8719de99a",
-  "apiKey": "AIzaSyCTw7JXMLn6HEcTYvHUNNHr7U65OXDFazQ",
-  "authDomain": "studio-3169873612-ad502.firebaseapp.com",
-  "measurementId": "",
-  "messagingSenderId": "1074761045103"
+  apiKey: getSafeEnv('NEXT_PUBLIC_FIREBASE_API_KEY'),
+  authDomain: getSafeEnv('NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN'),
+  projectId: getSafeEnv('NEXT_PUBLIC_FIREBASE_PROJECT_ID'),
+  storageBucket: getSafeEnv('NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET'),
+  messagingSenderId: getSafeEnv('NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID'),
+  appId: getSafeEnv('NEXT_PUBLIC_FIREBASE_APP_ID'),
 };
