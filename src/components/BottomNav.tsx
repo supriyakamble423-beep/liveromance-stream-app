@@ -2,14 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Radio, Map, UserHeart } from "lucide-react";
+import { Home, Radio, Map, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { icon: Home, label: "Global", href: "/global" },
   { icon: Radio, label: "Trends", href: "/trends" },
   { icon: Map, label: "Map", href: "/interest" },
-  { icon: UserHeart, label: "Profile", href: "/host-p" },
+  { icon: User, label: "Profile", href: "/host-p" },
 ];
 
 export function BottomNav() {
