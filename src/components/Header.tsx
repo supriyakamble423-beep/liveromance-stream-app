@@ -1,6 +1,6 @@
 "use client"
 
-import { Globe, SlidersHorizontal } from "lucide-react";
+import { Heart, SlidersHorizontal } from "lucide-react";
 import { Button } from "./ui/button";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -14,13 +14,13 @@ export function Header() {
     <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
       <div className="flex items-center justify-between px-4 pt-4 pb-2">
         <div className="flex items-center gap-2">
-          <div className="bg-primary p-2 rounded-xl flex items-center justify-center shadow-lg shadow-primary/20">
-            <Globe className="text-white size-5" />
+          <div className="romantic-gradient p-2 rounded-xl flex items-center justify-center shadow-lg shadow-primary/30">
+            <Heart className="text-white size-5 fill-current" />
           </div>
-          <h1 className="text-xl font-bold tracking-tight font-headline">Global Live</h1>
+          <h1 className="text-xl font-black tracking-tighter font-headline italic text-primary">Global Love</h1>
         </div>
-        <Button variant="secondary" size="icon" className="rounded-full size-10">
-          <SlidersHorizontal className="size-5" />
+        <Button variant="secondary" size="icon" className="rounded-full size-10 bg-secondary/10 hover:bg-secondary/20">
+          <SlidersHorizontal className="size-5 text-secondary" />
         </Button>
       </div>
       
@@ -30,7 +30,7 @@ export function Header() {
             key={cat}
             onClick={() => setActiveCategory(cat)}
             className={cn(
-              "text-sm font-semibold whitespace-nowrap transition-all relative py-1",
+              "text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all relative py-1",
               activeCategory === cat 
                 ? "text-primary scale-105" 
                 : "text-muted-foreground hover:text-primary"
