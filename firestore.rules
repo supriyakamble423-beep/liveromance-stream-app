@@ -25,7 +25,7 @@ service cloud.firestore {
 
     // HOSTS & STREAMS
     // Global access to hosts is required for the marketplace to function.
-    // Deployment Update: 2024-05-23 15:45 UTC - AdminMessages permissions fix
+    // Deployment Update: 2024-05-23 16:30 UTC - Final fix for hosts list permission
     match /hosts/{hostId} {
       allow read, get, list: if true;
       allow create: if isSignedIn();
