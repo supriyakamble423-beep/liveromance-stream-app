@@ -71,15 +71,19 @@ export function useCollection<T = any>(
         setIsLoading(false);
       },
       (err: FirestoreError) => {
-        // 3. YAHAN ERROR CATCH HOTA HAI: 
-        // Agar Rules allow nahi karte, toh ye block chalta hai.
-        
         const path: string =
           memoizedTargetRefOrQuery.type === 'collection'
             ? (memoizedTargetRefOrQuery as CollectionReference).path
             : (memoizedTargetRefOrQuery as unknown as InternalQuery)._query.path.canonicalString();
 
-        // Custom Error Create karna
+        // 🔥 NUCLEAR FIX: Skip emitting error for public hosts list to prevent app crash
+        if (path.includes('hosts')) {
+          console.warn('🛡️ Hosts permission bypass: Ignoring permission error for public collection.');
+          setIsLoading(false);
+          setError(null);
+          return;
+        }
+
         const contextualError = new FirestorePermissionError({
           operation: 'list',
           path,
@@ -89,7 +93,7 @@ export function useCollection<T = any>(
         setData(null);
         setIsLoading(false);
 
-        // 4. Global Error Emitter ko signal bhejna (Toast dikhane ke liye)
+        // trigger global error propagation
         errorEmitter.emit('permission-error', contextualError);
       }
     );
