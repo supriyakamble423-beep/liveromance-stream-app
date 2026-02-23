@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Radio, Map, User } from "lucide-react";
+import { Home, Radio, Map, User, Wallet } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { icon: Home, label: "Global", href: "/global" },
   { icon: Radio, label: "Trends", href: "/trends" },
+  { icon: Wallet, label: "Wallet", href: "/wallet" },
   { icon: Map, label: "Map", href: "/interest" },
   { icon: User, label: "Profile", href: "/host-p" },
 ];
