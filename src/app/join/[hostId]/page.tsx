@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Download, Loader2, Heart, Smartphone, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import Image from 'next/image';
 
 /**
  * Smart Join Page (A -> B Marketing)
@@ -16,7 +15,7 @@ export default function JoinRedirectPage() {
   const [status, setStatus] = useState<'detecting' | 'redirecting' | 'fallback'>('detecting');
   
   const hostId = params.hostId as string;
-  const apkUrl = "https://liveromance-stream-app.vercel.app/app-release.apk"; // Mock APK link
+  const apkUrl = "https://liveromance-stream-app.vercel.app/app-release.apk"; 
   const appScheme = `liveromance://profile/${hostId}`;
 
   useEffect(() => {
@@ -32,15 +31,17 @@ export default function JoinRedirectPage() {
     setStatus('redirecting');
     window.location.href = appScheme;
 
-    // Fallback logic: If app doesn't open within 2.5 seconds, show APK download
+    // Fallback logic: If app doesn't open within 2.5 seconds, redirect to APK download
     const timer = setTimeout(() => {
       if (!document.hidden) {
         setStatus('fallback');
+        // Automatically start APK download if fallback triggered
+        window.location.href = apkUrl;
       }
     }, 2500);
 
     return () => clearTimeout(timer);
-  }, [hostId, appScheme]);
+  }, [hostId, appScheme, apkUrl]);
 
   return (
     <div className="min-h-screen bg-[#0F0101] text-white flex flex-col items-center justify-center p-6 text-center max-w-lg mx-auto border-x border-white/10">

@@ -4,10 +4,8 @@ import { useState, useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import { 
-  X, Eye, Heart, Gift, MessageCircle, Share2, 
-  Star, Lock, Send, Sparkles, CameraOff,
-  ShieldAlert, RefreshCw, Zap, Loader2, Repeat,
-  ShieldCheck, Ghost, UserCheck, UserX
+  X, Eye, Heart, Gift, MessageCircle, Send, Sparkles, 
+  Lock, Loader2, Repeat, UserCheck, UserX, Ghost, Zap
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -137,7 +135,7 @@ export default function StreamPage() {
     }, 10000); 
 
     return () => clearInterval(moderationInterval);
-  }, [isHost, host?.streamType, host?.isLive, hostRef, isModerating]);
+  }, [isHost, host?.streamType, host?.isLive, hostRef, isModerating, router, toast]);
 
   const toggleStreamMode = async () => {
     if (!isHost || !hostRef || isUpdatingMode) return;
@@ -208,7 +206,7 @@ export default function StreamPage() {
       });
   };
 
-  if (isLoading) return <div className="h-screen bg-black flex items-center justify-center"><RefreshCw className="animate-spin text-primary" /></div>;
+  if (isLoading) return <div className="h-screen bg-black flex items-center justify-center"><Loader2 className="animate-spin text-primary" /></div>;
 
   const isPrivate = host?.streamType === 'private' || host?.streamType === 'invite-only';
 
@@ -222,7 +220,7 @@ export default function StreamPage() {
             {isMaskOn && (
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none animate-in fade-in duration-300">
                 <div className="relative romantic-glow">
-                  <Heart className="size-48 text-primary fill-current opacity-90 animate-pulse" />
+                  <Heart className="size-48 text-primary fill-current opacity-90 animate-pulse shadow-[0_0_50px_rgba(225,29,72,0.8)]" />
                   <div className="absolute inset-0 flex items-center justify-center">
                     <Ghost className="size-16 text-white opacity-40" />
                   </div>
@@ -286,12 +284,12 @@ export default function StreamPage() {
               className={cn(
                 "rounded-full h-10 px-6 gap-2 text-[10px] font-black uppercase tracking-widest shadow-2xl backdrop-blur-md border-2 transition-all",
                 isMaskOn 
-                  ? "bg-red-600 border-white text-white" 
-                  : "bg-white/10 border-pink-500 text-pink-500 hover:bg-pink-500/10"
+                  ? "bg-red-600 border-white text-white shadow-[0_0_20px_#ffffff]" 
+                  : "bg-white/10 border-pink-500 text-pink-500 hover:bg-pink-500/10 shadow-[0_0_20px_rgba(255,105,180,0.3)]"
               )}
             >
               {isMaskOn ? <UserCheck className="size-3" /> : <UserX className="size-3" />}
-              {isMaskOn ? 'Show Face' : 'Face Mask'}
+              {isMaskOn ? 'Mask On' : 'Show Face'}
             </Button>
           </div>
         </div>
