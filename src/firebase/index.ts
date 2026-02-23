@@ -15,8 +15,8 @@ export interface FirebaseSdks {
 
 /**
  * initializeFirebase
- * Simplified logic using the pattern requested by the user.
- * Pehle check karo ki saari keys hain ya nahi, fir initialize karo.
+ * Robust initialization logic.
+ * Checks for API key validity before attempting to initialize.
  */
 export function initializeFirebase(): FirebaseSdks {
   // Ensure we are on the client
@@ -24,14 +24,12 @@ export function initializeFirebase(): FirebaseSdks {
     return { firebaseApp: null, auth: null, firestore: null, storage: null };
   }
 
-  // Pehle check karo ki saari keys hain ya nahi, fir initialize karo
-  // Fail-safe: Agar apiKey missing hai toh initialize mat karo crash se bachne ke liye
   let app: FirebaseApp | null = null;
   
   try {
     if (getApps().length > 0) {
       app = getApp();
-    } else if (firebaseConfig.apiKey) {
+    } else if (firebaseConfig.apiKey && firebaseConfig.apiKey.length > 10) {
       app = initializeApp(firebaseConfig);
     }
   } catch (e) {
@@ -39,7 +37,7 @@ export function initializeFirebase(): FirebaseSdks {
   }
 
   if (!app) {
-    console.warn('⚠️ FIREBASE WARNING: Keys are missing or invalid.');
+    console.warn('⚠️ FIREBASE WARNING: Keys are missing or invalid in environment variables.');
     return { firebaseApp: null, auth: null, firestore: null, storage: null };
   }
 

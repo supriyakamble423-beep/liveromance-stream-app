@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState, useEffect, type ReactNode } from 'react';
+import React, { useState, type ReactNode } from 'react';
 import { FirebaseProvider } from '@/firebase/provider';
 import { initializeFirebase, type FirebaseSdks } from '@/firebase';
 
@@ -8,19 +8,18 @@ interface FirebaseClientProviderProps {
   children: ReactNode;
 }
 
+/**
+ * FirebaseClientProvider
+ * Initializes Firebase eagerly on the client to avoid hydration-related null states.
+ */
 export function FirebaseClientProvider({ children }: FirebaseClientProviderProps) {
-  // Use state to defer initialization until after mount to avoid hydration mismatches
-  const [services, setServices] = useState<FirebaseSdks>({
-    firebaseApp: null,
-    auth: null,
-    firestore: null,
-    storage: null
+  // Initialize services immediately if on client, otherwise null
+  const [services] = useState<FirebaseSdks>(() => {
+    if (typeof window !== 'undefined') {
+      return initializeFirebase();
+    }
+    return { firebaseApp: null, auth: null, firestore: null, storage: null };
   });
-
-  useEffect(() => {
-    const initialized = initializeFirebase();
-    setServices(initialized);
-  }, []);
 
   return (
     <FirebaseProvider
