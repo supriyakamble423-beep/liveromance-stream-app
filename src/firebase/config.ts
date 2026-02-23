@@ -1,24 +1,13 @@
 /**
  * Firebase Configuration
- * Safely maps environment variables. 
- * Ensure these are set in Vercel/Local .env with NEXT_PUBLIC_ prefix.
+ * Directly using environment variables as requested for maximum compatibility with Vercel.
  */
 
-const getSafeEnv = (key: string): string => {
-  if (typeof process === 'undefined' || !process.env) return '';
-  const value = process.env[key];
-  // Check for common 'missing' indicators
-  if (!value || value === 'undefined' || value === 'null' || value.includes('YOUR_')) {
-    return '';
-  }
-  return value;
-};
-
 export const firebaseConfig = {
-  apiKey: getSafeEnv('NEXT_PUBLIC_FIREBASE_API_KEY'),
-  authDomain: getSafeEnv('NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN'),
-  projectId: getSafeEnv('NEXT_PUBLIC_FIREBASE_PROJECT_ID'),
-  storageBucket: getSafeEnv('NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET'),
-  messagingSenderId: getSafeEnv('NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID'),
-  appId: getSafeEnv('NEXT_PUBLIC_FIREBASE_APP_ID'),
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };

@@ -15,8 +15,8 @@ export interface FirebaseSdks {
 
 /**
  * initializeFirebase
- * Robust initialization that checks for valid config before starting.
- * This prevents 'invalid-api-key' errors during SSR or when env vars are missing.
+ * Simplified logic using the pattern requested by the user.
+ * Pehle check karo ki saari keys hain ya nahi, fir initialize karo.
  */
 export function initializeFirebase(): FirebaseSdks {
   // Ensure we are on the client
@@ -24,31 +24,26 @@ export function initializeFirebase(): FirebaseSdks {
     return { firebaseApp: null, auth: null, firestore: null, storage: null };
   }
 
-  // 1. Check if already initialized
-  if (getApps().length > 0) {
-    const app = getApp();
-    return getSdks(app);
-  }
-
-  // 2. Validate Config
-  const isConfigValid = 
-    firebaseConfig.apiKey && 
-    firebaseConfig.apiKey.length > 10 &&
-    firebaseConfig.projectId;
-
-  if (!isConfigValid) {
-    console.warn('⚠️ FIREBASE WARNING: Keys are missing or invalid. App will run in limited mode.');
-    return { firebaseApp: null, auth: null, firestore: null, storage: null };
-  }
-
-  // 3. Initialize App
+  // Pehle check karo ki saari keys hain ya nahi, fir initialize karo
+  // Fail-safe: Agar apiKey missing hai toh initialize mat karo crash se bachne ke liye
+  let app: FirebaseApp | null = null;
+  
   try {
-    const firebaseApp = initializeApp(firebaseConfig);
-    return getSdks(firebaseApp);
+    if (getApps().length > 0) {
+      app = getApp();
+    } else if (firebaseConfig.apiKey) {
+      app = initializeApp(firebaseConfig);
+    }
   } catch (e) {
     console.error('Firebase initialization failed:', e);
+  }
+
+  if (!app) {
+    console.warn('⚠️ FIREBASE WARNING: Keys are missing or invalid.');
     return { firebaseApp: null, auth: null, firestore: null, storage: null };
   }
+
+  return getSdks(app);
 }
 
 /**
