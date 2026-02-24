@@ -1,11 +1,10 @@
-
 'use client';
 
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 import { collection, doc, setDoc, serverTimestamp, query, where, limit, addDoc } from 'firebase/firestore';
 import { Header } from "@/components/Header";
 import { BottomNav } from "@/components/BottomNav";
-import { MessageCircle, Zap, ShieldCheck, Lock, TrendingUp, RefreshCw, Sparkles, X, Heart, ShieldAlert, Star } from "lucide-react";
+import { MessageCircle, Zap, ShieldCheck, Lock, RefreshCw, X, Star } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -105,126 +104,126 @@ export default function GlobalMarketplace() {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-24 max-w-lg mx-auto border-x border-border">
+    <div className="min-h-screen bg-background pb-32 max-w-lg mx-auto border-x border-white/5 mesh-gradient">
       <Header />
       
-      <main className="px-4 pt-6 space-y-6">
+      <main className="px-6 pt-8 space-y-8">
         {showAIBot && (
-          <div className="relative animate-in slide-in-from-right-10 duration-500 z-40">
-            <div className="romantic-gradient p-5 rounded-[2rem] text-white shadow-2xl relative overflow-hidden group romantic-glow border border-white/20">
+          <div className="relative animate-in slide-in-from-right-10 duration-700 z-40">
+            <div className="romantic-gradient p-6 rounded-[2.5rem] text-white shadow-2xl relative overflow-hidden group romantic-glow border border-white/20">
               <div className="absolute top-0 right-0 p-4 opacity-10">
-                <ShieldCheck className="size-16" />
+                <ShieldCheck className="size-20" />
               </div>
               <button 
                 onClick={() => setShowAIBot(false)}
-                className="absolute top-4 right-4 text-white/50 hover:text-white"
+                className="absolute top-5 right-5 text-white/60 hover:text-white"
               >
-                <X className="size-4" />
+                <X className="size-5" />
               </button>
-              <div className="flex items-center gap-3 mb-2">
-                 <div className="size-10 rounded-2xl bg-white/20 flex items-center justify-center text-xl shadow-inner">🤖</div>
+              <div className="flex items-center gap-4 mb-3">
+                 <div className="size-12 rounded-2xl bg-white/20 flex items-center justify-center text-2xl shadow-inner backdrop-blur-md">🤖</div>
                  <div className="flex flex-col">
-                   <span className="text-[10px] font-black uppercase tracking-widest text-white/80 leading-none mb-1">Stream-X Agent</span>
-                   <span className="text-xs font-black uppercase tracking-tight italic">Safety Overseer</span>
+                   <span className="text-[11px] font-black uppercase tracking-[0.2em] text-white/80 leading-none mb-1">Stream-X Agent</span>
+                   <span className="text-sm font-black uppercase tracking-tight italic">Safety Overseer</span>
                  </div>
               </div>
-              <p className="text-[11px] font-bold leading-relaxed mb-4 text-white/90">
-                "Welcome! I monitor all Public streams 24/7. <span className="underline decoration-pink-300">Nudity is strictly banned here.</span> Use filters to find your perfect vibe!"
+              <p className="text-xs font-bold leading-relaxed mb-5 text-white/90">
+                "Welcome! I monitor all Public streams 24/7. <span className="underline decoration-pink-300 font-black">Nudity is strictly banned.</span> Keep it classy!"
               </p>
-              <div className="flex gap-2">
-                <Button size="sm" variant="secondary" className="h-8 rounded-xl text-[10px] font-black uppercase tracking-tight bg-white text-primary hover:bg-slate-100 shadow-lg">
+              <div className="flex gap-3">
+                <Button size="sm" variant="secondary" className="h-10 rounded-2xl text-[10px] font-black uppercase tracking-widest bg-white text-primary hover:bg-slate-100 shadow-xl border-none">
                   Explore Safe Nodes
                 </Button>
-                <Button size="sm" variant="outline" className="h-8 rounded-xl text-[10px] font-black uppercase tracking-tight border-white/30 text-white hover:bg-white/10">
-                  Privacy Policy
+                <Button size="sm" variant="outline" className="h-10 rounded-2xl text-[10px] font-black uppercase tracking-widest border-white/30 text-white hover:bg-white/10">
+                  Privacy
                 </Button>
               </div>
             </div>
           </div>
         )}
 
-        <section className="bg-primary/5 border border-primary/10 rounded-[2.5rem] p-5 flex items-center justify-between romantic-card-glow group">
+        <section className="bg-[#3D263D]/60 border border-white/5 rounded-[2.5rem] p-6 flex items-center justify-between romantic-card-glow backdrop-blur-md">
           <div className="space-y-1">
-            <p className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-1">
+            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-[#F472B6] flex items-center gap-2">
               <ShieldCheck className="size-3" /> Global Safety Grid
             </p>
-            <h2 className="text-xl font-black font-headline tracking-tighter uppercase italic group-hover:text-primary transition-colors">Market Activity</h2>
+            <h2 className="text-2xl font-black font-headline tracking-tighter uppercase italic text-white">Market Status</h2>
           </div>
-          <div className="flex gap-4 text-right">
+          <div className="flex gap-6 text-right">
             <div>
-              <p className="text-xs font-bold text-slate-400 uppercase">Live</p>
-              <p className="text-lg font-black text-primary">{hosts?.length || 0}</p>
+              <p className="text-[10px] font-black text-[#FDA4AF]/60 uppercase">Live</p>
+              <p className="text-xl font-black text-[#E11D48] drop-shadow-[0_0_10px_#E11D48]">{hosts?.length || 0}</p>
             </div>
             <div>
-              <p className="text-xs font-bold text-slate-400 uppercase">Secure</p>
-              <p className="text-lg font-black text-green-500">100%</p>
+              <p className="text-[10px] font-black text-[#FDA4AF]/60 uppercase">Secure</p>
+              <p className="text-xl font-black text-green-400 drop-shadow-[0_0_10px_#4ade80]">100%</p>
             </div>
           </div>
         </section>
 
-        <section className="flex items-center justify-between px-1">
+        <section className="flex items-center justify-between px-2">
           <div className="flex flex-col">
-            <h2 className="text-2xl font-black font-headline tracking-tight uppercase italic text-primary">Live & Verified</h2>
-            <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold flex items-center gap-1">
-              <Zap className="size-3 text-amber-500 fill-current" /> AI Scanned Every 10s
+            <h2 className="text-3xl font-black font-headline tracking-tight uppercase italic text-white">Verified</h2>
+            <p className="text-[10px] text-[#FDA4AF] uppercase tracking-[0.2em] font-black flex items-center gap-2">
+              <Zap className="size-3 text-amber-400 fill-current" /> AI Scanned Every 10s
             </p>
           </div>
           {hosts?.length === 0 && !isLoading && (
-            <Button onClick={seedFakeLiveHosts} disabled={isSeeding} size="sm" variant="outline" className="rounded-full gap-2 text-[10px] font-black uppercase tracking-widest h-8 border-primary/20 text-primary hover:bg-primary/5">
-              <RefreshCw className={cn("size-3", isSeeding && "animate-spin")} /> Simulate Live
+            <Button onClick={seedFakeLiveHosts} disabled={isSeeding} size="sm" variant="outline" className="rounded-full gap-2 text-[10px] font-black uppercase tracking-widest h-10 border-white/10 text-[#FDA4AF] hover:bg-white/5">
+              <RefreshCw className={cn("size-3", isSeeding && "animate-spin")} /> Simulate
             </Button>
           )}
         </section>
 
         {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-20 space-y-4 opacity-50">
-            <div className="size-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-            <p className="text-[10px] font-black uppercase tracking-widest">Connecting to AI Grid...</p>
+          <div className="flex flex-col items-center justify-center py-24 space-y-6 opacity-50">
+            <div className="size-16 border-4 border-[#E11D48] border-t-transparent rounded-full animate-spin shadow-[0_0_20px_#E11D48]" />
+            <p className="text-xs font-black uppercase tracking-[0.3em] text-[#FDA4AF]">Connecting to AI Grid...</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-5">
             {hosts?.map((host) => (
-              <div key={host.id} className="flex flex-col bg-card rounded-[2.5rem] overflow-hidden border border-border group transition-all hover:shadow-2xl relative romantic-card-glow">
-                <div className="relative aspect-[3/4] overflow-hidden bg-muted">
+              <div key={host.id} className="flex flex-col bg-[#3D263D]/80 rounded-[3rem] overflow-hidden border border-white/5 group transition-all duration-500 hover:shadow-[0_20px_50px_rgba(0,0,0,0.4)] relative hover:border-[#F472B6]/20">
+                <div className="relative aspect-[3/4] overflow-hidden bg-[#2D1B2D]">
                   <Image 
                     src={host.previewImageUrl || "https://picsum.photos/seed/host/600/800"} 
                     alt={host.id} 
                     fill 
-                    className="object-cover transition-transform duration-700 group-hover:scale-110"
+                    className="object-cover transition-transform duration-1000 group-hover:scale-110"
                   />
-                  <div className="absolute top-4 left-4 flex flex-col gap-2">
-                    <Badge className="bg-primary border-none text-[9px] font-black uppercase tracking-widest px-3 shadow-lg">Live</Badge>
+                  <div className="absolute top-5 left-5 flex flex-col gap-2">
+                    <Badge className="bg-[#E11D48] border-none text-[9px] font-black uppercase tracking-widest px-4 py-1 shadow-2xl">Live</Badge>
                   </div>
-                  <div className="absolute top-4 right-4">
-                    <div className="size-6 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center text-[10px] shadow-lg">
+                  <div className="absolute top-5 right-5">
+                    <div className="size-8 rounded-full bg-black/40 backdrop-blur-xl flex items-center justify-center text-xs shadow-2xl border border-white/10">
                       {host.country || '🌍'}
                     </div>
                   </div>
                   {host.streamType === 'private' && (
-                    <div className="absolute inset-0 bg-black/60 backdrop-blur-[6px] flex flex-col items-center justify-center gap-2 animate-in fade-in duration-300">
-                      <Lock className="size-10 text-primary/80" />
-                      <p className="text-[10px] font-black text-white/80 uppercase tracking-widest">Private Hub</p>
-                      <Badge variant="secondary" className="bg-primary text-white text-[8px] border-none font-black px-4">50 COINS</Badge>
+                    <div className="absolute inset-0 bg-[#2D1B2D]/70 backdrop-blur-md flex flex-col items-center justify-center gap-3 animate-in fade-in duration-500">
+                      <Lock className="size-12 text-[#F472B6]/80" />
+                      <p className="text-[10px] font-black text-white/90 uppercase tracking-[0.2em]">Private Hub</p>
+                      <Badge variant="secondary" className="bg-[#E11D48] text-white text-[9px] border-none font-black px-5 py-1 shadow-lg">50 COINS</Badge>
                     </div>
                   )}
                 </div>
-                <div className="p-4 space-y-4">
+                <div className="p-5 space-y-5">
                   <div className="flex justify-between items-center">
-                    <h3 className="font-black text-sm tracking-tight truncate uppercase italic">{host.username || `Host_${host.id.slice(0, 4)}`}</h3>
-                    <div className="flex items-center gap-1">
-                      <Star className="size-3 text-amber-500 fill-current" />
-                      <span className="text-[10px] font-black text-slate-500">{host.rating || '4.9'}</span>
+                    <h3 className="font-black text-sm tracking-tight truncate uppercase italic text-white">@{host.username || `Host_${host.id.slice(0, 4)}`}</h3>
+                    <div className="flex items-center gap-1.5">
+                      <Star className="size-3 text-amber-400 fill-current" />
+                      <span className="text-[11px] font-black text-[#FDA4AF]">{host.rating || '4.9'}</span>
                     </div>
                   </div>
                   <div className="flex gap-2">
                     <Button 
                       onClick={() => zapConnect(host.id, host.streamType || 'public')}
-                      className="flex-1 romantic-gradient rounded-2xl h-10 text-[10px] font-black gap-1 uppercase tracking-widest text-white hover:scale-105 transition-transform romantic-glow shadow-md"
+                      className="flex-1 romantic-gradient rounded-2xl h-11 text-[10px] font-black gap-2 uppercase tracking-widest text-white hover:scale-105 transition-transform shadow-xl border-none"
                     >
                       <Zap className="size-3 fill-current" /> {host.streamType === 'private' ? 'Unlock' : 'Zap'}
                     </Button>
                     <Link href={`/stream/${host.id}`} className="flex-1">
-                      <Button variant="outline" className="w-full rounded-2xl h-10 text-[10px] font-black gap-1 border-secondary/20 text-secondary uppercase tracking-widest hover:bg-secondary/5">
+                      <Button variant="outline" className="w-full rounded-2xl h-11 text-[10px] font-black gap-2 border-white/10 text-white uppercase tracking-widest hover:bg-white/5">
                         <MessageCircle className="size-3" /> View
                       </Button>
                     </Link>

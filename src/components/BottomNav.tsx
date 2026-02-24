@@ -17,7 +17,7 @@ export function BottomNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-[#2D1B2D]/90 backdrop-blur-xl border-t border-white/5 pb-safe shadow-[0_-4px_20px_rgba(0,0,0,0.3)]">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-[#2D1B2D]/95 backdrop-blur-2xl border-t border-white/5 pb-safe shadow-[0_-8px_30px_rgba(0,0,0,0.5)]">
       <div className="flex justify-around items-end h-16 max-w-lg mx-auto px-4">
         {navItems.map((item) => {
           const isActive = pathname === item.href;
@@ -26,14 +26,17 @@ export function BottomNav() {
               key={item.label}
               href={item.href}
               className={cn(
-                "flex flex-col items-center gap-1 transition-colors relative pb-2",
-                isActive ? "text-primary" : "text-muted-foreground hover:text-primary"
+                "flex flex-col items-center gap-1 transition-all duration-300 relative pb-2",
+                isActive ? "text-primary scale-110" : "text-muted-foreground hover:text-primary"
               )}
             >
               <div className="relative">
-                <item.icon className={cn("size-6", isActive && "fill-current")} />
+                <item.icon className={cn("size-6", isActive && "fill-current drop-shadow-[0_0_8px_#E11D48]")} />
               </div>
-              <span className="text-[10px] font-black uppercase tracking-tighter leading-none">{item.label}</span>
+              <span className={cn(
+                "text-[9px] font-black uppercase tracking-tighter leading-none transition-all",
+                isActive ? "opacity-100" : "opacity-60"
+              )}>{item.label}</span>
               {isActive && (
                 <div className="absolute -bottom-0.5 h-1 w-6 bg-primary rounded-full romantic-glow" />
               )}

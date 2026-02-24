@@ -4,9 +4,8 @@ import { useFirebase, useDoc, useMemoFirebase, useCollection } from "@/firebase"
 import { BottomNav } from "@/components/BottomNav";
 import { 
   ShieldCheck, Wallet, Settings, Radio, 
-  Star, Lock, Globe, Users, Loader2, Zap, Sparkles, Camera, Power, TrendingUp,
-  ImagePlus, Video, ChevronRight, Share2, ShieldAlert, AlertTriangle, Repeat,
-  User, MapPin, MessageSquare, Save, X
+  Lock, Globe, Users, Loader2, Zap, Sparkles, Camera, Power,
+  ChevronRight, Share2, MapPin, Save
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -22,7 +21,7 @@ import {
 } from "@/components/ui/dialog";
 import Image from "next/image";
 import Link from "next/link";
-import { doc, setDoc, serverTimestamp, query, where, orderBy, limit, collection, updateDoc } from "firebase/firestore";
+import { doc, serverTimestamp, query, where, orderBy, limit, collection, updateDoc } from "firebase/firestore";
 import { ref, uploadString, getDownloadURL } from "firebase/storage";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -40,7 +39,6 @@ export default function HostProfileDashboard() {
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Form States
   const [editName, setEditName] = useState("");
   const [editBio, setEditBio] = useState("");
   const [editCountry, setEditCountry] = useState("");
@@ -65,45 +63,25 @@ export default function HostProfileDashboard() {
   const { data: adminMessages } = useCollection(msgQuery);
   const latestAdminMsg = adminMessages?.[0];
 
-  const updateStreamType = async (type: 'public' | 'private' | 'invite-only') => {
+  const updateStreamType = async (type: 'public' | 'private') => {
     if (!hostRef) return;
-    if (!hostProfile?.verified) {
-      toast({ variant: 'destructive', title: 'Action Denied', description: 'Face ID required.' });
-      return;
-    }
-
     try {
       await updateDoc(hostRef, { streamType: type, updatedAt: serverTimestamp() });
-      toast({ 
-        title: "Mode Updated", 
-        description: type === 'public' ? "SFW Mode: AI auto-cuts nudity." : "Adult Mode: Paid access active." 
-      });
+      toast({ title: "Mode Updated", description: `Switched to ${type.toUpperCase()}` });
     } catch (err) {
       toast({ variant: 'destructive', title: 'Error', description: 'Update failed.' });
     }
   };
 
   const toggleLiveStatus = async () => {
-    if (!hostRef || !hostProfile?.verified) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Please verify identity first.' });
-      return;
-    }
-    
+    if (!hostRef) return;
     setIsTogglingLive(true);
     const newStatus = !hostProfile?.isLive;
-    
     try {
-      await updateDoc(hostRef, { 
-        isLive: newStatus, 
-        updatedAt: serverTimestamp(),
-        streamType: hostProfile.streamType || 'public' 
-      });
-      toast({ 
-        title: newStatus ? "🚀 BROADCAST ACTIVE" : "STREAM OFFLINE", 
-        description: newStatus ? `Mode: ${hostProfile.streamType?.toUpperCase()}` : "Broadcasting terminated." 
-      });
+      await updateDoc(hostRef, { isLive: newStatus, updatedAt: serverTimestamp() });
+      toast({ title: newStatus ? "Broadcast Active" : "Stream Offline" });
     } catch (err) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Status toggle failed.' });
+      toast({ variant: 'destructive', title: 'Error', description: 'Action failed.' });
     } finally {
       setIsTogglingLive(false);
     }
@@ -114,20 +92,20 @@ export default function HostProfileDashboard() {
     setIsOptimizing(true);
     try {
       await aiGuidedHostProfileOptimization({
-        profileDescription: hostProfile.bio || "Active streamer connecting globally.",
-        streamTitles: ["Global Vibe Check", "Late Night Live"],
-        contentStrategy: "High-energy interaction and real-time social discovery."
+        profileDescription: hostProfile.bio || "Active streamer.",
+        streamTitles: ["Global Vibe"],
+        contentStrategy: "High energy interaction."
       });
-      toast({ title: "AI Optimization Complete", description: "Your strategy has been refined." });
+      toast({ title: "AI Sync Complete" });
     } catch (e) {
-      toast({ variant: "destructive", title: "AI Busy", description: "Please retry in 5s." });
+      toast({ variant: "destructive", title: "AI Busy" });
     } finally {
       setIsOptimizing(false);
     }
   };
 
   const handleProfileUpdate = async () => {
-    if (!hostRef || !userId) return;
+    if (!hostRef) return;
     setIsUpdatingProfile(true);
     try {
       await updateDoc(hostRef, {
@@ -136,346 +114,139 @@ export default function HostProfileDashboard() {
         country: editCountry || hostProfile?.country,
         updatedAt: serverTimestamp()
       });
-      toast({ title: "Profile Updated", description: "Your public identity has been refreshed." });
+      toast({ title: "Profile Updated" });
     } catch (e) {
-      toast({ variant: "destructive", title: "Error", description: "Failed to save profile." });
+      toast({ variant: "destructive", title: "Error" });
     } finally {
       setIsUpdatingProfile(false);
     }
   };
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !storage || !userId || !hostRef) return;
-
-    setIsUploadingImage(true);
-    try {
-      const reader = new FileReader();
-      reader.onload = async (event) => {
-        const photoData = event.target?.result as string;
-        const storagePath = `host_profiles/${userId}_${Date.now()}.jpg`;
-        const storageRef = ref(storage, storagePath);
-        await uploadString(storageRef, photoData, "data_url");
-        const downloadURL = await getDownloadURL(storageRef);
-
-        await updateDoc(hostRef, {
-          previewImageUrl: downloadURL,
-          updatedAt: serverTimestamp()
-        });
-        toast({ title: "Image Uploaded", description: "Your profile picture is live!" });
-      };
-      reader.readAsDataURL(file);
-    } catch (e) {
-      toast({ variant: "destructive", title: "Upload Failed", description: "Check your connection." });
-    } finally {
-      setIsUploadingImage(false);
-    }
-  };
-
-  if (isProfileLoading) {
-    return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <Loader2 className="size-8 text-primary animate-spin" />
-      </div>
-    );
-  }
+  if (isProfileLoading) return <div className="min-h-screen bg-background flex items-center justify-center"><Loader2 className="animate-spin text-primary" /></div>;
 
   return (
-    <div className="min-h-screen bg-black text-white pb-28 max-w-lg mx-auto border-x border-white/10">
-      <header className="p-6 pt-12 bg-gradient-to-b from-primary/20 to-transparent">
-        <div className="flex items-center justify-between mb-8">
-          <h1 className="text-2xl font-black tracking-tighter uppercase italic flex items-center gap-2">
-             Profile <ChevronRight className="size-5 text-primary" />
+    <div className="min-h-screen bg-background text-white pb-32 max-w-lg mx-auto border-x border-white/5 mesh-gradient">
+      <header className="p-8 pt-16 bg-gradient-to-b from-[#E11D48]/15 to-transparent rounded-b-[4rem]">
+        <div className="flex items-center justify-between mb-10">
+          <h1 className="text-3xl font-black tracking-tighter uppercase italic flex items-center gap-2">
+             Dashboard <ChevronRight className="size-6 text-primary" />
           </h1>
           
           <Dialog>
             <DialogTrigger asChild>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="rounded-full bg-white/5 border border-white/10 hover:bg-primary/20"
-                onClick={() => {
-                  setEditName(hostProfile?.username || "");
-                  setEditBio(hostProfile?.bio || "");
-                  setEditCountry(hostProfile?.country || "");
-                }}
-              >
-                <Settings className="size-5" />
+              <Button variant="ghost" size="icon" className="rounded-full bg-white/5 border border-white/10 hover:bg-primary/20 size-12">
+                <Settings className="size-6" />
               </Button>
             </DialogTrigger>
-            <DialogContent className="bg-slate-950 border-white/10 text-white rounded-[2.5rem] max-w-[90vw] sm:max-w-md mx-auto">
+            <DialogContent className="bg-[#2D1B2D] border-white/10 text-white rounded-[3rem] max-w-[90vw] mx-auto">
               <DialogHeader>
-                <DialogTitle className="text-xl font-black uppercase tracking-tighter italic flex items-center gap-2">
-                  <User className="size-5 text-primary" /> Edit Identity
-                </DialogTitle>
+                <DialogTitle className="text-2xl font-black uppercase tracking-tighter italic text-white">Edit Profile</DialogTitle>
               </DialogHeader>
-              <div className="space-y-6 pt-4">
+              <div className="space-y-6 pt-6">
                 <div className="flex flex-col items-center gap-4">
-                  <div className="relative size-28 rounded-[2.5rem] overflow-hidden border-4 border-primary/30 group">
-                    <Image 
-                      src={hostProfile?.previewImageUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${userId}`} 
-                      alt="Profile" 
-                      fill 
-                      className="object-cover" 
-                    />
-                    <button 
-                      onClick={() => fileInputRef.current?.click()}
-                      className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
-                    >
-                      {isUploadingImage ? <Loader2 className="size-6 animate-spin" /> : <Camera className="size-6" />}
+                  <div className="relative size-32 rounded-[3rem] overflow-hidden border-4 border-primary/30 group">
+                    <Image src={hostProfile?.previewImageUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${userId}`} alt="Profile" fill className="object-cover" />
+                    <button onClick={() => fileInputRef.current?.click()} className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center">
+                      <Camera className="size-8" />
                     </button>
-                    <input 
-                      type="file" 
-                      ref={fileInputRef} 
-                      className="hidden" 
-                      accept="image/*" 
-                      onChange={handleImageUpload} 
-                    />
+                    <input type="file" ref={fileInputRef} className="hidden" accept="image/*" />
                   </div>
-                  <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Tap to change photo</p>
                 </div>
-
                 <div className="space-y-4">
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-2">Username</label>
-                    <Input 
-                      value={editName}
-                      onChange={(e) => setEditName(e.target.value)}
-                      placeholder="Your display name"
-                      className="bg-white/5 border-white/10 rounded-2xl h-12 focus-visible:ring-primary"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-2">Bio / Status</label>
-                    <Textarea 
-                      value={editBio}
-                      onChange={(e) => setEditBio(e.target.value)}
-                      placeholder="Tell the world about yourself..."
-                      className="bg-white/5 border-white/10 rounded-2xl min-h-[100px] focus-visible:ring-primary"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-2">Country / Location</label>
-                    <Input 
-                      value={editCountry}
-                      onChange={(e) => setEditCountry(e.target.value)}
-                      placeholder="e.g. Brazil 🇧🇷"
-                      className="bg-white/5 border-white/10 rounded-2xl h-12 focus-visible:ring-primary"
-                    />
-                  </div>
+                  <Input value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="Display Name" className="bg-white/5 border-white/10 rounded-2xl h-14" />
+                  <Textarea value={editBio} onChange={(e) => setEditBio(e.target.value)} placeholder="Bio" className="bg-white/5 border-white/10 rounded-2xl min-h-[120px]" />
+                  <Input value={editCountry} onChange={(e) => setEditCountry(e.target.value)} placeholder="Country" className="bg-white/5 border-white/10 rounded-2xl h-14" />
                 </div>
-
-                <div className="flex gap-3 pt-2">
-                  <DialogClose asChild>
-                    <Button variant="ghost" className="flex-1 rounded-2xl h-12 font-black uppercase tracking-widest text-[10px]">Cancel</Button>
-                  </DialogClose>
-                  <Button 
-                    onClick={handleProfileUpdate}
-                    disabled={isUpdatingProfile}
-                    className="flex-1 romantic-gradient rounded-2xl h-12 font-black uppercase tracking-widest text-[10px] text-white"
-                  >
-                    {isUpdatingProfile ? <Loader2 className="size-4 animate-spin mr-2" /> : <Save className="size-4 mr-2" />}
-                    Save Profile
-                  </Button>
-                </div>
+                <Button onClick={handleProfileUpdate} disabled={isUpdatingProfile} className="w-full romantic-gradient rounded-2xl h-14 font-black uppercase text-white">
+                  {isUpdatingProfile ? <Loader2 className="animate-spin mr-2" /> : <Save className="mr-2" />} Save Changes
+                </Button>
               </div>
             </DialogContent>
           </Dialog>
         </div>
-        
-        {latestAdminMsg && (
-          <div className="mb-6 bg-red-500/10 border border-red-500/20 p-4 rounded-2xl ring-1 ring-red-500/30 animate-in fade-in slide-in-from-top-4">
-            <div className="flex items-center gap-2 mb-1.5">
-              <ShieldCheck className="size-4 text-red-500" />
-              <span className="text-[10px] font-black uppercase text-red-500 tracking-widest">Urgent Directive</span>
-            </div>
-            <p className="text-xs text-slate-300 font-bold leading-relaxed italic">
-              "{latestAdminMsg.content}"
-            </p>
-          </div>
-        )}
 
-        <div className="flex items-center gap-5 mb-8">
-          <div className="relative size-24 rounded-[2.5rem] overflow-hidden border-4 border-primary/30 shadow-[0_0_30px_rgba(137,92,246,0.2)] bg-slate-900">
-            <Image 
-              src={hostProfile?.previewImageUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${userId}`} 
-              alt="Profile" 
-              fill 
-              className="object-cover" 
-            />
+        <div className="flex items-center gap-6 mb-10">
+          <div className="relative size-28 rounded-[3rem] overflow-hidden border-4 border-primary shadow-2xl bg-[#3D263D]">
+            <Image src={hostProfile?.previewImageUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${userId}`} alt="Profile" fill className="object-cover" />
           </div>
           <div className="flex-1 min-w-0">
-            <h2 className="text-2xl font-black tracking-tighter uppercase truncate">@{hostProfile?.username || `HOST_${userId?.slice(0, 4)}`}</h2>
-            <div className="flex items-center gap-2 mt-2">
-              <Badge className={cn(
-                "h-6 text-[9px] px-3 font-black tracking-widest border-none", 
-                hostProfile?.verified ? "bg-green-500 text-white" : "bg-white/10 text-slate-500"
-              )}>
-                {hostProfile?.verified ? "VERIFIED HOST" : "IDENTITY CHECK PENDING"}
+            <h2 className="text-3xl font-black tracking-tighter uppercase truncate text-white">@{hostProfile?.username || 'Host'}</h2>
+            <div className="flex items-center gap-3 mt-3">
+              <Badge className={cn("h-7 text-[10px] px-4 font-black tracking-widest border-none", hostProfile?.verified ? "bg-green-500 shadow-[0_0_15px_#22c55e]" : "bg-white/10")}>
+                {hostProfile?.verified ? "VERIFIED" : "PENDING"}
               </Badge>
-              {hostProfile?.isLive && (
-                <Badge className="h-6 text-[9px] px-3 font-black bg-red-600 animate-pulse border-none">LIVE</Badge>
-              )}
+              {hostProfile?.isLive && <Badge className="h-7 text-[10px] px-4 font-black bg-[#E11D48] animate-pulse shadow-[0_0_15px_#E11D48] border-none">LIVE</Badge>}
             </div>
-            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-2 flex items-center gap-1">
-              <MapPin className="size-3 text-primary" /> {hostProfile?.country || 'Global'}
-            </p>
           </div>
         </div>
 
-        {hostProfile?.bio && (
-          <div className="mb-8 px-2">
-            <p className="text-[11px] text-slate-300 font-medium leading-relaxed italic line-clamp-2">
-              "{hostProfile.bio}"
-            </p>
-          </div>
-        )}
-
-        {/* PROMINENT MODE TOGGLE ON DASHBOARD */}
-        <section className="mb-8 space-y-4">
-          <div className="flex items-center justify-between px-2">
-            <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">Quick Mode Selection</h3>
-            {hostProfile?.streamType === 'public' ? (
-              <Badge className="bg-green-500/20 text-green-500 border-none text-[8px] font-black">SFW MODE</Badge>
-            ) : (
-              <Badge className="bg-primary/20 text-primary border-none text-[8px] font-black">EARNING MODE</Badge>
-            )}
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <Button
-              onClick={() => updateStreamType('public')}
-              className={cn(
-                "h-16 rounded-2xl font-black uppercase tracking-widest gap-2 text-[10px]",
-                hostProfile?.streamType === 'public' ? "bg-green-500 text-white" : "bg-white/5 text-slate-400"
-              )}
-            >
-              <Globe className="size-4" /> Public (SFW)
-            </Button>
-            <Button
-              onClick={() => updateStreamType('private')}
-              className={cn(
-                "h-16 rounded-2xl font-black uppercase tracking-widest gap-2 text-[10px]",
-                hostProfile?.streamType === 'private' ? "bg-primary text-white" : "bg-white/5 text-slate-400"
-              )}
-            >
-              <Lock className="size-4" /> Adult (Paid)
-            </Button>
-          </div>
-        </section>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div className="bg-white/5 p-5 rounded-[2rem] border border-white/5 backdrop-blur-md">
-            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Earnings</p>
-            <div className="flex items-center gap-2">
-              <Wallet className="size-5 text-amber-400" />
-              <span className="text-2xl font-black tracking-tighter">{hostProfile?.earnings || "0"}</span>
+        <div className="grid grid-cols-2 gap-5">
+          <div className="bg-[#3D263D]/80 p-6 rounded-[2.5rem] border border-white/5 backdrop-blur-xl">
+            <p className="text-[10px] font-black text-[#FDA4AF]/60 uppercase tracking-[0.2em] mb-2">Earnings</p>
+            <div className="flex items-center gap-3">
+              <Wallet className="size-6 text-amber-400" />
+              <span className="text-3xl font-black tracking-tighter text-white">{hostProfile?.earnings || "0"}</span>
             </div>
           </div>
-          <div className="bg-white/5 p-5 rounded-[2rem] border border-white/5 backdrop-blur-md">
-            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Live Feed</p>
-            <div className="flex items-center gap-2">
-              <Users className="size-5 text-primary" />
-              <span className="text-2xl font-black tracking-tighter">{hostProfile?.viewers || "0"}</span>
+          <div className="bg-[#3D263D]/80 p-6 rounded-[2.5rem] border border-white/5 backdrop-blur-xl">
+            <p className="text-[10px] font-black text-[#FDA4AF]/60 uppercase tracking-[0.2em] mb-2">Viewers</p>
+            <div className="flex items-center gap-3">
+              <Users className="size-6 text-primary" />
+              <span className="text-3xl font-black tracking-tighter text-white">{hostProfile?.viewers || "0"}</span>
             </div>
           </div>
         </div>
       </header>
 
-      <main className="px-6 space-y-6">
-        {hostProfile?.streamType === 'public' && hostProfile?.isLive && (
-          <div className="p-4 bg-red-500/20 border border-red-500/30 rounded-2xl flex items-center gap-3">
-             <ShieldAlert className="size-5 text-red-500 animate-pulse" />
-             <p className="text-[10px] font-black text-red-500 uppercase leading-tight">AI Active Monitoring: Public streams must remain SFW. Nudity will trigger auto-cut.</p>
+      <main className="px-8 space-y-8">
+        <section className="space-y-4">
+          <div className="flex items-center justify-between px-2">
+            <h3 className="text-xs font-black uppercase tracking-[0.3em] text-[#FDA4AF]/60">Broadcast Mode</h3>
+            <Badge className={cn("border-none text-[9px] font-black", hostProfile?.streamType === 'public' ? "bg-green-500/20 text-green-400" : "bg-primary/20 text-primary")}>
+              {hostProfile?.streamType === 'public' ? 'SFW' : 'EARNING'}
+            </Badge>
           </div>
-        )}
-
-        <section className="bg-gradient-to-br from-primary/10 to-secondary/10 border border-primary/20 rounded-[2.5rem] p-6 flex items-center justify-between">
-          <div className="space-y-1">
-             <h3 className="text-sm font-black uppercase tracking-tight italic">Viral Engine</h3>
-             <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">A → B Lifetime Residual (1%)</p>
-          </div>
-          <Link href="/lifetime">
-            <Button size="icon" className="rounded-full bg-primary shadow-lg shadow-primary/20">
-              <Share2 className="size-5" />
+          <div className="grid grid-cols-2 gap-4">
+            <Button onClick={() => updateStreamType('public')} className={cn("h-20 rounded-[2rem] font-black uppercase tracking-widest gap-3 text-xs border-none", hostProfile?.streamType === 'public' ? "bg-green-500 text-white shadow-2xl" : "bg-white/5 text-[#FDA4AF]/60")}>
+              <Globe className="size-5" /> Public
             </Button>
-          </Link>
+            <Button onClick={() => updateStreamType('private')} className={cn("h-20 rounded-[2rem] font-black uppercase tracking-widest gap-3 text-xs border-none", hostProfile?.streamType === 'private' ? "romantic-gradient text-white shadow-2xl" : "bg-white/5 text-[#FDA4AF]/60")}>
+              <Lock className="size-5" /> Private
+            </Button>
+          </div>
         </section>
 
-        {!hostProfile?.verified ? (
-          <section className="bg-primary/20 border border-primary/30 rounded-[2.5rem] p-6 text-center space-y-4 shadow-xl">
-            <h3 className="text-xl font-black uppercase tracking-tight">Identity Required</h3>
-            <p className="text-xs text-slate-400 font-medium px-4">Verify your face to unlock global streaming privileges and start earning coins.</p>
-            <Link href="/host-f" className="block">
-              <Button className="w-full h-16 rounded-[1.5rem] bg-primary hover:bg-primary/90 font-black uppercase tracking-widest gap-2 text-white text-base shadow-lg shadow-primary/30">
-                <Camera className="size-6" /> Start 1-Sec Face ID
+        <section className="space-y-4">
+          <Button onClick={toggleLiveStatus} disabled={isTogglingLive} className={cn("w-full h-28 rounded-[3rem] font-black text-3xl uppercase tracking-[0.1em] gap-5 shadow-2xl transition-all border-none text-white", hostProfile?.isLive ? "bg-[#E11D48] hover:bg-[#E11D48]/90" : "bg-green-500 hover:bg-green-600")}>
+            {isTogglingLive ? <Loader2 className="size-10 animate-spin" /> : <Power className="size-12" />}
+            {hostProfile?.isLive ? "End Stream" : "Start Live"}
+          </Button>
+          
+          {hostProfile?.isLive && (
+            <Link href={`/stream/${userId}`} className="block">
+              <Button variant="outline" className="w-full h-16 rounded-[2rem] border-primary text-primary font-black uppercase tracking-widest gap-3 shadow-xl bg-primary/5">
+                <Radio className="size-6" /> Preview Signal
               </Button>
             </Link>
-          </section>
-        ) : (
-          <section className="space-y-4">
-            <Button 
-              onClick={toggleLiveStatus}
-              disabled={isTogglingLive}
-              className={cn(
-                "w-full h-24 rounded-[2.5rem] font-black text-2xl uppercase tracking-widest gap-4 shadow-2xl transition-all active:scale-95 text-white",
-                hostProfile?.isLive 
-                  ? "bg-red-600 hover:bg-red-700 shadow-red-500/40" 
-                  : "bg-green-500 hover:bg-green-600 shadow-green-500/40"
-              )}
-            >
-              {isTogglingLive ? <Loader2 className="size-8 animate-spin" /> : <Power className="size-9" />}
-              {hostProfile?.isLive ? "End Stream" : "Start Live Stream"}
-            </Button>
-            
-            {hostProfile?.isLive && (
-              <Link href={`/stream/${userId}`} className="block">
-                <Button variant="outline" className="w-full h-16 rounded-2xl border-primary text-primary font-black uppercase tracking-widest gap-3 shadow-lg">
-                  <Radio className="size-6" /> Preview Broadcast
-                </Button>
-              </Link>
-            )}
-          </section>
-        )}
-
-        {/* MEDIA UPLOAD SECTION (For Coins) */}
-        <section className="bg-white/5 p-6 rounded-[2.5rem] border border-dashed border-white/10">
-          <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4">Paid Media Marketplace</h3>
-          <div className="grid grid-cols-2 gap-3">
-            <Button variant="outline" className="h-28 rounded-2xl flex flex-col gap-1 border-white/5 bg-white/5 hover:bg-white/10 group transition-all">
-              <ImagePlus className="size-7 text-primary group-hover:scale-110 transition-transform" />
-              <span className="text-[10px] font-black uppercase tracking-tight">Add Photo</span>
-              <span className="text-[9px] font-black text-primary uppercase">Price: 10 Coins</span>
-            </Button>
-            <Button variant="outline" className="h-28 rounded-2xl flex flex-col gap-1 border-white/5 bg-white/5 hover:bg-white/10 group transition-all">
-              <Video className="size-7 text-secondary group-hover:scale-110 transition-transform" />
-              <span className="text-[10px] font-black uppercase tracking-tight">Add Video</span>
-              <span className="text-[9px] font-black text-secondary uppercase">Price: 50 Coins</span>
-            </Button>
-          </div>
+          )}
         </section>
 
-        <section className="space-y-4 pb-12">
-          <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-500 ml-2">AI Optimizer</h3>
-          <div className="bg-gradient-to-br from-primary/10 to-transparent border border-primary/20 rounded-[2.5rem] p-6 space-y-4">
-            <div className="flex items-center gap-3">
-              <Sparkles className="size-6 text-primary animate-pulse" />
-              <h4 className="text-sm font-black uppercase tracking-tight">Profile Performance Tuner</h4>
+        <section className="bg-gradient-to-br from-[#E11D48]/10 to-transparent border border-white/5 rounded-[3rem] p-8 space-y-5 shadow-2xl">
+          <div className="flex items-center gap-4">
+            <div className="size-12 rounded-2xl bg-primary/20 flex items-center justify-center text-primary shadow-xl">
+              <Sparkles className="size-7 animate-pulse" />
             </div>
-            <p className="text-[11px] text-slate-400 font-medium leading-relaxed uppercase">
-              Analyze your broadcast metadata to maximize engagement and diamond collection efficiency.
-            </p>
-            <Button 
-              onClick={handleOptimization}
-              disabled={isOptimizing}
-              className="w-full h-12 rounded-xl bg-primary font-black uppercase text-[10px] tracking-widest shadow-lg shadow-primary/20 text-white"
-            >
-              {isOptimizing ? <Loader2 className="size-4 animate-spin mr-2" /> : <Zap className="size-4 mr-2" />}
-              Generate Analysis
-            </Button>
+            <div>
+              <h4 className="text-base font-black uppercase tracking-tight text-white">AI Profile Optimizer</h4>
+              <p className="text-[10px] text-[#FDA4AF]/60 font-black uppercase tracking-widest">Meta Sync Active</p>
+            </div>
           </div>
+          <p className="text-[11px] text-[#FDA4AF]/80 font-bold leading-relaxed uppercase tracking-wide">Boost your Diamond collection efficiency by 40% with AI analysis.</p>
+          <Button onClick={handleOptimization} disabled={isOptimizing} className="w-full h-12 rounded-2xl bg-[#E11D48] font-black uppercase text-[10px] tracking-[0.2em] shadow-xl text-white border-none">
+            {isOptimizing ? <Loader2 className="animate-spin mr-2" /> : <Zap className="size-4 mr-2" />} Generate Analytics
+          </Button>
         </section>
 
-        {/* Adsterra Banner at the bottom of the Profile */}
         <AdBanner />
       </main>
 

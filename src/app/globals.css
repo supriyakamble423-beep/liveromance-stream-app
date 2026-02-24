@@ -23,27 +23,7 @@
     --border: 330 81% 70% / 0.1;
     --input: 300 32% 22%;
     --ring: 348 83% 50%;
-    --radius: 1rem;
-  }
-
-  .dark {
-    --background: 300 24% 15%;
-    --foreground: 0 0% 100%;
-    --card: 300 23% 20%;
-    --card-foreground: 0 0% 100%;
-    --popover: 300 24% 12%;
-    --popover-foreground: 0 0% 100%;
-    --primary: 348 83% 50%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 330 81% 70%;
-    --secondary-foreground: 0 0% 100%;
-    --muted: 300 32% 22%;
-    --muted-foreground: 350 89% 80%;
-    --accent: 348 83% 50%;
-    --accent-foreground: 0 0% 100%;
-    --border: 330 81% 70% / 0.1;
-    --input: 300 32% 22%;
-    --ring: 348 83% 50%;
+    --radius: 1.25rem;
   }
 }
 
@@ -86,4 +66,8 @@
     radial-gradient(at 0% 0%, hsla(348, 83%, 50%, 0.15) 0px, transparent 50%),
     radial-gradient(at 100% 100%, hsla(330, 81%, 70%, 0.1) 0px, transparent 50%),
     radial-gradient(at 50% 50%, hsla(300, 32%, 22%, 0.5) 0px, transparent 100%);
+}
+
+.mask-gradient-top {
+  mask-image: linear-gradient(to top, black 80%, transparent 100%);
 }

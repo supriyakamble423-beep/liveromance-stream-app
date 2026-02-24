@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Zap, PlayCircle, Gift, Heart, Sparkles, ChevronLeft, Loader2 } from "lucide-react";
+import { useState } from 'react';
+import { Zap, PlayCircle, Sparkles, ChevronLeft, Loader2, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useFirebase, useDoc, useMemoFirebase } from "@/firebase";
 import { doc, updateDoc, increment, serverTimestamp } from "firebase/firestore";
@@ -24,96 +24,77 @@ export default function RewardWallet() {
 
   const handleWatchAd = async () => {
     if (!user) {
-      toast({ variant: "destructive", title: "Sign in required", description: "Log in to earn rewards." });
+      toast({ variant: "destructive", title: "Sign in required" });
       return;
     }
-
     setIsWatching(true);
-    
-    // Simulate Ad experience
-    // Adsterra Direct Link logic
-    const adUrl = "https://www.highrevenuegate.com/example-link"; // Replace with real Adsterra link
-    window.open(adUrl, '_blank');
-
+    window.open('https://www.highrevenuegate.com/example-link', '_blank');
     try {
       if (userRef) {
-        // Add 5 coins reward
-        await updateDoc(userRef, {
-          coins: increment(5),
-          updatedAt: serverTimestamp()
-        });
-        
-        toast({ 
-          title: "🎉 Reward Received!", 
-          description: "5 Coins added to your heart wallet! ❤️",
-          className: "romantic-glow bg-primary text-white border-none"
-        });
+        await updateDoc(userRef, { coins: increment(5), updatedAt: serverTimestamp() });
+        toast({ title: "🎉 Reward Received!", className: "romantic-glow bg-primary text-white border-none" });
       }
     } catch (e) {
-      console.error(e);
-      toast({ variant: "destructive", title: "Error", description: "Reward sync failed." });
+      toast({ variant: "destructive", title: "Sync failed" });
     } finally {
       setIsWatching(false);
     }
   };
 
   return (
-    <div className="relative flex h-screen w-full flex-col overflow-hidden max-w-lg mx-auto border-x border-white/10 bg-[#0F0101] text-white pb-20">
-      <header className="flex items-center justify-between px-6 pt-10 pb-4 bg-black/40 backdrop-blur-md">
+    <div className="relative flex h-screen w-full flex-col overflow-hidden max-w-lg mx-auto border-x border-white/5 mesh-gradient text-white pb-24">
+      <header className="flex items-center justify-between px-8 pt-16 pb-6 bg-[#2D1B2D]/60 backdrop-blur-2xl">
         <Link href="/global">
-          <Button variant="ghost" size="icon" className="rounded-full bg-white/5">
-            <ChevronLeft className="size-5" />
+          <Button variant="ghost" size="icon" className="rounded-full bg-white/5 border border-white/10 size-12">
+            <ChevronLeft className="size-6" />
           </Button>
         </Link>
-        <h1 className="text-xl font-black italic uppercase tracking-tighter">Diamond Hub</h1>
-        <div className="size-10" />
+        <h1 className="text-2xl font-black italic uppercase tracking-tighter bg-gradient-to-r from-white to-[#FDA4AF] bg-clip-text text-transparent">Diamond Hub</h1>
+        <div className="size-12" />
       </header>
 
-      <main className="flex-1 overflow-y-auto px-6 space-y-6 pt-6 no-scrollbar">
-        {/* --- Wallet Balance Card --- */}
-        <div className="relative overflow-hidden bg-gradient-to-br from-red-600 via-pink-600 to-rose-700 p-8 rounded-[3rem] shadow-[0_20px_50px_rgba(225,29,72,0.3)] romantic-card-glow">
-          <div className="absolute top-0 right-0 p-4 opacity-20">
-            <Heart className="size-32 rotate-12 fill-white" />
+      <main className="flex-1 overflow-y-auto px-8 space-y-10 pt-8 no-scrollbar">
+        <div className="relative overflow-hidden bg-gradient-to-br from-[#E11D48] via-[#F472B6] to-[#E11D48] p-10 rounded-[4rem] shadow-[0_30px_60px_rgba(225,29,72,0.4)] romantic-card-glow border-none">
+          <div className="absolute top-0 right-0 p-6 opacity-30">
+            <Heart className="size-40 rotate-12 fill-white" />
           </div>
           
           <div className="relative z-10">
-            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/80">My Heart Balance</p>
-            <div className="flex items-center gap-3 mt-2">
-              <span className="text-5xl font-black italic tracking-tighter">
-                {isLoading ? <Loader2 className="animate-spin size-8" /> : (userData?.coins || 0)}
+            <p className="text-[11px] font-black uppercase tracking-[0.4em] text-white/90 mb-3">Total Balance</p>
+            <div className="flex items-center gap-4 mt-2">
+              <span className="text-6xl font-black italic tracking-tighter text-white">
+                {isLoading ? <Loader2 className="animate-spin size-10" /> : (userData?.coins || 0)}
               </span>
-              <Sparkles className="size-6 text-yellow-300 animate-pulse" />
+              <Sparkles className="size-8 text-yellow-300 animate-pulse drop-shadow-[0_0_15px_rgba(253,224,71,0.8)]" />
             </div>
-            <p className="text-[10px] font-bold mt-4 bg-white/20 w-fit px-3 py-1 rounded-full backdrop-blur-md">
-              Estimated Value: ₹{((userData?.coins || 0) / 10).toFixed(2)}
+            <p className="text-[10px] font-black mt-8 bg-black/20 w-fit px-5 py-2 rounded-full backdrop-blur-xl border border-white/10 uppercase tracking-widest">
+              Est. Value: ₹{((userData?.coins || 0) / 10).toFixed(2)}
             </p>
           </div>
         </div>
 
-        {/* --- Watch Ad Section --- */}
-        <section className="bg-white/5 border border-pink-500/20 rounded-[2.5rem] p-6 text-center romantic-card-glow">
-          <div className="size-16 bg-gradient-to-tr from-pink-500 to-red-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-pink-500/20">
-            <PlayCircle className="size-10 text-white fill-pink-600/20" />
+        <section className="bg-[#3D263D]/60 border border-white/10 rounded-[3.5rem] p-8 text-center shadow-2xl backdrop-blur-xl">
+          <div className="size-20 bg-gradient-to-tr from-[#F472B6] to-[#E11D48] rounded-[2rem] flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-primary/30">
+            <PlayCircle className="size-12 text-white" />
           </div>
           
-          <h3 className="text-lg font-black uppercase tracking-tight italic">Free Diamonds</h3>
-          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1 mb-6">
-            Watch a quick video and get <span className="text-pink-500">+5 Coins</span>
+          <h3 className="text-xl font-black uppercase tracking-tight italic text-white">Free Diamonds</h3>
+          <p className="text-[11px] text-[#FDA4AF] font-black uppercase tracking-[0.2em] mt-2 mb-8">
+            Instant Credit: <span className="text-white">+5 Coins</span>
           </p>
 
           <Button 
             onClick={handleWatchAd}
             disabled={isWatching}
-            className="w-full h-14 rounded-2xl bg-gradient-to-r from-red-600 to-pink-500 hover:scale-[1.02] transition-transform font-black uppercase tracking-widest text-[11px] shadow-lg shadow-red-600/20 romantic-glow border-none"
+            className="w-full h-16 rounded-[2rem] romantic-gradient font-black uppercase tracking-[0.2em] text-xs shadow-2xl hover:scale-105 transition-all border-none text-white"
           >
-            {isWatching ? <Loader2 className="animate-spin mr-2" /> : <PlayCircle className="size-4 mr-2" />}
-            Watch & Earn Now
+            {isWatching ? <Loader2 className="animate-spin mr-2" /> : <PlayCircle className="size-5 mr-2" />}
+            Watch & Earn
           </Button>
         </section>
 
-        {/* --- Quick Recharge Packs --- */}
-        <div className="grid grid-cols-1 gap-4 pb-10">
-          <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest pl-2">Top-up Packages</p>
+        <div className="space-y-5 pb-12">
+          <p className="text-[11px] font-black text-[#FDA4AF]/60 uppercase tracking-[0.3em] pl-4">Premium Bundles</p>
           
           {[
             { coins: 500, price: "₹49", bonus: "10%" },
@@ -121,19 +102,19 @@ export default function RewardWallet() {
             { coins: 5000, price: "₹399", bonus: "50%" },
           ].map((pkg, i) => (
             <div key={i} className={cn(
-              "p-5 rounded-[2rem] border flex justify-between items-center transition-all hover:bg-white/10",
-              pkg.popular ? "border-pink-500 bg-pink-500/5 shadow-lg shadow-pink-500/10" : "border-white/5 bg-white/5"
+              "p-6 rounded-[3rem] border flex justify-between items-center transition-all duration-500 backdrop-blur-md",
+              pkg.popular ? "border-[#F472B6]/30 bg-[#F472B6]/10 shadow-2xl" : "border-white/5 bg-white/5"
             )}>
-              <div className="flex items-center gap-4">
-                <div className="size-10 rounded-xl bg-white/5 flex items-center justify-center">
-                  <Zap className="size-5 text-yellow-400 fill-current" />
+              <div className="flex items-center gap-5">
+                <div className="size-12 rounded-2xl bg-white/5 flex items-center justify-center border border-white/5">
+                  <Zap className="size-6 text-yellow-400 fill-current" />
                 </div>
                 <div>
-                  <p className="text-sm font-black italic tracking-tight">{pkg.coins} Coins</p>
-                  <p className="text-[8px] font-black text-pink-500 uppercase">+{pkg.bonus} Extra Bonus</p>
+                  <p className="text-base font-black italic tracking-tighter text-white">{pkg.coins} Coins</p>
+                  <p className="text-[10px] font-black text-[#F472B6] uppercase tracking-widest">+{pkg.bonus} Bonus</p>
                 </div>
               </div>
-              <Button size="sm" className="rounded-xl h-10 px-6 font-black bg-white text-black hover:bg-slate-100 text-[10px] border-none">
+              <Button size="sm" className="rounded-2xl h-12 px-8 font-black bg-white text-[#E11D48] hover:bg-slate-100 text-[11px] border-none shadow-xl">
                 {pkg.price}
               </Button>
             </div>
