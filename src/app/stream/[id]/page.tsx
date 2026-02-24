@@ -59,19 +59,19 @@ export default function StreamPage() {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // LIVE TIMER LOGIC
+  // LIVE TIMER LOGIC: Tracks real duration even if host reloads
   useEffect(() => {
     if (!isHost || !host?.isLive || !host?.streamStartTime) {
       setSecondsLive(0);
       return;
     }
     
-    // Check if it's a Firestore Timestamp or a string
     const startTime = host.streamStartTime?.toDate?.()?.getTime() || new Date(host.streamStartTime).getTime();
     
     const updateTimer = () => {
       const now = Date.now();
-      setSecondsLive(Math.floor((now - startTime) / 1000));
+      const diff = Math.floor((now - startTime) / 1000);
+      setSecondsLive(diff > 0 ? diff : 0);
     };
 
     updateTimer();
@@ -82,32 +82,32 @@ export default function StreamPage() {
 
   const minutesLive = Math.floor(secondsLive / 60);
 
-  // MILESTONE ALERTS & EARNINGS LOGIC
+  // MILESTONE ALERTS: Triggered once per milestone
   useEffect(() => {
     if (!isHost || minutesLive === 0) return;
 
     if (minutesLive >= 15 && !achievedMilestones.includes(15)) {
       setAchievedMilestones(prev => [...prev, 15]);
       toast({ 
-        title: "🥉 Bronze Bonus!", 
-        description: "15 minutes live! You are now a Rising Star.",
-        className: "bg-[#CD7F32] text-white border-none shadow-[0_0_20px_#CD7F32]"
+        title: "🥉 BRONZE BONUS UNLOCKED!", 
+        description: "15 minutes live! You're now a Rising Star. +50 Coins pending.",
+        className: "bg-[#CD7F32] text-white border-none shadow-[0_0_30px_#CD7F32]"
       });
     }
     if (minutesLive >= 30 && !achievedMilestones.includes(30)) {
       setAchievedMilestones(prev => [...prev, 30]);
       toast({ 
-        title: "🥈 Silver Bonus!", 
-        description: "30 minutes live! 1.5x Multiplier UNLOCKED.",
-        className: "bg-cyan-500 text-white border-none shadow-[0_0_20px_#22d3ee]"
+        title: "🥈 SILVER MULTIPLIER ACTIVE!", 
+        description: "30 mins live! 1.5x Multiplier UNLOCKED for all gifts.",
+        className: "bg-cyan-500 text-white border-none shadow-[0_0_30px_#22d3ee]"
       });
     }
     if (minutesLive >= 60 && !achievedMilestones.includes(60)) {
       setAchievedMilestones(prev => [...prev, 60]);
       toast({ 
-        title: "🥇 Gold Jackpot!", 
-        description: "1 Hour Live! 2x Multiplier ACTIVE.",
-        className: "bg-yellow-500 text-black border-none shadow-[0_0_25px_#eab308]"
+        title: "🥇 GOLD JACKPOT ACTIVATED!", 
+        description: "1 Hour! 2x Multiplier is now LIVE. You're a Legend!",
+        className: "bg-yellow-500 text-black border-none shadow-[0_0_40px_#eab308]"
       });
     }
   }, [minutesLive, achievedMilestones, isHost, toast]);
@@ -146,6 +146,7 @@ export default function StreamPage() {
     };
   }, [isHost, cameraMode]);
 
+  // AI Moderation: Keeps app safe & premium
   useEffect(() => {
     if (!isHost || host?.streamType !== 'public' || !host?.isLive) return;
 
@@ -217,26 +218,32 @@ export default function StreamPage() {
   const endStream = async () => {
     if (!isHost || !hostRef) return;
     try {
-      // Calculate bonus based on duration
+      // Calculate multiplier-based bonus
       let bonus = 0;
-      if (minutesLive >= 60) bonus = 500;
-      else if (minutesLive >= 30) bonus = 150;
-      else if (minutesLive >= 15) bonus = 50;
+      if (minutesLive >= 60) bonus = 500; // Gold Jackpot
+      else if (minutesLive >= 30) bonus = 150; // Silver Bonus
+      else if (minutesLive >= 15) bonus = 50;  // Bronze Bonus
 
       await updateDoc(hostRef, {
         isLive: false,
         earnings: increment(bonus),
+        totalStreamMinutes: increment(minutesLive),
+        lastSessionBonus: bonus,
         updatedAt: serverTimestamp()
       });
 
       if (bonus > 0) {
-        toast({ title: "Session Bonus!", description: `You earned ${bonus} bonus coins!` });
+        toast({ 
+          title: "🎁 PROFIT SYNCED!", 
+          description: `You earned ${bonus} Stay-to-Earn coins!`,
+          className: "bg-green-500 text-white border-none shadow-2xl"
+        });
       }
       router.push('/host-p');
     } catch (e) {
-      toast({ variant: "destructive", title: "Error ending stream" });
+      toast({ variant: "destructive", title: "Sync failed" });
     }
-  }
+  };
 
   const sendMessage = () => {
     if (!inputText.trim() || !user || !firestore || !id) return;
@@ -261,7 +268,7 @@ export default function StreamPage() {
 
   const sendTip = (label: string, cost: number) => {
     if (!user || !firestore || !id) {
-      toast({ variant: "destructive", title: "Error", description: "Sign in to send tips." });
+      toast({ variant: "destructive", title: "Sign in required", description: "Sign in to send tips." });
       return;
     }
 
@@ -343,7 +350,7 @@ export default function StreamPage() {
         <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-transparent to-black/80" />
       </div>
 
-      {/* STAY-TO-EARN TIMER COMPONENT */}
+      {/* PROFIT ENGINE: LIVE EARNING TIMER */}
       {isHost && host?.isLive && <LiveEarningTimer minutes={minutesLive} />}
 
       {/* Stream-X Bot Status Bar */}
@@ -357,7 +364,7 @@ export default function StreamPage() {
             isModerating ? "bg-amber-500 shadow-amber-500 animate-pulse" : "bg-green-500 shadow-green-500"
           )} />
           <span className="text-[10px] font-black uppercase tracking-widest text-white/80">
-            {host?.streamType === 'public' ? 'Stream-X AI: Scanning' : 'Private Hub: Secure'}
+            {host?.streamType === 'public' ? 'Stream-X AI: Active' : 'Private Hub: Secure'}
           </span>
           <div className="h-3 w-px bg-white/20" />
           <div className="flex items-center gap-1">
@@ -368,7 +375,7 @@ export default function StreamPage() {
       </div>
 
       {isHost && (
-        <div className="absolute top-[165px] left-0 right-0 z-40 flex flex-col items-center gap-3">
+        <div className="absolute top-[185px] left-0 right-0 z-40 flex flex-col items-center gap-3">
           <div className="flex gap-2">
             <Button 
               onClick={toggleStreamMode} 
@@ -415,7 +422,7 @@ export default function StreamPage() {
         </div>
         <div className="flex gap-2">
           {isHost ? (
-            <Button variant="destructive" size="sm" onClick={endStream} className="rounded-full font-black uppercase text-[10px] tracking-widest h-10 px-6">
+            <Button variant="destructive" size="sm" onClick={endStream} className="rounded-full font-black uppercase text-[10px] tracking-widest h-10 px-6 shadow-2xl">
               End Stream
             </Button>
           ) : (
@@ -458,8 +465,8 @@ export default function StreamPage() {
         </div>
 
         <div className="absolute right-4 bottom-28 flex flex-col gap-4">
-          <button className="size-14 glass-effect rounded-full flex items-center justify-center text-white bg-white/10 hover:bg-primary/20 transition-all active:scale-90"><Heart className="size-7" /></button>
-          <button className="size-14 bg-secondary/80 rounded-full flex items-center justify-center text-white shadow-lg active:scale-90 transition-all"><Gift className="size-7" /></button>
+          <button className="size-14 glass-effect rounded-full flex items-center justify-center text-white bg-white/10 hover:bg-primary/20 transition-all active:scale-90 shadow-xl"><Heart className="size-7" /></button>
+          <button className="size-14 bg-secondary/80 rounded-full flex items-center justify-center text-white shadow-2xl active:scale-90 transition-all"><Gift className="size-7" /></button>
         </div>
 
         {(!isPrivate || isHost) && (
