@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect } from 'react';
@@ -25,7 +26,7 @@ export default function RootRedirect() {
             alt="Global Love" 
             width={300}
             height={300}
-            className="object-contain relative z-10"
+            className="object-contain relative z-10 logo-glow"
             priority
             onError={(e) => {
               const target = e.target as HTMLImageElement;

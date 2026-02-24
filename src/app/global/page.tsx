@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
@@ -80,7 +81,7 @@ export default function GlobalMarketplace() {
     try {
       for (const mock of MOCK_HOSTS) {
         const hostRef = doc(firestore, 'hosts', `fake_${mock.id}`);
-        setDoc(hostRef, {
+        await setDoc(hostRef, {
           id: `fake_${mock.id}`,
           username: mock.name,
           isLive: true,
@@ -98,22 +99,8 @@ export default function GlobalMarketplace() {
     } finally { setIsSeeding(false); }
   };
 
-  if (!areServicesAvailable) {
-    return (
-      <div className="min-h-screen bg-[#2D1B2D] flex flex-col items-center justify-center p-10 text-center mesh-gradient">
-        <div className="romantic-gradient p-6 rounded-full mb-8 logo-glow">
-          <AlertCircle className="size-16 text-white" />
-        </div>
-        <h1 className="text-2xl font-black uppercase italic mb-4">Configuration Required</h1>
-        <p className="text-xs text-slate-400 font-bold uppercase leading-relaxed mb-8">
-          Please set your Firebase Environment Variables to enable the live marketplace.
-        </p>
-        <Button onClick={() => window.location.reload()} className="h-14 rounded-2xl bg-white text-primary font-black uppercase px-10">Retry Connection</Button>
-      </div>
-    );
-  }
-
-  if (isLoading) {
+  // Gracefully handle missing services by allowing simulation
+  if (isLoading && areServicesAvailable) {
     return (
       <div className="min-h-screen bg-[#2D1B2D] flex flex-col items-center justify-center space-y-8 mesh-gradient">
         <div className="relative size-40 animate-pulse logo-glow">
@@ -127,6 +114,15 @@ export default function GlobalMarketplace() {
   return (
     <div className="min-h-screen bg-background pb-32 max-w-lg mx-auto border-x border-white/5 mesh-gradient screen-guard-active">
       <Header />
+      
+      {!areServicesAvailable && (
+        <div className="mx-6 mt-6 bg-red-500/10 border border-red-500/20 p-4 rounded-2xl flex items-center gap-4">
+           <AlertCircle className="size-6 text-red-500 shrink-0" />
+           <p className="text-[10px] font-black uppercase text-red-200">Firebase keys missing. Entering simulation mode.</p>
+           <Button size="sm" onClick={seedFakeLiveHosts} className="ml-auto bg-red-500 text-white text-[8px] font-black h-8 px-4">Simulate</Button>
+        </div>
+      )}
+
       <Dialog open={showAgeGate} onOpenChange={() => {}}>
         <DialogContent className="bg-[#2D1B2D] border-white/10 text-white rounded-[3rem] max-w-[90vw] mx-auto p-8">
           <DialogHeader className="items-center text-center">
