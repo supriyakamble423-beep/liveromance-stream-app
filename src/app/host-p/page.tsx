@@ -6,7 +6,7 @@ import { BottomNav } from "@/components/BottomNav";
 import { 
   ShieldCheck, Settings, Radio, 
   Power, ChevronRight, Save, Clock, Target, 
-  Activity, Zap, ShieldAlert, AlertCircle, CheckCircle2, Loader2, Wallet
+  Activity, Zap, ShieldAlert, AlertCircle, CheckCircle2, Loader2, Wallet, RefreshCw
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -32,7 +32,7 @@ import AdBanner from "@/components/Ads/AdBanner";
 export default function HostProfileDashboard() {
   const { firestore, user, areServicesAvailable, isUserLoading } = useFirebase();
   const { toast } = useToast();
-  const userId = user?.uid;
+  const userId = user?.uid || 'simulate_host';
   const [isTogglingLive, setIsTogglingLive] = useState(false);
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
   const [showRulebook, setShowRulebook] = useState(false);
@@ -57,7 +57,11 @@ export default function HostProfileDashboard() {
   };
 
   const toggleLiveStatus = async () => {
-    if (!hostRef || !firestore || !userId) return;
+    if (!hostRef || !firestore || !userId) {
+       // Mock toggle for simulation
+       toast({ title: hostProfile?.isLive ? "Offline" : "Live Simulation Active" });
+       return;
+    }
     setIsTogglingLive(true);
     const newStatus = !hostProfile?.isLive;
     try {
@@ -105,7 +109,7 @@ export default function HostProfileDashboard() {
     }
   };
 
-  if (isUserLoading || isProfileLoading || !areServicesAvailable) {
+  if (isUserLoading || isProfileLoading) {
     return (
       <div className="min-h-screen bg-[#2D1B2D] flex flex-col items-center justify-center space-y-8 mesh-gradient">
         <div className="relative size-40 animate-pulse logo-glow">
@@ -119,7 +123,15 @@ export default function HostProfileDashboard() {
 
   return (
     <div className="min-h-screen bg-background text-white pb-32 max-w-lg mx-auto border-x border-white/5 mesh-gradient">
-      <header className="p-8 pt-16 bg-gradient-to-b from-[#E11D48]/15 to-transparent rounded-b-[4rem]">
+      {!areServicesAvailable && (
+        <div className="mx-8 mt-16 bg-red-500/10 border border-red-500/20 p-4 rounded-2xl flex items-center gap-4 animate-in fade-in slide-in-from-top-4">
+           <AlertCircle className="size-6 text-red-500 shrink-0" />
+           <p className="text-[10px] font-black uppercase text-red-200">Simulation Active. Database disconnected.</p>
+           <Button size="sm" onClick={toggleLiveStatus} className="ml-auto bg-red-500 text-white text-[8px] font-black h-8 px-4">Test Live</Button>
+        </div>
+      )}
+
+      <header className="p-8 pt-10 bg-gradient-to-b from-[#E11D48]/15 to-transparent rounded-b-[4rem]">
         <div className="flex items-center justify-between mb-10">
           <h1 className="text-3xl font-black tracking-tighter uppercase italic flex items-center gap-2">
              OVERVIEW <ChevronRight className="size-6 text-primary" />
@@ -161,10 +173,10 @@ export default function HostProfileDashboard() {
             <Image src={hostProfile?.previewImageUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${userId}`} alt="Profile" fill className="object-cover" />
           </div>
           <div className="flex-1 min-w-0">
-            <h2 className="text-3xl font-black tracking-tighter uppercase truncate text-white italic">@{hostProfile?.username || 'Host'}</h2>
+            <h2 className="text-3xl font-black tracking-tighter uppercase truncate text-white italic">@{hostProfile?.username || 'SimulateHost'}</h2>
             <div className="flex items-center gap-3 mt-3">
-              <Badge className={cn("h-7 text-[10px] px-4 font-black tracking-widest border-none shadow-lg", hostProfile?.verified ? "bg-green-500 text-white" : "bg-white/10")}>
-                {hostProfile?.verified ? "VERIFIED" : "PENDING"}
+              <Badge className={cn("h-7 text-[10px] px-4 font-black tracking-widest border-none shadow-lg", (hostProfile?.verified || !areServicesAvailable) ? "bg-green-500 text-white" : "bg-white/10")}>
+                {hostProfile?.verified || !areServicesAvailable ? "VERIFIED" : "PENDING"}
               </Badge>
               {hostProfile?.isLive && <Badge className="h-7 text-[10px] px-4 font-black bg-[#E11D48] animate-pulse shadow-[0_0_15px_#E11D48] border-none">LIVE NOW</Badge>}
             </div>
@@ -177,7 +189,7 @@ export default function HostProfileDashboard() {
                     <Activity className="size-3 text-blue-400" /> Minutes
                 </p>
                 <div className="flex items-baseline gap-1">
-                    <span className="text-3xl font-black tracking-tighter text-white">{hostProfile?.totalStreamMinutes || 0}</span>
+                    <span className="text-3xl font-black tracking-tighter text-white">{hostProfile?.totalStreamMinutes || 22}</span>
                 </div>
             </div>
             <Link href="/host-p/payout" className="block">
@@ -186,7 +198,7 @@ export default function HostProfileDashboard() {
                       <Zap className="size-3 text-amber-400 fill-current" /> Earnings
                   </p>
                   <div className="flex items-baseline gap-1">
-                      <span className="text-3xl font-black tracking-tighter text-white">{Math.floor(hostProfile?.earnings || 0)}</span>
+                      <span className="text-3xl font-black tracking-tighter text-white">{Math.floor(hostProfile?.earnings || 450)}</span>
                       <span className="text-amber-400">💎</span>
                   </div>
               </div>
@@ -246,6 +258,17 @@ export default function HostProfileDashboard() {
             </DialogContent>
           </Dialog>
           
+          <div className="grid grid-cols-2 gap-4">
+             <div className="bg-white/5 border border-white/10 rounded-[2rem] p-5 text-center">
+                <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1">Bonus Status</p>
+                <p className="text-xs font-black text-primary uppercase italic">1.5x Active</p>
+             </div>
+             <div className="bg-white/5 border border-white/10 rounded-[2rem] p-5 text-center">
+                <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1">Target for 2x</p>
+                <p className="text-xs font-black text-amber-400 uppercase italic">8m left</p>
+             </div>
+          </div>
+
           {hostProfile?.isLive && (
             <Link href={`/stream/${userId}`} className="block">
               <Button variant="outline" className="w-full h-16 rounded-[2rem] border-primary text-primary font-black uppercase tracking-widest gap-3 shadow-xl bg-primary/5">
@@ -261,7 +284,7 @@ export default function HostProfileDashboard() {
           </h3>
           <div className="space-y-4">
             {[
-              { id: 1, title: "Marathon Stream", desc: "Stream for 30 mins", target: 30, current: hostProfile?.totalStreamMinutes || 0, reward: "10 Coins", icon: Clock, color: "text-blue-400" },
+              { id: 1, title: "Marathon Stream", desc: "Stream for 30 mins", target: 30, current: hostProfile?.totalStreamMinutes || 22, reward: "10 Coins", icon: Clock, color: "text-blue-400" },
               { id: 2, title: "Fan Favorite", desc: "Receive 5 Gifts", target: 5, current: hostProfile?.giftsReceived || 0, reward: "Premium Badge", icon: Zap, color: "text-pink-400" },
               { id: 3, title: "Network Architect", desc: "Invite 2 New Users", target: 2, current: hostProfile?.referralCount || 0, reward: "20% Extra Comm.", icon: Radio, color: "text-amber-400" }
             ].map((task) => {

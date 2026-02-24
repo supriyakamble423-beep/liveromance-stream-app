@@ -5,7 +5,7 @@ import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 import { collection, doc, setDoc, serverTimestamp, query, where, limit, addDoc } from 'firebase/firestore';
 import { Header } from "@/components/Header";
 import { BottomNav } from "@/components/BottomNav";
-import { MessageCircle, Zap, ShieldCheck, Lock, RefreshCw, X, Star, Sparkles, ShieldAlert, CheckCircle, AlertCircle } from "lucide-react";
+import { MessageCircle, Zap, ShieldCheck, Lock, RefreshCw, X, Star, Sparkles, ShieldAlert, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -14,14 +14,12 @@ import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from 'react';
 import { MOCK_HOSTS } from '@/lib/mock-data';
 import { cn } from "@/lib/utils";
-import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
 import AdBanner from "@/components/Ads/AdBanner";
 import { personalizedHostRecommendations, type PersonalizedHostRecommendationsOutput } from "@/ai/flows/personalized-host-recommendations-flow";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export default function GlobalMarketplace() {
-  const { firestore, user, areServicesAvailable } = useFirebase();
+  const { firestore, user, areServicesAvailable, isUserLoading } = useFirebase();
   const { toast } = useToast();
   const [isSeeding, setIsSeeding] = useState(false);
   const [showAIBot, setShowAIBot] = useState(false);
@@ -99,8 +97,7 @@ export default function GlobalMarketplace() {
     } finally { setIsSeeding(false); }
   };
 
-  // Gracefully handle missing services by allowing simulation
-  if (isLoading && areServicesAvailable) {
+  if (isUserLoading) {
     return (
       <div className="min-h-screen bg-[#2D1B2D] flex flex-col items-center justify-center space-y-8 mesh-gradient">
         <div className="relative size-40 animate-pulse logo-glow">
@@ -129,7 +126,7 @@ export default function GlobalMarketplace() {
             <div className="size-20 bg-primary/20 rounded-full flex items-center justify-center mb-4 romantic-glow">
               <ShieldAlert className="size-10 text-primary" />
             </div>
-            <DialogTitle className="text-3xl font-black uppercase italic tracking-tighter">Identity Check</DialogTitle>
+            <DialogTitle className="text-3xl font-black uppercase italic tracking-tighter text-white">Identity Check</DialogTitle>
           </DialogHeader>
           <div className="space-y-6 pt-4 text-center">
              <p className="text-sm font-bold leading-relaxed text-slate-300">You must be <span className="text-primary font-black">18 or older</span> to enter.</p>
