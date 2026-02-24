@@ -4,7 +4,7 @@ import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 import { collection, doc, setDoc, serverTimestamp, query, where, limit, addDoc } from 'firebase/firestore';
 import { Header } from "@/components/Header";
 import { BottomNav } from "@/components/BottomNav";
-import { MessageCircle, Zap, ShieldCheck, Lock, RefreshCw, X, Star } from "lucide-react";
+import { MessageCircle, Zap, ShieldCheck, Lock, RefreshCw, X, Star, Sparkles, TrendingUp } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -16,12 +16,15 @@ import { cn } from "@/lib/utils";
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import AdBanner from "@/components/Ads/AdBanner";
+import { personalizedHostRecommendations, type PersonalizedHostRecommendationsOutput } from "@/ai/flows/personalized-host-recommendations-flow";
 
 export default function GlobalMarketplace() {
-  const { firestore, auth } = useFirebase();
+  const { firestore, auth, user } = useFirebase();
   const { toast } = useToast();
   const [isSeeding, setIsSeeding] = useState(false);
   const [showAIBot, setShowAIBot] = useState(false);
+  const [recommendations, setRecommendations] = useState<PersonalizedHostRecommendationsOutput["recommendations"]>([]);
+  const [isRecLoading, setIsRecLoading] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => setShowAIBot(true), 1500);
@@ -38,6 +41,39 @@ export default function GlobalMarketplace() {
   }, [firestore]);
 
   const { data: hosts, isLoading } = useCollection(liveHostsQuery);
+
+  // AI Logic: Fetch Personalized Recommendations
+  useEffect(() => {
+    if (!hosts || hosts.length === 0 || !user || recommendations.length > 0) return;
+
+    async function getAIRecommendations() {
+      setIsRecLoading(true);
+      try {
+        const availableHosts = hosts.map(h => ({
+          id: h.id,
+          name: h.username || 'Anonymous',
+          categories: ['General'],
+          country: h.country || 'Global',
+          isLive: h.isLive || false,
+          previewImage: h.previewImageUrl || "https://picsum.photos/seed/host/600/800"
+        }));
+
+        const res = await personalizedHostRecommendations({
+          userId: user?.uid || 'guest',
+          userInterests: ['Music', 'Talk', 'Fun'],
+          viewingHistory: [],
+          availableHosts
+        });
+        setRecommendations(res.recommendations);
+      } catch (e) {
+        console.error("AI Recommendation Error:", e);
+      } finally {
+        setIsRecLoading(false);
+      }
+    }
+
+    getAIRecommendations();
+  }, [hosts, user, recommendations.length]);
 
   const seedFakeLiveHosts = async () => {
     if (!firestore || isSeeding) return;
@@ -140,6 +176,35 @@ export default function GlobalMarketplace() {
               </div>
             </div>
           </div>
+        )}
+
+        {/* AI RECOMMENDED SECTION */}
+        {recommendations.length > 0 && (
+          <section className="space-y-4">
+            <div className="flex items-center justify-between px-2">
+              <h2 className="text-xs font-black uppercase tracking-[0.2em] text-[#FDA4AF] flex items-center gap-2">
+                <Sparkles className="size-4 text-amber-400 animate-pulse" /> Recommended For You
+              </h2>
+              <Badge variant="outline" className="text-[8px] font-black uppercase border-white/10 text-white/40">AI Selection</Badge>
+            </div>
+            <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2">
+              {recommendations.map((rec) => (
+                <Link key={rec.hostId} href={`/stream/${rec.hostId}`} className="flex-shrink-0 w-40">
+                  <div className="bg-[#3D263D]/60 border border-white/5 rounded-[2rem] p-3 space-y-3 relative overflow-hidden group">
+                    <div className="relative aspect-square rounded-[1.5rem] overflow-hidden">
+                      <Image src={rec.previewImageUrl} alt={rec.hostName} fill className="object-cover transition-transform group-hover:scale-110" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                      <Badge className="absolute bottom-2 left-2 bg-[#E11D48] text-[7px] border-none font-black uppercase px-2 h-4">Live</Badge>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black text-white truncate italic">@{rec.hostName}</p>
+                      <p className="text-[8px] text-amber-400/80 font-bold uppercase tracking-widest truncate">{rec.reason.slice(0, 30)}...</p>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </section>
         )}
 
         <section className="bg-[#3D263D]/60 border border-white/5 rounded-[2.5rem] p-6 flex items-center justify-between romantic-card-glow backdrop-blur-md">
