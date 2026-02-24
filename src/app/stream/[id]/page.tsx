@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useEffect, useRef } from "react";
@@ -15,7 +14,6 @@ import { doc, collection, addDoc, serverTimestamp, query, orderBy, limit, update
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { nsfwModeration } from "@/ai/flows/nsfw-moderation-flow";
-import { processPayment } from "@/lib/payments";
 
 export default function StreamPage() {
   const { id } = useParams();
@@ -128,6 +126,14 @@ export default function StreamPage() {
   const isPrivate = host?.streamType === 'private' || host?.streamType === 'invite-only';
   const isBlurred = host?.manualBlur === true;
 
+  // Mock data for simulation
+  const displayHost = host || {
+    username: 'Demo_Host',
+    previewImageUrl: 'https://picsum.photos/seed/demo/600/800',
+    viewers: 1250,
+    streamType: 'public'
+  };
+
   return (
     <div className="relative h-screen w-full flex flex-col overflow-hidden bg-black mx-auto max-w-lg border-x border-white/10 screen-guard-active">
       <div className="absolute inset-0 z-0 bg-black">
@@ -136,7 +142,7 @@ export default function StreamPage() {
             <video ref={videoRef} autoPlay playsInline muted className={cn("w-full h-full object-cover scale-x-[-1]", isBlurred && "blur-3xl")} />
           ) : (
             <div className="relative w-full h-full">
-              <Image src={host?.previewImageUrl || "https://picsum.photos/seed/stream/800/1200"} alt="Stream" fill className={cn("object-cover", (isPrivate || isBlurred) ? "blur-3xl opacity-40" : "opacity-90")} />
+              <Image src={displayHost.previewImageUrl || "https://picsum.photos/seed/stream/800/1200"} alt="Stream" fill className={cn("object-cover", (isPrivate || isBlurred) ? "blur-3xl opacity-40" : "opacity-90")} />
               {isPrivate && (
                 <div className="absolute inset-0 bg-black/40 backdrop-blur-xl flex flex-col items-center justify-center space-y-6 px-10 text-center">
                   <div className="size-20 bg-primary/20 rounded-full flex items-center justify-center romantic-glow mb-2">
@@ -146,7 +152,7 @@ export default function StreamPage() {
                     <h2 className="text-3xl font-black uppercase italic text-white tracking-tighter">Private Hub</h2>
                     <p className="text-[10px] font-black text-[#FDA4AF] uppercase tracking-widest">Premium Content</p>
                   </div>
-                  <Button onClick={() => setShowPrivateWarning(true)} className="h-16 rounded-2xl bg-primary px-10 text-white font-black uppercase tracking-widest gap-2 shadow-2xl shadow-primary/40 text-sm">
+                  <Button onClick={() => setShowPrivateWarning(true)} className="h-16 rounded-2xl bg-primary px-10 text-white font-black uppercase tracking-widest gap-2 shadow-2xl shadow-primary/40 text-sm border-none">
                     <Zap className="size-5 fill-current" /> Pay 50 Coins
                   </Button>
                 </div>
@@ -160,19 +166,19 @@ export default function StreamPage() {
       <header className="relative z-10 flex items-center justify-between px-4 pt-16 pb-4">
         <div className="flex items-center gap-3 glass-effect rounded-full p-1 pr-4 bg-black/30 backdrop-blur-md border border-white/10">
           <div className="relative size-10 rounded-full border-2 border-primary overflow-hidden">
-            <Image src={host?.previewImageUrl || "https://api.dicebear.com/7.x/avataaars/svg?seed=host"} alt="Host" fill className="object-cover" />
+            <Image src={displayHost.previewImageUrl || "https://api.dicebear.com/7.x/avataaars/svg?seed=host"} alt="Host" fill className="object-cover" />
           </div>
           <div>
-            <h3 className="text-[11px] font-black leading-none text-white uppercase tracking-tighter">@{host?.username || 'Host'}</h3>
+            <h3 className="text-[11px] font-black leading-none text-white uppercase tracking-tighter italic">@{displayHost.username}</h3>
             <div className="flex items-center gap-1 mt-1">
               <Eye className="size-3 text-primary" />
-              <span className="text-[8px] font-black text-white/50 uppercase">{host?.viewers || 0} Nodes</span>
+              <span className="text-[8px] font-black text-white/50 uppercase">{displayHost.viewers || 0} Nodes</span>
             </div>
           </div>
         </div>
         <div className="flex gap-2">
           {isHost ? (
-            <Button variant="destructive" size="sm" onClick={endStream} className="rounded-full font-black uppercase text-[10px] tracking-widest h-10 px-6">End Signal</Button>
+            <Button variant="destructive" size="sm" onClick={endStream} className="rounded-full font-black uppercase text-[10px] tracking-widest h-10 px-6 border-none">End Signal</Button>
           ) : (
             <Button variant="secondary" size="icon" onClick={() => router.back()} className="glass-effect size-10 rounded-full text-white border-none bg-white/10"><X className="size-5" /></Button>
           )}
@@ -191,7 +197,7 @@ export default function StreamPage() {
         </div>
 
         {!isPrivate && (
-          <footer className="flex items-center gap-3 w-full">
+          <footer className="flex items-center gap-3 w-full pb-safe">
             <div className="flex-1 flex items-center glass-effect rounded-[2rem] px-6 h-14 bg-white/10 border-white/10 backdrop-blur-md">
               <Input className="bg-transparent border-none focus-visible:ring-0 text-white placeholder-white/30 font-bold text-sm" placeholder="Send a message..." />
               <button className="ml-2 text-primary"><Send className="size-5" /></button>
