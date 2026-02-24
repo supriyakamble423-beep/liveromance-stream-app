@@ -1,11 +1,11 @@
-
 'use client';
 
 import { useFirebase, useDoc, useMemoFirebase } from "@/firebase";
 import { BottomNav } from "@/components/BottomNav";
 import { 
   Settings, Radio, Power, ChevronRight, Save, Clock, Target, 
-  Activity, Zap, AlertCircle, Loader2, Wallet, Camera, Video, ShieldCheck, Sparkles, Star
+  Activity, Zap, AlertCircle, Loader2, Wallet, Camera, Video, ShieldCheck, Sparkles, Star,
+  CheckCircle2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
