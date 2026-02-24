@@ -1,3 +1,4 @@
+
 "use client"
 
 import { SlidersHorizontal } from "lucide-react";
@@ -15,13 +16,18 @@ export function Header() {
     <header className="sticky top-0 z-50 bg-[#2D1B2D]/90 backdrop-blur-2xl border-b border-white/5 shadow-lg">
       <div className="flex items-center justify-between px-6 pt-6 pb-2">
         <div className="flex items-center">
-          <div className="relative h-10 w-32 drop-shadow-[0_0_8px_rgba(255,255,255,0.4)]">
+          <div className="relative h-10 w-32 drop-shadow-[0_0_12px_rgba(255,255,255,0.3)]">
             <Image 
               src="/logo.png" 
               alt="Global Love" 
               fill 
               className="object-contain object-left"
               priority
+              onError={(e) => {
+                // Fallback to a placeholder if the local logo.png is missing
+                const target = e.target as HTMLImageElement;
+                target.src = "https://placehold.co/400x120/E11D48/white?text=GLOBAL+LOVE";
+              }}
             />
           </div>
         </div>

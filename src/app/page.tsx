@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect } from 'react';
@@ -10,20 +11,24 @@ export default function RootRedirect() {
   useEffect(() => {
     const timer = setTimeout(() => {
       router.push('/global');
-    }, 2000);
+    }, 2500);
     return () => clearTimeout(timer);
   }, [router]);
 
   return (
     <div className="min-h-screen bg-[#2D1B2D] flex flex-col items-center justify-center relative overflow-hidden mesh-gradient">
       <div className="relative flex flex-col items-center gap-8 z-10">
-        <div className="relative size-48 animate-pulse drop-shadow-[0_0_20px_rgba(255,255,255,0.5)]">
+        <div className="relative size-48 animate-pulse drop-shadow-[0_0_30px_rgba(255,255,255,0.4)]">
           <Image 
             src="/logo.png" 
             alt="Global Love" 
             fill 
             className="object-contain"
             priority
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              target.src = "https://placehold.co/400x400/E11D48/white?text=GL";
+            }}
           />
         </div>
         <div className="flex flex-col items-center gap-3">

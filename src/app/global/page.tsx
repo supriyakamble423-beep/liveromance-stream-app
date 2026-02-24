@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
@@ -142,8 +143,17 @@ export default function GlobalMarketplace() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-[#2D1B2D] flex flex-col items-center justify-center space-y-8 mesh-gradient">
-        <div className="relative size-40 animate-pulse drop-shadow-[0_0_15px_rgba(255,255,255,0.4)]">
-          <Image src="/logo.png" alt="Loading..." fill className="object-contain" />
+        <div className="relative size-40 animate-pulse drop-shadow-[0_0_20px_rgba(255,255,255,0.4)]">
+          <Image 
+            src="/logo.png" 
+            alt="Loading..." 
+            fill 
+            className="object-contain" 
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              target.src = "https://placehold.co/400x400/E11D48/white?text=GL";
+            }}
+          />
         </div>
         <div className="flex flex-col items-center gap-3">
           <div className="size-10 border-4 border-[#E11D48] border-t-transparent rounded-full animate-spin" />
