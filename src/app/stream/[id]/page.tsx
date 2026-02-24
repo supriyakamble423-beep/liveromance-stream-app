@@ -14,6 +14,7 @@ import { doc, collection, addDoc, serverTimestamp, query, orderBy, limit, update
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { nsfwModeration } from "@/ai/flows/nsfw-moderation-flow";
+import LiveEarningTimer from "@/components/Stream/LiveEarningTimer";
 
 export default function StreamPage() {
   const { id } = useParams();
@@ -24,6 +25,7 @@ export default function StreamPage() {
   const [inputText, setInputText] = useState("");
   const [showPrivateWarning, setShowPrivateWarning] = useState(false);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [streamMinutes, setStreamMinutes] = useState(0);
   
   const chatEndRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -37,6 +39,15 @@ export default function StreamPage() {
   }, [firestore, id]);
 
   const { data: host, isLoading } = useDoc(hostRef);
+
+  // Stream Duration Timer for Host
+  useEffect(() => {
+    if (!isHost || !host?.isLive) return;
+    const interval = setInterval(() => {
+      setStreamMinutes(prev => prev + 1);
+    }, 60000);
+    return () => clearInterval(interval);
+  }, [isHost, host?.isLive]);
 
   // NSFW AI Monitoring for Hosts
   useEffect(() => {
@@ -162,6 +173,8 @@ export default function StreamPage() {
         </div>
         <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/80" />
       </div>
+
+      {isHost && host?.isLive && <LiveEarningTimer minutes={streamMinutes} />}
 
       <header className="relative z-10 flex items-center justify-between px-4 pt-16 pb-4">
         <div className="flex items-center gap-3 glass-effect rounded-full p-1 pr-4 bg-black/30 backdrop-blur-md border border-white/10">

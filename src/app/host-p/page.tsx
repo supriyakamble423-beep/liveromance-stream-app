@@ -24,11 +24,13 @@ import { doc, serverTimestamp, updateDoc, setDoc } from "firebase/firestore";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import AdBanner from "@/components/Ads/AdBanner";
 
 export default function HostProfileDashboard() {
   const { firestore, user, areServicesAvailable, isUserLoading } = useFirebase();
   const { toast } = useToast();
+  const router = useRouter();
   const userId = user?.uid || 'simulate_host';
   const [isTogglingLive, setIsTogglingLive] = useState(false);
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
@@ -56,6 +58,10 @@ export default function HostProfileDashboard() {
   const toggleLiveStatus = async () => {
     if (!hostRef || !firestore || !userId) {
        toast({ title: hostProfile?.isLive ? "Offline" : "Live Simulation Active" });
+       if (!hostProfile?.isLive) {
+         setShowRulebook(false);
+         router.push(`/stream/${userId}`);
+       }
        return;
     }
     setIsTogglingLive(true);
@@ -79,6 +85,10 @@ export default function HostProfileDashboard() {
         title: newStatus ? "Broadcast Active" : "Stream Offline",
         description: newStatus ? "Rules accepted. You are now live." : "Session data saved."
       });
+
+      if (newStatus) {
+        router.push(`/stream/${userId}`);
+      }
     } catch (err) {
       console.error(err);
       toast({ variant: 'destructive', title: 'Error', description: 'Permission denied.' });
@@ -186,25 +196,25 @@ export default function HostProfileDashboard() {
           </p>
         </section>
 
-        {/* Main Action Buttons */}
+        {/* Main Action Buttons - Pic & Video */}
         <div className="grid grid-cols-2 gap-4 mt-6">
             <Link href="/host-f" className="flex-1">
-              <Button variant="outline" className="w-full h-24 rounded-[2rem] border-white/10 bg-white/5 text-white flex flex-col items-center justify-center gap-2 hover:bg-primary/20 transition-all border-none romantic-card-glow group">
-                <div className="size-10 bg-primary/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <Camera className="size-6 text-primary" />
+              <Button variant="outline" className="w-full h-28 rounded-[2rem] border-white/10 bg-white/5 text-white flex flex-col items-center justify-center gap-3 hover:bg-primary/20 transition-all border-none romantic-card-glow group">
+                <div className="size-12 bg-primary/20 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Camera className="size-7 text-primary" />
                 </div>
-                <span className="text-[10px] font-black uppercase tracking-widest italic">Identity Scan (Pic)</span>
+                <span className="text-[11px] font-black uppercase tracking-widest italic">Identity Scan (Pic)</span>
               </Button>
             </Link>
             <Button 
               onClick={() => toast({ title: "Media Hub", description: "Video setup is active in Live mode." })} 
               variant="outline" 
-              className="flex-1 h-24 rounded-[2rem] border-white/10 bg-white/5 text-white flex flex-col items-center justify-center gap-2 hover:bg-primary/20 transition-all border-none romantic-card-glow group"
+              className="flex-1 h-28 rounded-[2rem] border-white/10 bg-white/5 text-white flex flex-col items-center justify-center gap-3 hover:bg-primary/20 transition-all border-none romantic-card-glow group"
             >
-              <div className="size-10 bg-secondary/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                <Video className="size-6 text-secondary" />
+              <div className="size-12 bg-secondary/20 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Video className="size-7 text-secondary" />
               </div>
-              <span className="text-[10px] font-black uppercase tracking-widest italic">Live Hub (Video)</span>
+              <span className="text-[11px] font-black uppercase tracking-widest italic">Live Hub (Video)</span>
             </Button>
         </div>
       </header>
@@ -215,7 +225,7 @@ export default function HostProfileDashboard() {
             onClick={startStreamProcess} 
             disabled={isTogglingLive} 
             className={cn(
-              "w-full h-20 rounded-[3rem] font-black text-2xl uppercase tracking-[0.1em] gap-4 shadow-2xl transition-all border-none text-white italic", 
+              "w-full h-24 rounded-[3.5rem] font-black text-2xl uppercase tracking-[0.1em] gap-4 shadow-2xl transition-all border-none text-white italic", 
               hostProfile?.isLive ? "bg-primary" : "bg-green-600 shadow-green-600/20"
             )}
           >
