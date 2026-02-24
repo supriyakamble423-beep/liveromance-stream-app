@@ -93,15 +93,13 @@ export default function StreamPage() {
     return () => cameraStream?.getTracks().forEach(track => track.stop());
   }, [isHost]);
 
-  // ONE-CLICK TOGGLE LOGIC
   const toggleStreamMode = async () => {
     if (!isHost) return;
-
     const currentMode = host?.streamType || 'public';
     const nextMode = currentMode === 'public' ? 'private' : 'public';
 
     if (!areServicesAvailable || !hostRef) {
-      toast({ title: `Simulation: Switched to ${nextMode.toUpperCase()}` });
+      toast({ title: `Simulation: Mode set to ${nextMode.toUpperCase()}` });
       return;
     }
 
@@ -110,11 +108,6 @@ export default function StreamPage() {
         streamType: nextMode,
         updatedAt: serverTimestamp() 
       }, { merge: true });
-      
-      toast({ 
-        title: nextMode === 'private' ? "PRIVATE MODE ACTIVE" : "PUBLIC MODE ACTIVE",
-        description: nextMode === 'private' ? "Encryption enabled." : "Discovery enabled."
-      });
     } catch (e) {
       toast({ variant: "destructive", title: "Update Failed" });
     }
@@ -164,7 +157,6 @@ export default function StreamPage() {
 
   return (
     <div className="relative h-screen w-full flex flex-col overflow-hidden bg-black mx-auto max-w-lg border-x border-white/10 screen-guard-active">
-      {/* Background Video/Image Layer */}
       <div className="absolute inset-0 z-0 bg-black">
         {isHost ? (
           <div className="relative w-full h-full">
@@ -197,7 +189,6 @@ export default function StreamPage() {
         <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-transparent to-black/90 pointer-events-none" />
       </div>
 
-      {/* ONE-CLICK TOGGLE BUTTON & VIEWERS */}
       <div className="absolute top-6 left-0 right-0 z-[60] flex justify-center px-6 pointer-events-none">
          <div className="flex gap-2 pointer-events-auto items-center">
             {isHost && (
@@ -235,7 +226,6 @@ export default function StreamPage() {
 
       {isHost && <LiveEarningTimer minutes={streamMinutes} />}
 
-      {/* USER ENTRY POPUP (5 SECONDS) */}
       {isHost && activeNotification && (
         <div className="absolute top-48 left-6 right-6 z-[100] animate-in slide-in-from-top-10 duration-500">
            <div className="romantic-gradient p-5 rounded-3xl shadow-2xl flex items-center gap-4 border border-white/20 romantic-glow">
@@ -251,7 +241,6 @@ export default function StreamPage() {
         </div>
       )}
 
-      {/* Header Profile - Minimalist */}
       <header className="relative z-10 flex items-center justify-between px-4 pt-20 pb-4 mt-24">
         <div className="flex items-center gap-3 glass-effect rounded-full p-1 pr-5 bg-black/30 backdrop-blur-md border border-white/10">
           <div className="relative size-12 rounded-full border-2 border-primary overflow-hidden bg-slate-800">
@@ -279,7 +268,6 @@ export default function StreamPage() {
         </div>
       </header>
 
-      {/* Interaction Area */}
       <div className="flex-1 relative z-10 flex flex-col justify-end px-6 pb-10">
         <div className="w-full max-w-[85%] flex flex-col gap-3 overflow-y-auto max-h-[30vh] mb-8 no-scrollbar">
             <div className="px-4 py-3 rounded-2xl max-w-fit bg-black/60 backdrop-blur-lg border border-white/10 shadow-xl">
