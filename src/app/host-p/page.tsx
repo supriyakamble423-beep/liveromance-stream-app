@@ -1,10 +1,11 @@
+
 'use client';
 
 import { useFirebase, useDoc, useMemoFirebase } from "@/firebase";
 import { BottomNav } from "@/components/BottomNav";
 import { 
   Settings, Radio, Power, ChevronRight, Save, Clock, Target, 
-  Activity, Zap, AlertCircle, Loader2, Wallet
+  Activity, Zap, AlertCircle, Loader2, Wallet, Camera, Video, ShieldCheck, Sparkles, Star
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -104,7 +105,6 @@ export default function HostProfileDashboard() {
     }
   };
 
-  // Only show loader if services are definitely available and still initializing
   if (isUserLoading && areServicesAvailable) {
     return (
       <div className="min-h-screen bg-[#2D1B2D] flex flex-col items-center justify-center space-y-8 mesh-gradient">
@@ -118,25 +118,16 @@ export default function HostProfileDashboard() {
           />
         </div>
         <div className="size-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Connecting Node...</p>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-background text-white pb-32 max-w-lg mx-auto border-x border-white/5 mesh-gradient">
-      {!areServicesAvailable && (
-        <div className="mx-8 mt-16 bg-red-500/10 border border-red-500/20 p-4 rounded-2xl flex items-center gap-4 animate-in fade-in slide-in-from-top-4">
-           <AlertCircle className="size-6 text-red-500 shrink-0" />
-           <p className="text-[10px] font-black uppercase text-red-200">Simulation Active. Mode Enabled.</p>
-           <Button size="sm" onClick={toggleLiveStatus} className="ml-auto bg-red-500 text-white text-[8px] font-black h-8 px-4">Test Live</Button>
-        </div>
-      )}
-
       <header className="p-8 pt-10 bg-gradient-to-b from-[#E11D48]/15 to-transparent rounded-b-[4rem]">
         <div className="flex items-center justify-between mb-10">
           <h1 className="text-3xl font-black tracking-tighter uppercase italic flex items-center gap-2">
-             OVERVIEW <ChevronRight className="size-6 text-primary" />
+             DASHBOARD <ChevronRight className="size-6 text-primary" />
           </h1>
           
           <div className="flex items-center gap-2">
@@ -177,35 +168,49 @@ export default function HostProfileDashboard() {
           <div className="flex-1 min-w-0">
             <h2 className="text-3xl font-black tracking-tighter uppercase truncate text-white italic">@{hostProfile?.username || 'Host_Node'}</h2>
             <div className="flex items-center gap-3 mt-3">
-              <Badge className={cn("h-7 text-[10px] px-4 font-black tracking-widest border-none shadow-lg", (hostProfile?.verified || !areServicesAvailable) ? "bg-green-500 text-white" : "bg-white/10")}>
-                {hostProfile?.verified || !areServicesAvailable ? "VERIFIED" : "PENDING"}
+              <Badge className={cn("h-7 text-[10px] px-4 font-black tracking-widest border-none", hostProfile?.verified ? "bg-green-500 text-white" : "bg-white/10 text-slate-400")}>
+                {hostProfile?.verified ? "VERIFIED" : "UNVERIFIED"}
               </Badge>
-              {hostProfile?.isLive && <Badge className="h-7 text-[10px] px-4 font-black bg-[#E11D48] animate-pulse shadow-[0_0_15px_#E11D48] border-none">LIVE NOW</Badge>}
+              {hostProfile?.isLive && <Badge className="h-7 text-[10px] px-4 font-black bg-[#E11D48] animate-pulse border-none">LIVE</Badge>}
             </div>
           </div>
         </div>
 
-        <section className="grid grid-cols-2 gap-4">
-            <div className="bg-[#3D263D]/80 p-6 rounded-[2.5rem] border border-white/5 backdrop-blur-xl">
-                <p className="text-[10px] font-black text-[#FDA4AF]/60 uppercase tracking-[0.2em] mb-2 flex items-center gap-2">
-                    <Activity className="size-3 text-blue-400" /> Minutes
-                </p>
-                <div className="flex items-baseline gap-1">
-                    <span className="text-3xl font-black tracking-tighter text-white">{hostProfile?.totalStreamMinutes || 22}</span>
-                </div>
+        {/* Multiplier Status Card */}
+        <section className="bg-[#3D263D]/60 p-6 rounded-[2.5rem] border border-white/10 backdrop-blur-xl mb-6">
+          <div className="flex justify-between items-center mb-4">
+            <div className="flex flex-col">
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[#FDA4AF]">Earning Level</span>
+              <h3 className="text-xl font-black italic uppercase text-white flex items-center gap-2">
+                <Sparkles className="size-5 text-amber-400" /> {hostProfile?.isLive ? "1.5x Multiplier" : "1.0x Base Rate"}
+              </h3>
             </div>
-            <Link href="/host-p/payout" className="block">
-              <div className="bg-[#3D263D]/80 p-6 rounded-[2.5rem] border border-white/5 backdrop-blur-xl hover:border-primary/40 transition-all">
-                  <p className="text-[10px] font-black text-[#FDA4AF]/60 uppercase tracking-[0.2em] mb-2 flex items-center gap-2">
-                      <Zap className="size-3 text-amber-400 fill-current" /> Earnings
-                  </p>
-                  <div className="flex items-baseline gap-1">
-                      <span className="text-3xl font-black tracking-tighter text-white">{Math.floor(hostProfile?.earnings || 4500)}</span>
-                      <span className="text-amber-400">💎</span>
-                  </div>
-              </div>
-            </Link>
+            <div className="flex gap-1">
+              <Badge className="bg-primary/20 text-primary border-none text-[8px] font-black">1.5x</Badge>
+              <Badge className="bg-white/5 text-slate-500 border-none text-[8px] font-black">2.0x</Badge>
+            </div>
+          </div>
+          <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
+            <div className="h-full bg-primary rounded-full w-[65%]" />
+          </div>
+          <p className="text-[9px] font-bold text-slate-500 uppercase mt-3 tracking-widest">
+            Stream 15 more minutes to unlock 2.0x Gold Rate
+          </p>
         </section>
+
+        {/* Action Buttons: Pic & Video */}
+        <div className="grid grid-cols-2 gap-4">
+            <Link href="/host-f" className="flex-1">
+              <Button variant="outline" className="w-full h-20 rounded-[2rem] border-white/10 bg-white/5 text-white flex flex-col items-center gap-1 hover:bg-primary/20 transition-all">
+                <Camera className="size-6 text-primary" />
+                <span className="text-[10px] font-black uppercase tracking-widest">Face Verify (Pic)</span>
+              </Button>
+            </Link>
+            <Button variant="outline" onClick={() => toast({ title: "Media Hub", description: "Video setup active." })} className="flex-1 h-20 rounded-[2rem] border-white/10 bg-white/5 text-white flex flex-col items-center gap-1 hover:bg-primary/20 transition-all">
+              <Video className="size-6 text-secondary" />
+              <span className="text-[10px] font-black uppercase tracking-widest">Stream Hub (Video)</span>
+            </Button>
+        </div>
       </header>
 
       <main className="px-8 space-y-10 pt-10">
@@ -215,26 +220,66 @@ export default function HostProfileDashboard() {
             disabled={isTogglingLive} 
             className={cn(
               "w-full h-28 rounded-[3.5rem] font-black text-3xl uppercase tracking-[0.1em] gap-5 shadow-2xl transition-all border-none text-white italic", 
-              hostProfile?.isLive ? "bg-[#E11D48]" : "bg-green-500"
+              hostProfile?.isLive ? "bg-[#E11D48]" : "bg-green-500 shadow-green-500/20"
             )}
           >
             {isTogglingLive ? <Loader2 className="size-10 animate-spin" /> : <Power className="size-12" />}
-            {hostProfile?.isLive ? "End Stream" : "Go Live Now"}
+            {hostProfile?.isLive ? "End Stream" : "Go Live"}
           </Button>
 
           {hostProfile?.isLive && (
             <Link href={`/stream/${userId}`} className="block">
-              <Button variant="outline" className="w-full h-16 rounded-[2rem] border-primary text-primary font-black uppercase tracking-widest gap-3 shadow-xl bg-primary/5">
+              <Button variant="outline" className="w-full h-16 rounded-[2rem] border-primary text-primary font-black uppercase tracking-widest gap-3 bg-primary/5">
                 <Radio className="size-6" /> Preview Stream
               </Button>
             </Link>
           )}
         </section>
 
+        <section className="grid grid-cols-2 gap-4">
+            <div className="bg-[#3D263D]/80 p-6 rounded-[2.5rem] border border-white/5 flex flex-col items-center text-center">
+                <p className="text-[10px] font-black text-[#FDA4AF]/60 uppercase mb-2">Total Viewers</p>
+                <div className="flex items-center gap-2">
+                  <Star className="size-4 text-amber-400 fill-current" />
+                  <span className="text-3xl font-black italic text-white">{hostProfile?.viewers || 0}</span>
+                </div>
+            </div>
+            <div className="bg-[#3D263D]/80 p-6 rounded-[2.5rem] border border-white/5 flex flex-col items-center text-center">
+                <p className="text-[10px] font-black text-[#FDA4AF]/60 uppercase mb-2">Total Minutes</p>
+                <div className="flex items-center gap-2">
+                  <Clock className="size-4 text-secondary" />
+                  <span className="text-3xl font-black italic text-white">{hostProfile?.totalStreamMinutes || 0}</span>
+                </div>
+            </div>
+        </section>
+
         <AdBanner />
       </main>
 
       <BottomNav />
+
+      {/* Rulebook Dialog */}
+      <Dialog open={showRulebook} onOpenChange={setShowRulebook}>
+        <DialogContent className="bg-[#2D1B2D] border-white/10 text-white rounded-[3rem] max-w-[90vw] mx-auto p-8">
+          <DialogHeader className="items-center text-center">
+            <div className="size-20 bg-primary/20 rounded-full flex items-center justify-center mb-4 romantic-glow">
+              <ShieldCheck className="size-10 text-primary" />
+            </div>
+            <DialogTitle className="text-2xl font-black uppercase italic tracking-tighter text-white">Streaming Rulebook</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-6 pt-4">
+             <div className="bg-white/5 rounded-2xl p-5 text-[10px] space-y-4 border border-white/10 font-bold uppercase tracking-widest">
+               <p className="flex items-start gap-3 text-green-400"><CheckCircle2 className="size-4 shrink-0" /> Public Mode: Bra / Panty Allowed.</p>
+               <p className="flex items-start gap-3 text-red-500"><AlertCircle className="size-4 shrink-0" /> Public Mode: No Full Nudity.</p>
+               <p className="flex items-start gap-3 text-blue-400"><Sparkles className="size-4 shrink-0" /> Private Mode: Full Freedom.</p>
+             </div>
+             <p className="text-[9px] text-center text-slate-500 font-bold uppercase italic leading-relaxed">
+               Violating Public Mode rules will result in an instant and permanent ban from the grid.
+             </p>
+             <Button onClick={toggleLiveStatus} className="w-full h-16 rounded-2xl romantic-gradient font-black uppercase tracking-widest text-white shadow-xl">I Accept / Go Live</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

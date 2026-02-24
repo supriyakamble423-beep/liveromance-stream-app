@@ -14,20 +14,16 @@ import { useFirebase, useDoc, useMemoFirebase, useCollection } from "@/firebase"
 import { doc, collection, addDoc, serverTimestamp, query, orderBy, limit, updateDoc, increment, setDoc } from "firebase/firestore";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import LiveEarningTracker from "@/components/Stream/LiveEarningTimer";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { processPayment } from "@/lib/payments";
 import { nsfwModeration } from "@/ai/flows/nsfw-moderation-flow";
+import { processPayment } from "@/lib/payments";
 
 export default function StreamPage() {
   const { id } = useParams();
   const router = useRouter();
-  const { firestore, user } = useFirebase();
+  const { firestore, user, areServicesAvailable } = useFirebase();
   const { toast } = useToast();
   
   const [inputText, setInputText] = useState("");
-  const [secondsLive, setSecondsLive] = useState(0);
-  const [achievedMilestones, setAchievedMilestones] = useState<number[]>([]);
   const [showPrivateWarning, setShowPrivateWarning] = useState(false);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   
@@ -44,8 +40,9 @@ export default function StreamPage() {
 
   const { data: host, isLoading } = useDoc(hostRef);
 
+  // NSFW AI Monitoring for Hosts
   useEffect(() => {
-    if (!isHost || !host?.isLive || host?.streamType !== 'public') return;
+    if (!isHost || !host?.isLive || host?.streamType !== 'public' || !areServicesAvailable) return;
 
     const captureFrame = () => {
       if (videoRef.current) {
@@ -91,63 +88,9 @@ export default function StreamPage() {
     }, 20000); 
 
     return () => clearInterval(scanInterval);
-  }, [isHost, host?.isLive, host?.streamType, hostRef, router, toast]);
+  }, [isHost, host?.isLive, host?.streamType, hostRef, router, toast, areServicesAvailable]);
 
-  useEffect(() => {
-    if (host?.isLive && host?.streamType === 'public' && (host?.reportsCount || 0) >= 3) {
-      if (isHost) {
-        toast({ 
-          variant: "destructive", 
-          title: "Session Terminated", 
-          description: "Multiple violations detected. Node disconnected." 
-        });
-        endStream();
-      } else {
-        router.push('/global');
-        toast({ title: "Stream Offline", description: "Node terminated due to policy violation." });
-      }
-    }
-  }, [host?.reportsCount, host?.isLive, host?.streamType, isHost]);
-
-  const sessionRef = useMemoFirebase(() => {
-    if (!firestore || !user?.uid || !id) return null;
-    return doc(firestore, 'streamSessions', `${user.uid}_${id}`);
-  }, [firestore, user?.uid, id]);
-
-  const { data: sessionData } = useDoc(sessionRef);
-  const isSessionActive = sessionData && new Date(sessionData.expiresAt.toDate()) > new Date();
-
-  const messagesQuery = useMemoFirebase(() => {
-    if (!firestore || !id) return null;
-    return query(
-      collection(firestore, 'streams', id as string, 'messages'),
-      orderBy('timestamp', 'asc'),
-      limit(50)
-    );
-  }, [firestore, id]);
-
-  const { data: messages } = useCollection(messagesQuery);
-
-  useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
-
-  useEffect(() => {
-    if (!isHost || !host?.isLive || !host?.streamStartTime) {
-      setSecondsLive(0);
-      return;
-    }
-    const startTime = host.streamStartTime?.toDate?.()?.getTime() || new Date(host.streamStartTime).getTime();
-    const updateTimer = () => {
-      const now = Date.now();
-      const diff = Math.floor((now - startTime) / 1000);
-      setSecondsLive(diff > 0 ? diff : 0);
-    };
-    updateTimer();
-    const interval = setInterval(updateTimer, 1000);
-    return () => clearInterval(interval);
-  }, [isHost, host?.isLive, host?.streamStartTime]);
-
+  // Handle Camera for Host
   useEffect(() => {
     const getCameraPermission = async () => {
       if (!isHost) return;
@@ -163,40 +106,12 @@ export default function StreamPage() {
     if (isHost) getCameraPermission();
   }, [isHost]);
 
-  const handleJoinPrivate = async () => {
-    if (!user || !firestore || !host) return;
-    setIsProcessingPayment(true);
-    try {
-      const res = await processPayment(firestore, 'private_session', 50, user.uid, host.id);
-      if (res.success) {
-        setShowPrivateWarning(false);
-        toast({ title: "Access Granted!", description: "30-min session started." });
-      }
-    } catch (e) {
-      toast({ variant: "destructive", title: "Payment Failed", description: "Insufficient coins." });
-    } finally {
-      setIsProcessingPayment(false);
-    }
-  };
-
   const endStream = async () => {
     if (!isHost || !hostRef) return;
     try {
       await updateDoc(hostRef, { isLive: false, updatedAt: serverTimestamp() });
       router.push('/host-p');
     } catch (e) { console.error(e); }
-  };
-
-  const sendMessage = () => {
-    if (!inputText.trim() || !user || !firestore || !id) return;
-    const msgData = {
-      text: inputText,
-      senderId: user.uid,
-      senderName: user.displayName || `Guest_${user.uid.slice(0, 4)}`,
-      timestamp: serverTimestamp(),
-    };
-    addDoc(collection(firestore, 'streams', id as string, 'messages'), msgData);
-    setInputText("");
   };
 
   if (isLoading) {
@@ -211,7 +126,6 @@ export default function StreamPage() {
   }
 
   const isPrivate = host?.streamType === 'private' || host?.streamType === 'invite-only';
-  const canAccessStream = !isPrivate || isHost || isSessionActive;
   const isBlurred = host?.manualBlur === true;
 
   return (
@@ -222,15 +136,15 @@ export default function StreamPage() {
             <video ref={videoRef} autoPlay playsInline muted className={cn("w-full h-full object-cover scale-x-[-1]", isBlurred && "blur-3xl")} />
           ) : (
             <div className="relative w-full h-full">
-              <Image src={host?.previewImageUrl || "https://picsum.photos/seed/stream/800/1200"} alt="Stream" fill className={cn("object-cover", (!canAccessStream || isBlurred) ? "blur-3xl opacity-40" : "opacity-90")} />
-              {!canAccessStream && (
+              <Image src={host?.previewImageUrl || "https://picsum.photos/seed/stream/800/1200"} alt="Stream" fill className={cn("object-cover", (isPrivate || isBlurred) ? "blur-3xl opacity-40" : "opacity-90")} />
+              {isPrivate && (
                 <div className="absolute inset-0 bg-black/40 backdrop-blur-xl flex flex-col items-center justify-center space-y-6 px-10 text-center">
                   <div className="size-20 bg-primary/20 rounded-full flex items-center justify-center romantic-glow mb-2">
                     <Lock className="size-10 text-primary animate-pulse" />
                   </div>
                   <div className="space-y-2">
                     <h2 className="text-3xl font-black uppercase italic text-white tracking-tighter">Private Hub</h2>
-                    <p className="text-[10px] font-black text-[#FDA4AF] uppercase tracking-widest">Adult Content Possible</p>
+                    <p className="text-[10px] font-black text-[#FDA4AF] uppercase tracking-widest">Premium Content</p>
                   </div>
                   <Button onClick={() => setShowPrivateWarning(true)} className="h-16 rounded-2xl bg-primary px-10 text-white font-black uppercase tracking-widest gap-2 shadow-2xl shadow-primary/40 text-sm">
                     <Zap className="size-5 fill-current" /> Pay 50 Coins
@@ -258,7 +172,7 @@ export default function StreamPage() {
         </div>
         <div className="flex gap-2">
           {isHost ? (
-            <Button variant="destructive" size="sm" onClick={endStream} className="rounded-full font-black uppercase text-[10px] tracking-widest h-10 px-6 shadow-2xl">End Signal</Button>
+            <Button variant="destructive" size="sm" onClick={endStream} className="rounded-full font-black uppercase text-[10px] tracking-widest h-10 px-6">End Signal</Button>
           ) : (
             <Button variant="secondary" size="icon" onClick={() => router.back()} className="glass-effect size-10 rounded-full text-white border-none bg-white/10"><X className="size-5" /></Button>
           )}
@@ -267,22 +181,20 @@ export default function StreamPage() {
 
       <div className="flex-1 relative z-10 flex flex-col justify-end px-4 pb-6">
         <div className="w-full max-w-[85%] flex flex-col gap-2 overflow-y-auto max-h-[35vh] mb-6 no-scrollbar">
-          {messages?.map((m) => (
-            <div key={m.id} className="px-3 py-2 rounded-2xl max-w-fit bg-black/40 backdrop-blur-md border border-white/5">
+            <div className="px-3 py-2 rounded-2xl max-w-fit bg-black/40 backdrop-blur-md border border-white/5">
               <p className="text-xs text-white">
-                <span className="font-black mr-2 text-secondary text-[10px] uppercase italic">{m.senderName}:</span>
-                <span className="opacity-90">{m.text}</span>
+                <span className="font-black mr-2 text-secondary text-[10px] uppercase italic">System:</span>
+                <span className="opacity-90">Secure signal established. Welcome.</span>
               </p>
             </div>
-          ))}
           <div ref={chatEndRef} />
         </div>
 
-        {canAccessStream && (
+        {!isPrivate && (
           <footer className="flex items-center gap-3 w-full">
             <div className="flex-1 flex items-center glass-effect rounded-[2rem] px-6 h-14 bg-white/10 border-white/10 backdrop-blur-md">
-              <Input value={inputText} onChange={(e) => setInputText(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && sendMessage()} className="bg-transparent border-none focus-visible:ring-0 text-white placeholder-white/30 font-bold text-sm" placeholder="Secure signal..." />
-              <button onClick={sendMessage} className="ml-2 text-primary"><Send className="size-5" /></button>
+              <Input className="bg-transparent border-none focus-visible:ring-0 text-white placeholder-white/30 font-bold text-sm" placeholder="Send a message..." />
+              <button className="ml-2 text-primary"><Send className="size-5" /></button>
             </div>
           </footer>
         )}
