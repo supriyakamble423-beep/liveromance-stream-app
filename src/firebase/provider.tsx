@@ -3,7 +3,7 @@
 import React, { DependencyList, createContext, useContext, ReactNode, useMemo, useState, useEffect } from 'react';
 import { FirebaseApp } from 'firebase/app';
 import { Firestore } from 'firebase/firestore';
-import { Auth, User, onAuthStateChanged } from 'firebase/auth';
+import { Auth, User, onAuthStateChanged, signInAnonymously } from 'firebase/auth';
 import { FirebaseStorage } from 'firebase/storage';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener'
 
@@ -75,6 +75,10 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
     const unsubscribe = onAuthStateChanged(
       auth,
       (firebaseUser) => {
+        if (!firebaseUser && auth) {
+          // Auto-sign in anonymously if no user is present to ensure rules pass
+          signInAnonymously(auth).catch(e => console.error("Auto-Auth failed:", e));
+        }
         setUserAuthState({ user: firebaseUser, isUserLoading: false, userError: null });
       },
       (error) => {
@@ -113,7 +117,6 @@ export const useFirebase = (): FirebaseServicesAndUser => {
   const context = useContext(FirebaseContext);
   if (context === undefined) throw new Error('useFirebase must be used within a FirebaseProvider.');
   
-  // Returning context directly to let components handle loading states
   return {
     firebaseApp: context.firebaseApp,
     firestore: context.firestore,
