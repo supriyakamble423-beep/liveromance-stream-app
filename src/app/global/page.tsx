@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
@@ -6,7 +7,7 @@ import { Header } from "@/components/Header";
 import { BottomNav } from "@/components/BottomNav";
 import { MessageCircle, Zap, ShieldCheck, Lock, RefreshCw, X, Star, Sparkles, TrendingUp, ShieldAlert, CheckCircle } from "lucide-react";
 import Image from "next/image";
-import Link from "next/link";
+import Link from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
@@ -184,9 +185,9 @@ export default function GlobalMarketplace() {
                  You must be <span className="text-primary font-black">18 or older</span> to enter Global Love.
                </p>
                <div className="bg-white/5 rounded-2xl p-4 text-[10px] text-left space-y-2 border border-white/10">
-                 <p className="flex items-start gap-2"><CheckCircle className="size-3 text-green-400 mt-0.5" /> Public Streams: NO Nudity allowed.</p>
+                 <p className="flex items-start gap-2"><CheckCircle className="size-3 text-green-400 mt-0.5" /> Public Streams: No Nudity allowed.</p>
                  <p className="flex items-start gap-2"><CheckCircle className="size-3 text-green-400 mt-0.5" /> Private Streams: Encrypted & Private.</p>
-                 <p className="flex items-start gap-2"><CheckCircle className="size-3 text-green-400 mt-0.5" /> Users are responsible for shared data.</p>
+                 <p className="text-[9px] opacity-60 mt-4 leading-relaxed font-bold italic">"Public nudity is strictly prohibited to maintain platform decorum. Private sessions are personal and consensual."</p>
                </div>
              </div>
              <div className="flex flex-col gap-3">
@@ -306,7 +307,7 @@ export default function GlobalMarketplace() {
                   src={host.previewImageUrl || "https://picsum.photos/seed/host/600/800"} 
                   alt={host.id} 
                   fill 
-                  className={cn("object-cover transition-transform duration-1000 group-hover:scale-110", host.streamType === 'private' && "blur-xl opacity-50")}
+                  className={cn("object-cover transition-transform duration-1000 group-hover:scale-110", (host.streamType === 'private' || host.manualBlur) && "blur-xl opacity-50")}
                 />
                 <div className="absolute top-5 left-5 flex flex-col gap-2">
                   <Badge className="bg-[#E11D48] border-none text-[9px] font-black uppercase tracking-widest px-4 py-1 shadow-2xl">Live</Badge>
@@ -321,6 +322,12 @@ export default function GlobalMarketplace() {
                     <Lock className="size-12 text-[#F472B6]/80" />
                     <p className="text-[10px] font-black text-white/90 uppercase tracking-[0.2em]">Private Hub</p>
                     <Badge variant="secondary" className="bg-[#E11D48] text-white text-[9px] border-none font-black px-5 py-1 shadow-lg">50 COINS</Badge>
+                  </div>
+                )}
+                {host.streamType === 'public' && host.manualBlur && (
+                  <div className="absolute inset-0 bg-black/40 backdrop-blur-md flex flex-col items-center justify-center gap-2">
+                    <ShieldAlert className="size-8 text-white/40" />
+                    <p className="text-[8px] font-black uppercase text-white/40 tracking-[0.2em]">Manual Blur Active</p>
                   </div>
                 )}
               </div>

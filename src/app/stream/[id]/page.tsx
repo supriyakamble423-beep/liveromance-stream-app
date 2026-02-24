@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useEffect, useRef } from "react";
@@ -5,17 +6,18 @@ import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import { 
   X, Eye, Heart, MessageCircle, Send, 
-  Lock, Loader2, Zap, ShieldAlert, CheckCircle2, AlertTriangle, Flag
+  Lock, Loader2, Zap, ShieldAlert, CheckCircle2, AlertTriangle, Flag, EyeOff, Ghost
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useFirebase, useDoc, useMemoFirebase, useCollection } from "@/firebase";
-import { doc, collection, addDoc, serverTimestamp, query, orderBy, limit, updateDoc, increment } from "firebase/firestore";
+import { doc, collection, addDoc, serverTimestamp, query, orderBy, limit, updateDoc, increment, setDoc } from "firebase/firestore";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import LiveEarningTimer from "@/components/Stream/LiveEarningTimer";
+import LiveEarningTracker from "@/components/Stream/LiveEarningTimer";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { processPayment } from "@/lib/payments";
+import { nsfwModeration } from "@/ai/flows/nsfw-moderation-flow";
 
 export default function StreamPage() {
   const { id } = useParams();
@@ -42,6 +44,57 @@ export default function StreamPage() {
 
   const { data: host, isLoading } = useDoc(hostRef);
 
+  // --- AI NSFW AUTO-MODERATION LOOP ---
+  useEffect(() => {
+    if (!isHost || !host?.isLive || host?.streamType !== 'public') return;
+
+    const captureFrame = () => {
+      if (videoRef.current) {
+        const canvas = document.createElement('canvas');
+        canvas.width = 400; // Smaller for faster AI processing
+        canvas.height = 300;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+        return canvas.toDataURL('image/jpeg', 0.5);
+      }
+      return null;
+    };
+
+    const scanInterval = setInterval(async () => {
+      const frame = captureFrame();
+      if (frame) {
+        try {
+          const result = await nsfwModeration({ 
+            photoDataUri: frame, 
+            streamType: 'public' 
+          });
+
+          if (!result.isSafe) {
+            toast({ 
+              variant: "destructive", 
+              title: "AI SAFETY ALERT", 
+              description: `Stream terminated: ${result.reason}` 
+            });
+            
+            // Auto-terminate on Firestore
+            if (hostRef) {
+              updateDoc(hostRef, { 
+                isLive: false, 
+                violationReason: result.reason,
+                reportsCount: increment(5) // Instant flag
+              });
+            }
+            router.push('/host-p');
+          }
+        } catch (e) {
+          console.error("AI Scan failed", e);
+        }
+      }
+    }, 20000); // Scan every 20 seconds
+
+    return () => clearInterval(scanInterval);
+  }, [isHost, host?.isLive, host?.streamType, hostRef, router, toast]);
+
   // Auto-terminate logic for public streams if reports >= 3
   useEffect(() => {
     if (host?.isLive && host?.streamType === 'public' && (host?.reportsCount || 0) >= 3) {
@@ -49,7 +102,7 @@ export default function StreamPage() {
         toast({ 
           variant: "destructive", 
           title: "Session Terminated", 
-          description: "Multiple nudity reports received. Account flagged." 
+          description: "Multiple violations detected. Node disconnected." 
         });
         endStream();
       } else {
@@ -143,6 +196,13 @@ export default function StreamPage() {
     }
   };
 
+  const toggleQuickBlur = async () => {
+    if (!hostRef || !isHost) return;
+    const currentBlur = host?.manualBlur || false;
+    await updateDoc(hostRef, { manualBlur: !currentBlur });
+    toast({ title: !currentBlur ? "Quick Blur ON" : "Quick Blur OFF" });
+  };
+
   const reportNudity = async () => {
     if (!hostRef || isHost) return;
     try {
@@ -184,6 +244,7 @@ export default function StreamPage() {
 
   const isPrivate = host?.streamType === 'private' || host?.streamType === 'invite-only';
   const canAccessStream = !isPrivate || isHost || isSessionActive;
+  const isBlurred = host?.manualBlur === true;
 
   return (
     <div className="relative h-screen w-full flex flex-col overflow-hidden bg-black mx-auto max-w-lg border-x border-white/10 screen-guard-active">
@@ -191,14 +252,20 @@ export default function StreamPage() {
       <div className="absolute inset-0 z-0 bg-black">
         <div className="relative w-full h-full">
           {isHost ? (
-            <video ref={videoRef} autoPlay playsInline muted className={cn("w-full h-full object-cover scale-x-[-1]")} />
+            <video 
+              ref={videoRef} 
+              autoPlay 
+              playsInline 
+              muted 
+              className={cn("w-full h-full object-cover scale-x-[-1]", isBlurred && "blur-3xl")} 
+            />
           ) : (
             <div className="relative w-full h-full">
               <Image 
                 src={host?.previewImageUrl || "https://picsum.photos/seed/stream/800/1200"} 
                 alt="Stream" 
                 fill 
-                className={cn("object-cover", !canAccessStream ? "blur-3xl opacity-40" : "opacity-90")} 
+                className={cn("object-cover", (!canAccessStream || isBlurred) ? "blur-3xl opacity-40" : "opacity-90")} 
               />
               {!canAccessStream && (
                 <div className="absolute inset-0 bg-black/40 backdrop-blur-xl flex flex-col items-center justify-center space-y-6 px-10 text-center">
@@ -212,6 +279,12 @@ export default function StreamPage() {
                   <Button onClick={() => setShowPrivateWarning(true)} className="h-16 rounded-2xl bg-primary px-10 text-white font-black uppercase tracking-widest gap-2 shadow-2xl shadow-primary/40 text-sm">
                     <Zap className="size-5 fill-current" /> Pay 50 Coins
                   </Button>
+                </div>
+              )}
+              {canAccessStream && isBlurred && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
+                  <Ghost className="size-12 text-white/20 animate-bounce" />
+                  <p className="text-[10px] font-black uppercase text-white/40 tracking-widest">Host activated Blur</p>
                 </div>
               )}
             </div>
@@ -254,7 +327,7 @@ export default function StreamPage() {
         </DialogContent>
       </Dialog>
 
-      {isHost && host?.isLive && <LiveEarningTimer minutes={minutesLive} />}
+      {isHost && host?.isLive && <LiveEarningTracker minutes={minutesLive} />}
 
       <header className="relative z-10 flex items-center justify-between px-4 pt-16 pb-4">
         <div className="flex items-center gap-3 glass-effect rounded-full p-1 pr-4 bg-black/30 backdrop-blur-md border border-white/10">
@@ -270,6 +343,11 @@ export default function StreamPage() {
           </div>
         </div>
         <div className="flex gap-2">
+          {isHost && (
+            <Button onClick={toggleQuickBlur} variant="ghost" size="icon" className={cn("glass-effect size-10 rounded-full border-none transition-colors", isBlurred ? "bg-red-500 text-white" : "bg-white/10 text-white/60")}>
+              <EyeOff className="size-5" />
+            </Button>
+          )}
           {!isHost && host?.streamType === 'public' && (
             <Button onClick={reportNudity} variant="ghost" size="icon" className="glass-effect size-10 rounded-full text-red-500 border-none bg-red-500/10">
               <Flag className="size-5" />

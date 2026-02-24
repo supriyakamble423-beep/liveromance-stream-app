@@ -1,8 +1,9 @@
+
 'use client';
 
 import { useState, useEffect } from "react";
 import { 
-  Bell, Monitor, MessageSquare, ShieldAlert, Send, Eye, ShieldCheck, UserCircle, Download, Wifi, Activity, Zap, Trash2, PowerOff, Ban
+  Bell, Monitor, MessageSquare, ShieldAlert, Send, Eye, ShieldCheck, UserCircle, Download, Wifi, Activity, Zap, Trash2, PowerOff, Ban, AlertTriangle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -37,8 +38,8 @@ export default function AdminControlRoom() {
       setIsLoading(true);
       try {
         const res = await adminAIErrorReports({
-          systemLogs: "Global success rate: 99.8%. AI scanning 14 active public nodes.",
-          hostVerificationIssues: ["Node #882: NSFW scan pending validation"]
+          systemLogs: "AI Node Active. Real-time NSFW scanning enabled on 14 public channels.",
+          hostVerificationIssues: ["Node #882: Manual Blur activated by host"]
         });
         setReports(res.autoReports);
       } catch (e) {
@@ -61,12 +62,12 @@ export default function AdminControlRoom() {
       
       await addDoc(collection(firestore, 'adminMessages'), {
         hostId,
-        content: "Your stream was terminated by System Overseer due to a safety violation.",
+        content: "System Overide: Your stream was terminated due to AI detected violations.",
         timestamp: serverTimestamp(),
-        sender: 'Admin-GodMode'
+        sender: 'AI-Sentinel'
       });
       
-      toast({ title: "Stream Cut", description: "Node has been forcefully disconnected." });
+      toast({ title: "Node Severed", description: "Host disconnected successfully." });
     } catch (e) {
       toast({ variant: "destructive", title: "Failure", description: "Override failed." });
     }
@@ -74,7 +75,7 @@ export default function AdminControlRoom() {
 
   const sendAdminMessage = async () => {
     if (!adminMsg.trim() || !activeHost) {
-      toast({ variant: "destructive", title: "Error", description: "Target host required." });
+      toast({ variant: "destructive", title: "Error", description: "Target required." });
       return;
     }
     
@@ -83,10 +84,10 @@ export default function AdminControlRoom() {
         hostId: activeHost.id,
         content: adminMsg,
         timestamp: serverTimestamp(),
-        sender: 'Admin-GodMode'
+        sender: 'System-Overseer'
       });
       setAdminMsg("");
-      toast({ title: "Signal Transmitted", description: "Direct communication established." });
+      toast({ title: "Directive Sent", description: "Message delivered to host node." });
     } catch (e) {
       toast({ variant: "destructive", title: "Failure", description: "Node disconnection." });
     }
@@ -98,12 +99,12 @@ export default function AdminControlRoom() {
         <div className="flex flex-col">
           <div className="flex items-center gap-2">
             <span className="size-2 rounded-full bg-cyan-400 animate-pulse shadow-[0_0_10px_#22D3EE]" />
-            <span className="text-[10px] font-black uppercase tracking-widest text-cyan-400">Mainframe</span>
+            <span className="text-[10px] font-black uppercase tracking-widest text-cyan-400">AI Sentinel</span>
           </div>
-          <h1 className="text-xl font-black tracking-tight font-headline">SYSTEM OVERSEER</h1>
+          <h1 className="text-xl font-black tracking-tight font-headline">COMMAND CENTER</h1>
         </div>
         <div className="flex items-center gap-3">
-          <Badge className="bg-red-500/20 text-red-500 border-none text-[8px] font-black uppercase">Admin Mode</Badge>
+          <Badge className="bg-red-500/20 text-red-500 border-none text-[8px] font-black uppercase tracking-widest px-3">Overseer active</Badge>
         </div>
       </header>
 
@@ -111,9 +112,9 @@ export default function AdminControlRoom() {
         <section className="space-y-4 pt-6">
           <div className="flex items-center justify-between">
             <h2 className="text-xs font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
-              <Monitor className="size-4 text-cyan-400" /> Surveillance Grid
+              <Monitor className="size-4 text-cyan-400" /> Active Grid Nodes
             </h2>
-            <Badge variant="outline" className="text-[8px] uppercase">{activeStreams?.length || 0} Nodes Active</Badge>
+            <Badge variant="outline" className="text-[8px] uppercase">{activeStreams?.length || 0} Online</Badge>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -126,12 +127,25 @@ export default function AdminControlRoom() {
                   selectedStreamId === stream.id ? "border-cyan-400 scale-[0.98] shadow-lg shadow-cyan-400/20" : "border-white/5 opacity-60 hover:opacity-100"
                 )}
                >
-                 <Image src={stream.previewImageUrl || "https://picsum.photos/seed/admin/400/400"} alt="Feed" fill className="object-cover" />
+                 <Image 
+                   src={stream.previewImageUrl || "https://picsum.photos/seed/admin/400/400"} 
+                   alt="Feed" 
+                   fill 
+                   className={cn("object-cover", stream.manualBlur && "blur-xl")} 
+                 />
                  <div className="absolute inset-0 bg-black/40" />
+                 
+                 {/* Violation Flag */}
+                 {(stream.reportsCount || 0) > 0 && (
+                   <div className="absolute top-2 left-2 bg-red-500 rounded-full p-1 animate-pulse">
+                     <AlertTriangle className="size-3 text-white" />
+                   </div>
+                 )}
+
                  <div className="absolute bottom-2 left-2 right-2 flex justify-between items-center">
                     <span className="text-[8px] font-black uppercase tracking-tighter truncate max-w-[50%]">{stream.username || stream.id.slice(0,4)}</span>
-                    <Badge className={cn("text-[6px] h-3 px-1 border-none", stream.streamType === 'public' ? "bg-green-500" : "bg-primary")}>
-                      {stream.streamType?.toUpperCase() || 'PUB'}
+                    <Badge className={cn("text-[6px] h-3 px-1 border-none font-black uppercase", stream.streamType === 'public' ? "bg-green-500" : "bg-primary")}>
+                      {stream.streamType || 'PUB'}
                     </Badge>
                  </div>
                </div>
@@ -144,8 +158,11 @@ export default function AdminControlRoom() {
             <div className="bg-slate-900/80 border border-white/10 rounded-[2.5rem] p-5 space-y-4">
                <div className="flex justify-between items-start">
                   <div>
-                    <h3 className="text-sm font-black uppercase italic">Target: @{activeHost.username || activeHost.id.slice(0,6)}</h3>
-                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Type: {activeHost.streamType || 'Public'}</p>
+                    <h3 className="text-sm font-black uppercase italic tracking-tighter">Target: @{activeHost.username || activeHost.id.slice(0,6)}</h3>
+                    <div className="flex gap-2 mt-1">
+                      <Badge variant="outline" className="text-[6px] h-3 px-1 border-white/20 uppercase font-black">{activeHost.streamType || 'Public'}</Badge>
+                      {activeHost.manualBlur && <Badge className="text-[6px] h-3 px-1 bg-amber-500 border-none uppercase font-black">Manual Blur ON</Badge>}
+                    </div>
                   </div>
                   <Button 
                     onClick={() => terminateStream(activeHost.id)}
@@ -153,7 +170,7 @@ export default function AdminControlRoom() {
                     size="sm" 
                     className="rounded-full gap-2 text-[10px] font-black uppercase h-8 px-4"
                   >
-                    <PowerOff className="size-3" /> Cut Signal
+                    <PowerOff className="size-3" /> Sever Signal
                   </Button>
                </div>
                
@@ -162,7 +179,7 @@ export default function AdminControlRoom() {
                     value={adminMsg}
                     onChange={(e) => setAdminMsg(e.target.value)}
                     placeholder="Direct directive..." 
-                    className="bg-black/50 border-white/10 text-xs h-12 rounded-2xl focus-visible:ring-primary uppercase font-bold"
+                    className="bg-black/50 border-white/10 text-xs h-12 rounded-2xl focus-visible:ring-primary uppercase font-bold tracking-widest"
                   />
                   <Button onClick={sendAdminMessage} size="icon" className="bg-primary rounded-2xl size-12 shrink-0">
                     <Send className="size-5" />
@@ -174,7 +191,7 @@ export default function AdminControlRoom() {
 
         <section className="pb-10">
           <div className="flex items-center justify-between mb-4 px-2">
-            <h2 className="text-xs font-black uppercase tracking-widest text-slate-400">AI Safety Reports</h2>
+            <h2 className="text-xs font-black uppercase tracking-widest text-slate-400">AI Sentinel Logs</h2>
             <ShieldAlert className="size-4 text-red-500" />
           </div>
           <div className="space-y-3">
@@ -185,9 +202,9 @@ export default function AdminControlRoom() {
             ) : reports.map((report, idx) => (
               <div key={idx} className="p-5 rounded-[2rem] bg-white/5 border border-white/5">
                 <div className="flex justify-between items-start mb-3">
-                  <h3 className="font-black text-xs uppercase tracking-tight">{report.reportType}</h3>
+                  <h3 className="font-black text-xs uppercase tracking-tight italic">{report.reportType}</h3>
                   <Badge variant="secondary" className={cn(
-                    "text-[8px] uppercase font-black px-3 py-1",
+                    "text-[8px] uppercase font-black px-3 py-1 tracking-widest",
                     report.severity === 'Critical' ? "bg-red-500/20 text-red-500" : "bg-cyan-500/20 text-cyan-400"
                   )}>
                     {report.severity}
