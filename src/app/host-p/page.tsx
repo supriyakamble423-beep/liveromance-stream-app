@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useFirebase, useDoc, useMemoFirebase } from "@/firebase";
@@ -5,7 +6,7 @@ import { BottomNav } from "@/components/BottomNav";
 import { 
   ShieldCheck, Settings, Radio, 
   Power, ChevronRight, Save, Clock, Target, 
-  Activity, Zap, ShieldAlert, AlertCircle, CheckCircle2, Loader2
+  Activity, Zap, ShieldAlert, AlertCircle, CheckCircle2, Loader2, Wallet
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -70,7 +71,7 @@ export default function HostProfileDashboard() {
         streamType: hostProfile?.streamType || 'public',
         rating: hostProfile?.rating || 4.9,
         verified: hostProfile?.verified || true,
-        reportsCount: 0 // Reset reports when going live
+        reportsCount: 0 
       }, { merge: true });
 
       setShowRulebook(false);
@@ -124,28 +125,35 @@ export default function HostProfileDashboard() {
              OVERVIEW <ChevronRight className="size-6 text-primary" />
           </h1>
           
-          <Dialog>
-            <DialogTrigger asChild>
+          <div className="flex items-center gap-2">
+            <Link href="/host-p/payout">
               <Button variant="ghost" size="icon" className="rounded-full bg-white/5 border border-white/10 hover:bg-primary/20 size-12">
-                <Settings className="size-6 text-white/60" />
+                <Wallet className="size-6 text-primary" />
               </Button>
-            </DialogTrigger>
-            <DialogContent className="bg-[#2D1B2D] border-white/10 text-white rounded-[3rem] max-w-[90vw] mx-auto">
-              <DialogHeader>
-                <DialogTitle className="text-2xl font-black uppercase tracking-tighter italic text-white">Edit Profile</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-6 pt-6">
-                <div className="space-y-4">
-                  <Input value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="Display Name" className="bg-white/5 border-white/10 rounded-2xl h-14" />
-                  <Textarea value={editBio} onChange={(e) => setEditBio(e.target.value)} placeholder="Bio" className="bg-white/5 border-white/10 rounded-2xl min-h-[120px]" />
-                  <Input value={editCountry} onChange={(e) => setEditCountry(e.target.value)} placeholder="Country" className="bg-white/5 border-white/10 rounded-2xl h-14" />
-                </div>
-                <Button onClick={handleProfileUpdate} disabled={isUpdatingProfile} className="w-full romantic-gradient rounded-2xl h-14 font-black uppercase text-white shadow-xl">
-                  {isUpdatingProfile ? <Loader2 className="animate-spin mr-2" /> : <Save className="mr-2" />} Save Changes
+            </Link>
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="ghost" size="icon" className="rounded-full bg-white/5 border border-white/10 hover:bg-primary/20 size-12">
+                  <Settings className="size-6 text-white/60" />
                 </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
+              </DialogTrigger>
+              <DialogContent className="bg-[#2D1B2D] border-white/10 text-white rounded-[3rem] max-w-[90vw] mx-auto">
+                <DialogHeader>
+                  <DialogTitle className="text-2xl font-black uppercase tracking-tighter italic text-white">Edit Profile</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-6 pt-6">
+                  <div className="space-y-4">
+                    <Input value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="Display Name" className="bg-white/5 border-white/10 rounded-2xl h-14" />
+                    <Textarea value={editBio} onChange={(e) => setEditBio(e.target.value)} placeholder="Bio" className="bg-white/5 border-white/10 rounded-2xl min-h-[120px]" />
+                    <Input value={editCountry} onChange={(e) => setEditCountry(e.target.value)} placeholder="Country" className="bg-white/5 border-white/10 rounded-2xl h-14" />
+                  </div>
+                  <Button onClick={handleProfileUpdate} disabled={isUpdatingProfile} className="w-full romantic-gradient rounded-2xl h-14 font-black uppercase text-white shadow-xl">
+                    {isUpdatingProfile ? <Loader2 className="animate-spin mr-2" /> : <Save className="mr-2" />} Save Changes
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
 
         <div className="flex items-center gap-6 mb-10">
@@ -172,15 +180,17 @@ export default function HostProfileDashboard() {
                     <span className="text-3xl font-black tracking-tighter text-white">{hostProfile?.totalStreamMinutes || 0}</span>
                 </div>
             </div>
-            <div className="bg-[#3D263D]/80 p-6 rounded-[2.5rem] border border-white/5 backdrop-blur-xl">
-                <p className="text-[10px] font-black text-[#FDA4AF]/60 uppercase tracking-[0.2em] mb-2 flex items-center gap-2">
-                    <Zap className="size-3 text-amber-400 fill-current" /> Earnings
-                </p>
-                <div className="flex items-baseline gap-1">
-                    <span className="text-3xl font-black tracking-tighter text-white">{Math.floor(hostProfile?.earnings || 0)}</span>
-                    <span className="text-amber-400">💎</span>
-                </div>
-            </div>
+            <Link href="/host-p/payout" className="block">
+              <div className="bg-[#3D263D]/80 p-6 rounded-[2.5rem] border border-white/5 backdrop-blur-xl hover:border-primary/40 transition-all">
+                  <p className="text-[10px] font-black text-[#FDA4AF]/60 uppercase tracking-[0.2em] mb-2 flex items-center gap-2">
+                      <Zap className="size-3 text-amber-400 fill-current" /> Earnings
+                  </p>
+                  <div className="flex items-baseline gap-1">
+                      <span className="text-3xl font-black tracking-tighter text-white">{Math.floor(hostProfile?.earnings || 0)}</span>
+                      <span className="text-amber-400">💎</span>
+                  </div>
+              </div>
+            </Link>
         </section>
       </header>
 
@@ -198,7 +208,6 @@ export default function HostProfileDashboard() {
             {hostProfile?.isLive ? "End Stream" : "Go Live Now"}
           </Button>
 
-          {/* Host Rulebook Dialog */}
           <Dialog open={showRulebook} onOpenChange={setShowRulebook}>
             <DialogContent className="bg-[#2D1B2D] border-white/10 text-white rounded-[3rem] max-w-[90vw] mx-auto p-8 overflow-hidden">
               <DialogHeader className="items-center text-center">

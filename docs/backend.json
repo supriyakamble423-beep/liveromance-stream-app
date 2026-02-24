@@ -16,7 +16,8 @@
         "age": { "type": "number" },
         "gender": { "type": "string" },
         "language": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" }
+        "createdAt": { "type": "string", "format": "date-time" },
+        "coins": { "type": "number" }
       },
       "required": ["id", "username", "email", "createdAt"]
     },
@@ -36,22 +37,35 @@
         "canStreamPrivate": { "type": "boolean" },
         "rating": { "type": "number" },
         "previewImageUrl": { "type": "string", "format": "uri" },
-        "reportsCount": { "type": "number", "description": "Count of policy violation reports." },
-        "violationReason": { "type": "string", "description": "Reason for the latest violation." }
+        "reportsCount": { "type": "number" },
+        "earnings": { "type": "number", "description": "Total diamonds earned." },
+        "paymentDetails": {
+          "type": "object",
+          "properties": {
+            "upiId": { "type": "string" },
+            "accountNumber": { "type": "string" },
+            "ifscCode": { "type": "string" },
+            "holderName": { "type": "string" }
+          }
+        }
       },
       "required": ["id", "userId", "isLive", "verified"]
     },
-    "StreamSession": {
-      "title": "StreamSession",
+    "PayoutRequest": {
+      "title": "PayoutRequest",
       "type": "object",
-      "description": "Tracks a paid private stream session for a specific user and host.",
+      "description": "A request from a host to withdraw their earnings into cash.",
       "properties": {
-        "userId": { "type": "string" },
         "hostId": { "type": "string" },
-        "expiresAt": { "type": "string", "format": "date-time" },
-        "lastPaidAt": { "type": "string", "format": "date-time" }
+        "hostName": { "type": "string" },
+        "amountDiamonds": { "type": "number" },
+        "amountCash": { "type": "number" },
+        "status": { "type": "string", "enum": ["pending", "paid", "rejected"] },
+        "paymentDetails": { "type": "object" },
+        "requestedAt": { "type": "string", "format": "date-time" },
+        "paidAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["userId", "hostId", "expiresAt"]
+      "required": ["hostId", "amountDiamonds", "amountCash", "status", "requestedAt"]
     }
   },
   "auth": {
@@ -76,26 +90,11 @@
         }
       },
       {
-        "path": "/adminMessages/{messageId}",
+        "path": "/payoutRequests/{requestId}",
         "definition": {
-          "entityName": "AdminMessage",
-          "schema": {
-            "type": "object",
-            "properties": {
-              "hostId": { "type": "string" },
-              "content": { "type": "string" },
-              "timestamp": { "type": "string", "format": "date-time" }
-            }
-          },
-          "description": "Direct messages from admin to hosts."
-        }
-      },
-      {
-        "path": "/streamSessions/{sessionId}",
-        "definition": {
-          "entityName": "StreamSession",
-          "schema": { "$ref": "#/backend/entities/StreamSession" },
-          "description": "Manages paid session access for private rooms."
+          "entityName": "PayoutRequest",
+          "schema": { "$ref": "#/backend/entities/PayoutRequest" },
+          "description": "Manages withdrawal requests."
         }
       }
     ]
