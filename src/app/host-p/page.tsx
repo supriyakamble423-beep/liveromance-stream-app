@@ -3,10 +3,9 @@
 import { useFirebase, useDoc, useMemoFirebase } from "@/firebase";
 import { BottomNav } from "@/components/BottomNav";
 import { 
-  ShieldCheck, Wallet, Settings, Radio, 
-  Lock, Globe, Users, Loader2, Zap, Sparkles, Camera, Power,
-  ChevronRight, Share2, MapPin, Save, Clock, TrendingUp,
-  Trophy, CheckCircle2, Gift, Star, Target, Timer, BarChart3, Activity
+  ShieldCheck, Settings, Radio, 
+  Power, ChevronRight, Save, Clock, Target, 
+  Activity, Zap, ShieldAlert, AlertCircle, CheckCircle2, Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -18,10 +17,12 @@ import {
   DialogHeader, 
   DialogTitle, 
   DialogTrigger,
+  DialogDescription,
+  DialogFooter
 } from "@/components/ui/dialog";
 import Image from "next/image";
 import Link from "next/link";
-import { doc, serverTimestamp, updateDoc, increment, setDoc } from "firebase/firestore";
+import { doc, serverTimestamp, updateDoc, setDoc } from "firebase/firestore";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
@@ -33,6 +34,7 @@ export default function HostProfileDashboard() {
   const userId = user?.uid;
   const [isTogglingLive, setIsTogglingLive] = useState(false);
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
+  const [showRulebook, setShowRulebook] = useState(false);
   
   const [editName, setEditName] = useState("");
   const [editBio, setEditBio] = useState("");
@@ -44,6 +46,14 @@ export default function HostProfileDashboard() {
   }, [firestore, userId]);
 
   const { data: hostProfile, isLoading: isProfileLoading } = useDoc(hostRef);
+
+  const startStreamProcess = () => {
+    if (hostProfile?.isLive) {
+      toggleLiveStatus();
+    } else {
+      setShowRulebook(true);
+    }
+  };
 
   const toggleLiveStatus = async () => {
     if (!hostRef || !firestore || !userId) return;
@@ -59,12 +69,14 @@ export default function HostProfileDashboard() {
         previewImageUrl: hostProfile?.previewImageUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${userId}`,
         streamType: hostProfile?.streamType || 'public',
         rating: hostProfile?.rating || 4.9,
-        verified: hostProfile?.verified || true
+        verified: hostProfile?.verified || true,
+        reportsCount: 0 // Reset reports when going live
       }, { merge: true });
 
+      setShowRulebook(false);
       toast({ 
         title: newStatus ? "Broadcast Active" : "Stream Offline",
-        description: newStatus ? "Users can now find you in the marketplace." : "Session data saved."
+        description: newStatus ? "Rules accepted. You are now live." : "Session data saved."
       });
     } catch (err) {
       console.error(err);
@@ -91,39 +103,6 @@ export default function HostProfileDashboard() {
       setIsUpdatingProfile(false);
     }
   };
-
-  const tasks = [
-    {
-      id: 1,
-      title: "Marathon Stream",
-      desc: "Stream for 30 mins",
-      target: 30,
-      current: hostProfile?.totalStreamMinutes || 0,
-      reward: "10 Coins",
-      icon: Clock,
-      color: "text-blue-400"
-    },
-    {
-      id: 2,
-      title: "Fan Favorite",
-      desc: "Receive 5 Gifts",
-      target: 5,
-      current: hostProfile?.giftsReceived || 0,
-      reward: "Premium Badge",
-      icon: Gift,
-      color: "text-pink-400"
-    },
-    {
-      id: 3,
-      title: "Network Architect",
-      desc: "Invite 2 New Users",
-      target: 2,
-      current: hostProfile?.referralCount || 0,
-      reward: "20% Extra Comm.",
-      icon: Share2,
-      color: "text-amber-400"
-    }
-  ];
 
   if (isUserLoading || isProfileLoading || !areServicesAvailable) {
     return (
@@ -208,7 +187,7 @@ export default function HostProfileDashboard() {
       <main className="px-8 space-y-10 pt-10">
         <section className="space-y-4">
           <Button 
-            onClick={toggleLiveStatus} 
+            onClick={startStreamProcess} 
             disabled={isTogglingLive} 
             className={cn(
               "w-full h-28 rounded-[3.5rem] font-black text-3xl uppercase tracking-[0.1em] gap-5 shadow-2xl transition-all border-none text-white italic", 
@@ -218,6 +197,45 @@ export default function HostProfileDashboard() {
             {isTogglingLive ? <Loader2 className="size-10 animate-spin" /> : <Power className="size-12" />}
             {hostProfile?.isLive ? "End Stream" : "Go Live Now"}
           </Button>
+
+          {/* Host Rulebook Dialog */}
+          <Dialog open={showRulebook} onOpenChange={setShowRulebook}>
+            <DialogContent className="bg-[#2D1B2D] border-white/10 text-white rounded-[3rem] max-w-[90vw] mx-auto p-8 overflow-hidden">
+              <DialogHeader className="items-center text-center">
+                <div className="size-16 bg-primary/20 rounded-full flex items-center justify-center mb-4">
+                  <ShieldAlert className="size-8 text-primary" />
+                </div>
+                <DialogTitle className="text-2xl font-black uppercase italic tracking-tighter">Public Rulebook</DialogTitle>
+                <DialogDescription className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                  Compliance is mandatory for all hosts.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-6 pt-4">
+                <div className="bg-white/5 rounded-2xl p-5 text-[10px] text-left space-y-4 border border-white/10">
+                  <div className="flex items-start gap-3">
+                    <CheckCircle2 className="size-4 text-green-400 mt-0.5 shrink-0" />
+                    <p className="leading-relaxed">Allowed: Bra, Panty, Bikini, Dance, and Chatting.</p>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <ShieldAlert className="size-4 text-red-500 mt-0.5 shrink-0" />
+                    <p className="leading-relaxed text-red-400 font-black">STRICTLY BANNED: Full nudity, private parts, or sexual acts in Public mode.</p>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="size-4 text-amber-400 mt-0.5 shrink-0" />
+                    <p className="leading-relaxed opacity-70 italic">3 User reports for nudity will automatically terminate your session.</p>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-3 pt-2">
+                  <Button onClick={toggleLiveStatus} className="h-16 rounded-2xl romantic-gradient font-black uppercase tracking-widest text-white shadow-xl">
+                    I Accept / Go Live
+                  </Button>
+                  <Button variant="ghost" onClick={() => setShowRulebook(false)} className="text-[10px] font-black text-slate-500 uppercase">
+                    Decline / Exit
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
           
           {hostProfile?.isLive && (
             <Link href={`/stream/${userId}`} className="block">
@@ -233,7 +251,11 @@ export default function HostProfileDashboard() {
             <Target className="size-4" /> Daily Tasks
           </h3>
           <div className="space-y-4">
-            {tasks.map((task) => {
+            {[
+              { id: 1, title: "Marathon Stream", desc: "Stream for 30 mins", target: 30, current: hostProfile?.totalStreamMinutes || 0, reward: "10 Coins", icon: Clock, color: "text-blue-400" },
+              { id: 2, title: "Fan Favorite", desc: "Receive 5 Gifts", target: 5, current: hostProfile?.giftsReceived || 0, reward: "Premium Badge", icon: Zap, color: "text-pink-400" },
+              { id: 3, title: "Network Architect", desc: "Invite 2 New Users", target: 2, current: hostProfile?.referralCount || 0, reward: "20% Extra Comm.", icon: Radio, color: "text-amber-400" }
+            ].map((task) => {
               const progress = Math.min((task.current / task.target) * 100, 100);
               return (
                 <div key={task.id} className="bg-[#3D263D]/60 border border-white/5 rounded-[2.5rem] p-6">

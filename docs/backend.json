@@ -7,56 +7,18 @@
       "type": "object",
       "description": "Represents a user within the Global Social Marketplace application. This entity stores core user information, distinct from authentication credentials which are managed externally.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the UserProfile entity."
-        },
-        "username": {
-          "type": "string",
-          "description": "The user's chosen display name."
-        },
-        "email": {
-          "type": "string",
-          "description": "The user's email address.",
-          "format": "email"
-        },
-        "profileImageUrl": {
-          "type": "string",
-          "description": "URL to the user's profile image.",
-          "format": "uri"
-        },
-        "bio": {
-          "type": "string",
-          "description": "A short biographical description provided by the user."
-        },
-        "country": {
-          "type": "string",
-          "description": "The user's country of residence, often represented by a country code or flag emoji."
-        },
-        "age": {
-          "type": "number",
-          "description": "The user's age."
-        },
-        "gender": {
-          "type": "string",
-          "description": "The user's self-identified gender."
-        },
-        "language": {
-          "type": "string",
-          "description": "The primary language spoken by the user."
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp when the user profile was created.",
-          "format": "date-time"
-        }
+        "id": { "type": "string" },
+        "username": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "profileImageUrl": { "type": "string", "format": "uri" },
+        "bio": { "type": "string" },
+        "country": { "type": "string" },
+        "age": { "type": "number" },
+        "gender": { "type": "string" },
+        "language": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
       },
-      "required": [
-        "id",
-        "username",
-        "email",
-        "createdAt"
-      ]
+      "required": ["id", "username", "email", "createdAt"]
     },
     "HostProfile": {
       "$schema": "http://json-schema.org/draft-07/schema#",
@@ -64,55 +26,20 @@
       "type": "object",
       "description": "Extends UserProfile to include details specific to users who act as hosts/streamers.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the HostProfile entity."
-        },
-        "userId": {
-          "type": "string",
-          "description": "Reference to the associated UserProfile."
-        },
-        "isLive": {
-          "type": "boolean",
-          "description": "Indicates if the host is currently live streaming."
-        },
-        "streamType": {
-          "type": "string",
-          "enum": ["public", "private", "invite-only"],
-          "description": "The current visibility type of the stream."
-        },
-        "viewers": {
-          "type": "number",
-          "description": "Current number of viewers."
-        },
-        "verified": {
-          "type": "boolean",
-          "description": "Indicates if the host's identity has been verified."
-        },
-        "canStreamPublic": {
-          "type": "boolean",
-          "description": "Permission to stream publicly."
-        },
-        "canStreamPrivate": {
-          "type": "boolean",
-          "description": "Permission to stream privately."
-        },
-        "rating": {
-          "type": "number",
-          "description": "Average rating."
-        },
-        "previewImageUrl": {
-          "type": "string",
-          "description": "URL to an image for host's profile or stream.",
-          "format": "uri"
-        }
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "isLive": { "type": "boolean" },
+        "streamType": { "type": "string", "enum": ["public", "private", "invite-only"] },
+        "viewers": { "type": "number" },
+        "verified": { "type": "boolean" },
+        "canStreamPublic": { "type": "boolean" },
+        "canStreamPrivate": { "type": "boolean" },
+        "rating": { "type": "number" },
+        "previewImageUrl": { "type": "string", "format": "uri" },
+        "reportsCount": { "type": "number", "description": "Count of policy violation reports." },
+        "violationReason": { "type": "string", "description": "Reason for the latest violation." }
       },
-      "required": [
-        "id",
-        "userId",
-        "isLive",
-        "verified"
-      ]
+      "required": ["id", "userId", "isLive", "verified"]
     },
     "StreamSession": {
       "title": "StreamSession",
@@ -128,10 +55,7 @@
     }
   },
   "auth": {
-    "providers": [
-      "password",
-      "anonymous"
-    ]
+    "providers": ["password", "anonymous"]
   },
   "firestore": {
     "structure": [
@@ -139,9 +63,7 @@
         "path": "/users/{userId}",
         "definition": {
           "entityName": "UserProfile",
-          "schema": {
-            "$ref": "#/backend/entities/UserProfile"
-          },
+          "schema": { "$ref": "#/backend/entities/UserProfile" },
           "description": "Stores core user profile data."
         }
       },
@@ -149,9 +71,7 @@
         "path": "/hosts/{hostId}",
         "definition": {
           "entityName": "HostProfile",
-          "schema": {
-            "$ref": "#/backend/entities/HostProfile"
-          },
+          "schema": { "$ref": "#/backend/entities/HostProfile" },
           "description": "Stores host-specific profile data."
         }
       },
@@ -174,9 +94,7 @@
         "path": "/streamSessions/{sessionId}",
         "definition": {
           "entityName": "StreamSession",
-          "schema": {
-            "$ref": "#/backend/entities/StreamSession"
-          },
+          "schema": { "$ref": "#/backend/entities/StreamSession" },
           "description": "Manages paid session access for private rooms."
         }
       }

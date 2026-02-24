@@ -1,25 +1,19 @@
-
 "use client"
 
 import { useState, useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import { 
-  X, Eye, Heart, Gift, MessageCircle, Send, Sparkles, 
-  Lock, Loader2, Repeat, UserCheck, UserX, Ghost, Zap,
-  Trophy, Medal, Crown, Camera, ShieldAlert, CheckCircle2, AlertTriangle
+  X, Eye, Heart, MessageCircle, Send, 
+  Lock, Loader2, Zap, ShieldAlert, CheckCircle2, AlertTriangle, Flag
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useFirebase, useDoc, useMemoFirebase, useCollection } from "@/firebase";
-import { doc, collection, addDoc, serverTimestamp, query, orderBy, limit, setDoc, updateDoc, increment } from "firebase/firestore";
+import { doc, collection, addDoc, serverTimestamp, query, orderBy, limit, updateDoc, increment } from "firebase/firestore";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { errorEmitter } from "@/firebase/error-emitter";
-import { FirestorePermissionError } from "@/firebase/errors";
-import { nsfwModeration } from "@/ai/flows/nsfw-moderation-flow";
 import LiveEarningTimer from "@/components/Stream/LiveEarningTimer";
-import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { processPayment } from "@/lib/payments";
 
@@ -30,8 +24,6 @@ export default function StreamPage() {
   const { toast } = useToast();
   
   const [inputText, setInputText] = useState("");
-  const [isUpdatingMode, setIsUpdatingMode] = useState(false);
-  const [isMaskOn, setIsMaskOn] = useState(false);
   const [secondsLive, setSecondsLive] = useState(0);
   const [achievedMilestones, setAchievedMilestones] = useState<number[]>([]);
   const [showPrivateWarning, setShowPrivateWarning] = useState(false);
@@ -50,7 +42,23 @@ export default function StreamPage() {
 
   const { data: host, isLoading } = useDoc(hostRef);
 
-  // --- SMART RECONNECT LOGIC ---
+  // Auto-terminate logic for public streams if reports >= 3
+  useEffect(() => {
+    if (host?.isLive && host?.streamType === 'public' && (host?.reportsCount || 0) >= 3) {
+      if (isHost) {
+        toast({ 
+          variant: "destructive", 
+          title: "Session Terminated", 
+          description: "Multiple nudity reports received. Account flagged." 
+        });
+        endStream();
+      } else {
+        router.push('/global');
+        toast({ title: "Stream Offline", description: "Node terminated due to policy violation." });
+      }
+    }
+  }, [host?.reportsCount, host?.isLive, host?.streamType, isHost]);
+
   const sessionRef = useMemoFirebase(() => {
     if (!firestore || !user?.uid || !id) return null;
     return doc(firestore, 'streamSessions', `${user.uid}_${id}`);
@@ -123,7 +131,6 @@ export default function StreamPage() {
     if (!user || !firestore || !host) return;
     setIsProcessingPayment(true);
     try {
-      // 50 Coins for Private Access
       const res = await processPayment(firestore, 'private_session', 50, user.uid, host.id);
       if (res.success) {
         setShowPrivateWarning(false);
@@ -133,6 +140,16 @@ export default function StreamPage() {
       toast({ variant: "destructive", title: "Payment Failed", description: "Insufficient coins." });
     } finally {
       setIsProcessingPayment(false);
+    }
+  };
+
+  const reportNudity = async () => {
+    if (!hostRef || isHost) return;
+    try {
+      await updateDoc(hostRef, { reportsCount: increment(1) });
+      toast({ title: "Report Submitted", description: "System safety scan initiated." });
+    } catch (e) {
+      console.error(e);
     }
   };
 
@@ -172,44 +189,44 @@ export default function StreamPage() {
     <div className="relative h-screen w-full flex flex-col overflow-hidden bg-black mx-auto max-w-lg border-x border-white/10 screen-guard-active">
       {/* Video layer */}
       <div className="absolute inset-0 z-0 bg-black">
-        {isHost ? (
-          <div className="relative w-full h-full">
+        <div className="relative w-full h-full">
+          {isHost ? (
             <video ref={videoRef} autoPlay playsInline muted className={cn("w-full h-full object-cover scale-x-[-1]")} />
-            {isMaskOn && (
-              <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-md">
-                <Heart className="size-48 text-primary fill-current opacity-60 animate-pulse" />
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="relative w-full h-full">
-            <Image 
-              src={host?.previewImageUrl || "https://picsum.photos/seed/stream/800/1200"} 
-              alt="Stream" 
-              fill 
-              className={cn("object-cover", !canAccessStream ? "blur-3xl opacity-40" : "opacity-90")} 
-            />
-            {!canAccessStream && (
-              <div className="absolute inset-0 bg-black/40 backdrop-blur-xl flex flex-col items-center justify-center space-y-6 px-10 text-center">
-                 <div className="size-20 bg-primary/20 rounded-full flex items-center justify-center romantic-glow mb-2">
-                   <Lock className="size-10 text-primary animate-pulse" />
-                 </div>
-                 <div className="space-y-2">
-                   <h2 className="text-3xl font-black uppercase italic text-white tracking-tighter">Private Hub</h2>
-                   <p className="text-[10px] font-black text-[#FDA4AF] uppercase tracking-widest">Adult Content Possible • End-to-End Secure</p>
-                 </div>
-                 <Button onClick={() => setShowPrivateWarning(true)} className="h-16 rounded-2xl bg-primary px-10 text-white font-black uppercase tracking-widest gap-2 shadow-2xl shadow-primary/40 text-sm">
+          ) : (
+            <div className="relative w-full h-full">
+              <Image 
+                src={host?.previewImageUrl || "https://picsum.photos/seed/stream/800/1200"} 
+                alt="Stream" 
+                fill 
+                className={cn("object-cover", !canAccessStream ? "blur-3xl opacity-40" : "opacity-90")} 
+              />
+              {!canAccessStream && (
+                <div className="absolute inset-0 bg-black/40 backdrop-blur-xl flex flex-col items-center justify-center space-y-6 px-10 text-center">
+                  <div className="size-20 bg-primary/20 rounded-full flex items-center justify-center romantic-glow mb-2">
+                    <Lock className="size-10 text-primary animate-pulse" />
+                  </div>
+                  <div className="space-y-2">
+                    <h2 className="text-3xl font-black uppercase italic text-white tracking-tighter">Private Hub</h2>
+                    <p className="text-[10px] font-black text-[#FDA4AF] uppercase tracking-widest">Adult Content Possible • End-to-End Secure</p>
+                  </div>
+                  <Button onClick={() => setShowPrivateWarning(true)} className="h-16 rounded-2xl bg-primary px-10 text-white font-black uppercase tracking-widest gap-2 shadow-2xl shadow-primary/40 text-sm">
                     <Zap className="size-5 fill-current" /> Pay 50 Coins
-                 </Button>
-                 <p className="text-[9px] text-white/40 font-bold uppercase tracking-tighter mt-4">Includes 5-min Rejoin Grace Period</p>
-              </div>
-            )}
-          </div>
-        )}
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Watermark for Private Room */}
+          {isPrivate && canAccessStream && (
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none opacity-20 rotate-45">
+              <p className="text-5xl font-black uppercase tracking-[0.5em] text-white whitespace-nowrap">Strictly 18+ Private Room</p>
+            </div>
+          )}
+        </div>
         <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/80" />
       </div>
 
-      {/* Private Room Warning Dialog */}
       <Dialog open={showPrivateWarning} onOpenChange={setShowPrivateWarning}>
         <DialogContent className="bg-[#2D1B2D] border-white/10 text-white rounded-[3rem] max-w-[90vw] mx-auto p-8 overflow-hidden">
           <DialogHeader className="items-center text-center">
@@ -218,22 +235,20 @@ export default function StreamPage() {
             </div>
             <DialogTitle className="text-2xl font-black uppercase italic tracking-tighter">Private Directive</DialogTitle>
             <DialogDescription className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-              You are entering a 1-on-1 private space.
+              Nudity & Adult Content permitted here.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-6 pt-4 text-center">
             <div className="bg-white/5 rounded-2xl p-4 text-[10px] text-left space-y-3 border border-white/10">
-              <p className="flex items-start gap-2 leading-relaxed"><CheckCircle2 className="size-3 text-primary mt-0.5" /> Nudity & Adult Content is permitted here.</p>
-              <p className="flex items-start gap-2 leading-relaxed"><CheckCircle2 className="size-3 text-primary mt-0.5" /> Screenshots are globally blocked for privacy.</p>
-              <p className="flex items-start gap-2 leading-relaxed"><CheckCircle2 className="size-3 text-primary mt-0.5" /> 50 Coins = 30 Mins Access.</p>
+              <p className="flex items-start gap-2 leading-relaxed"><CheckCircle2 className="size-3 text-primary mt-0.5" /> Full freedom for Host and User.</p>
+              <p className="flex items-start gap-2 leading-relaxed"><CheckCircle2 className="size-3 text-primary mt-0.5" /> Screenshots strictly prohibited.</p>
+              <p className="flex items-start gap-2 leading-relaxed"><CheckCircle2 className="size-3 text-primary mt-0.5" /> End-to-End Encryption Active.</p>
             </div>
             <div className="flex flex-col gap-3">
               <Button onClick={handleJoinPrivate} disabled={isProcessingPayment} className="h-16 rounded-2xl romantic-gradient font-black uppercase tracking-widest text-white shadow-xl">
                 {isProcessingPayment ? <Loader2 className="animate-spin mr-2" /> : "Confirm & Pay 50💎"}
               </Button>
-              <Button variant="ghost" onClick={() => setShowPrivateWarning(false)} className="text-[10px] font-black text-slate-500 uppercase">
-                Cancel / Exit
-              </Button>
+              <Button variant="ghost" onClick={() => setShowPrivateWarning(false)} className="text-[10px] font-black text-slate-500 uppercase">Cancel</Button>
             </div>
           </div>
         </DialogContent>
@@ -244,17 +259,22 @@ export default function StreamPage() {
       <header className="relative z-10 flex items-center justify-between px-4 pt-16 pb-4">
         <div className="flex items-center gap-3 glass-effect rounded-full p-1 pr-4 bg-black/30 backdrop-blur-md border border-white/10">
           <div className="relative size-10 rounded-full border-2 border-primary overflow-hidden">
-            <Image src={host?.previewImageUrl || "https://picsum.photos/seed/host/200/200"} alt="Host" fill className="object-cover" />
+            <Image src={host?.previewImageUrl || "https://api.dicebear.com/7.x/avataaars/svg?seed=host"} alt="Host" fill className="object-cover" />
           </div>
           <div>
             <h3 className="text-[11px] font-black leading-none text-white uppercase tracking-tighter">@{host?.username || 'Host'}</h3>
             <div className="flex items-center gap-1 mt-1">
-              <ShieldAlert className="size-3 text-green-400" />
-              <span className="text-[8px] font-black text-white/50 uppercase">Secure Node</span>
+              <Eye className="size-3 text-primary" />
+              <span className="text-[8px] font-black text-white/50 uppercase">{host?.viewers || 0} Nodes</span>
             </div>
           </div>
         </div>
         <div className="flex gap-2">
+          {!isHost && host?.streamType === 'public' && (
+            <Button onClick={reportNudity} variant="ghost" size="icon" className="glass-effect size-10 rounded-full text-red-500 border-none bg-red-500/10">
+              <Flag className="size-5" />
+            </Button>
+          )}
           {isHost ? (
             <Button variant="destructive" size="sm" onClick={endStream} className="rounded-full font-black uppercase text-[10px] tracking-widest h-10 px-6 shadow-2xl">
               End Signal
@@ -279,14 +299,6 @@ export default function StreamPage() {
           ))}
           <div ref={chatEndRef} />
         </div>
-
-        {isHost && (
-          <div className="flex gap-2 mb-4">
-             <Button variant="outline" className="rounded-full bg-black/40 text-xs font-black uppercase border-white/10 h-10 px-6">
-                Mode: {host?.streamType?.toUpperCase()}
-             </Button>
-          </div>
-        )}
 
         {canAccessStream && (
           <footer className="flex items-center gap-3 w-full">
