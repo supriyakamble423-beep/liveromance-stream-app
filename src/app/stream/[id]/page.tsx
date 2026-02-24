@@ -5,7 +5,8 @@ import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import { 
   X, Eye, Heart, Gift, MessageCircle, Send, Sparkles, 
-  Lock, Loader2, Repeat, UserCheck, UserX, Ghost, Zap
+  Lock, Loader2, Repeat, UserCheck, UserX, Ghost, Zap,
+  Trophy, Medal, Crown
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { errorEmitter } from "@/firebase/error-emitter";
 import { FirestorePermissionError } from "@/firebase/errors";
 import { nsfwModeration } from "@/ai/flows/nsfw-moderation-flow";
+import LiveEarningTimer from "@/components/Stream/LiveEarningTimer";
 
 export default function StreamPage() {
   const { id } = useParams();
@@ -27,6 +29,8 @@ export default function StreamPage() {
   const [isModerating, setIsModerating] = useState(false);
   const [isUpdatingMode, setIsUpdatingMode] = useState(false);
   const [isMaskOn, setIsMaskOn] = useState(false);
+  const [secondsLive, setSecondsLive] = useState(0);
+  const [achievedMilestones, setAchievedMilestones] = useState<number[]>([]);
   const chatEndRef = useRef<HTMLDivElement>(null);
   
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -54,6 +58,57 @@ export default function StreamPage() {
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // LIVE TIMER LOGIC
+  useEffect(() => {
+    if (!isHost || !host?.isLive || !host?.streamStartTime) {
+      setSecondsLive(0);
+      return;
+    }
+    
+    const startTime = host.streamStartTime.toDate().getTime();
+    const updateTimer = () => {
+      const now = Date.now();
+      setSecondsLive(Math.floor((now - startTime) / 1000));
+    };
+
+    updateTimer();
+    const interval = setInterval(updateTimer, 1000);
+
+    return () => clearInterval(interval);
+  }, [isHost, host?.isLive, host?.streamStartTime]);
+
+  const minutesLive = Math.floor(secondsLive / 60);
+
+  // MILESTONE ALERTS
+  useEffect(() => {
+    if (!isHost || minutesLive === 0) return;
+
+    if (minutesLive >= 15 && !achievedMilestones.includes(15)) {
+      setAchievedMilestones(prev => [...prev, 15]);
+      toast({ 
+        title: "🥉 Bronze Bonus!", 
+        description: "15 minutes live! You are a Rising Star.",
+        className: "bg-[#CD7F32] text-white border-none shadow-[0_0_20px_#CD7F32]"
+      });
+    }
+    if (minutesLive >= 30 && !achievedMilestones.includes(30)) {
+      setAchievedMilestones(prev => [...prev, 30]);
+      toast({ 
+        title: "🥈 Silver Bonus!", 
+        description: "30 minutes live! 1.5x Multiplier UNLOCKED.",
+        className: "bg-cyan-500 text-white border-none shadow-[0_0_20px_#22d3ee]"
+      });
+    }
+    if (minutesLive >= 60 && !achievedMilestones.includes(60)) {
+      setAchievedMilestones(prev => [...prev, 60]);
+      toast({ 
+        title: "🥇 Gold Jackpot!", 
+        description: "1 Hour Live! 2x Multiplier ACTIVE.",
+        className: "bg-yellow-500 text-black border-none shadow-[0_0_25px_#eab308]"
+      });
+    }
+  }, [minutesLive, achievedMilestones, isHost, toast]);
 
   useEffect(() => {
     let stream: MediaStream | null = null;
@@ -244,8 +299,14 @@ export default function StreamPage() {
         <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-transparent to-black/80" />
       </div>
 
+      {/* STAY-TO-EARN TIMER COMPONENT */}
+      {isHost && host?.isLive && <LiveEarningTimer minutes={minutesLive} />}
+
       {/* Stream-X Bot Status Bar */}
-      <div className="absolute top-4 left-0 right-0 z-40 flex justify-center px-4">
+      <div className={cn(
+        "absolute left-0 right-0 z-40 flex justify-center px-4 transition-all duration-500",
+        isHost ? "top-4" : "top-4"
+      )}>
         <div className="flex items-center gap-3 glass-effect bg-black/40 backdrop-blur-xl rounded-full px-4 py-2 border border-white/10 shadow-2xl">
           <div className={cn(
             "size-2 rounded-full shadow-[0_0_10px]",
@@ -263,7 +324,7 @@ export default function StreamPage() {
       </div>
 
       {isHost && (
-        <div className="absolute top-20 left-0 right-0 z-40 flex flex-col items-center gap-3">
+        <div className="absolute top-[160px] left-0 right-0 z-40 flex flex-col items-center gap-3">
           <div className="flex gap-2">
             <Button 
               onClick={toggleStreamMode} 

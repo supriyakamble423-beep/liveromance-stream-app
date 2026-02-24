@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/dialog";
 import Image from "next/image";
 import Link from "next/link";
-import { doc, serverTimestamp, query, where, orderBy, limit, collection, updateDoc } from "firebase/firestore";
+import { doc, serverTimestamp, query, where, orderBy, limit, collection, updateDoc, increment } from "firebase/firestore";
 import { ref, uploadString, getDownloadURL } from "firebase/storage";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -73,12 +73,42 @@ export default function HostProfileDashboard() {
     }
   };
 
+  const calculateSessionBonus = (startTime: any) => {
+    if (!startTime) return 0;
+    const start = startTime.toDate().getTime();
+    const now = Date.now();
+    const minutes = Math.floor((now - start) / 60000);
+
+    if (minutes >= 60) return 500; // Gold Jackpot
+    if (minutes >= 30) return 150; // Silver Bonus
+    if (minutes >= 15) return 50;  // Bronze Bonus
+    return 0;
+  };
+
   const toggleLiveStatus = async () => {
     if (!hostRef) return;
     setIsTogglingLive(true);
     const newStatus = !hostProfile?.isLive;
     try {
-      await updateDoc(hostRef, { isLive: newStatus, updatedAt: serverTimestamp() });
+      const bonus = newStatus ? 0 : calculateSessionBonus(hostProfile?.streamStartTime);
+      
+      const updateData: any = { 
+        isLive: newStatus, 
+        updatedAt: serverTimestamp() 
+      };
+
+      if (newStatus) {
+        updateData.streamStartTime = serverTimestamp();
+      } else if (bonus > 0) {
+        updateData.earnings = increment(bonus);
+        toast({ 
+          title: "🎁 Session Reward!", 
+          description: `You earned ${bonus} bonus coins for staying live!`,
+          className: "bg-green-500 text-white border-none shadow-[0_0_20px_rgba(34,197,94,0.5)]"
+        });
+      }
+
+      await updateDoc(hostRef, updateData);
       toast({ title: newStatus ? "Broadcast Active" : "Stream Offline" });
     } catch (err) {
       toast({ variant: 'destructive', title: 'Error', description: 'Action failed.' });
@@ -185,7 +215,7 @@ export default function HostProfileDashboard() {
             <p className="text-[10px] font-black text-[#FDA4AF]/60 uppercase tracking-[0.2em] mb-2">Earnings</p>
             <div className="flex items-center gap-3">
               <Wallet className="size-6 text-amber-400" />
-              <span className="text-3xl font-black tracking-tighter text-white">{hostProfile?.earnings || "0"}</span>
+              <span className="text-3xl font-black tracking-tighter text-white">{Math.floor(hostProfile?.earnings || 0)}</span>
             </div>
           </div>
           <div className="bg-[#3D263D]/80 p-6 rounded-[2.5rem] border border-white/5 backdrop-blur-xl">
@@ -237,13 +267,23 @@ export default function HostProfileDashboard() {
               <Sparkles className="size-7 animate-pulse" />
             </div>
             <div>
-              <h4 className="text-base font-black uppercase tracking-tight text-white">AI Profile Optimizer</h4>
-              <p className="text-[10px] text-[#FDA4AF]/60 font-black uppercase tracking-widest">Meta Sync Active</p>
+              <h4 className="text-base font-black uppercase tracking-tight text-white">Stay-to-Earn Rewards</h4>
+              <p className="text-[10px] text-[#FDA4AF]/60 font-black uppercase tracking-widest">Active Earning Meta</p>
             </div>
           </div>
-          <p className="text-[11px] text-[#FDA4AF]/80 font-bold leading-relaxed uppercase tracking-wide">Boost your Diamond collection efficiency by 40% with AI analysis.</p>
+          <div className="space-y-2">
+            <p className="text-[11px] text-[#FDA4AF]/80 font-bold uppercase tracking-wide flex justify-between">
+              <span>15 Mins:</span> <span>🥉 Bronze Bonus</span>
+            </p>
+            <p className="text-[11px] text-[#FDA4AF]/80 font-bold uppercase tracking-wide flex justify-between">
+              <span>30 Mins:</span> <span className="text-cyan-400">🥈 1.5x Multiplier</span>
+            </p>
+            <p className="text-[11px] text-[#FDA4AF]/80 font-bold uppercase tracking-wide flex justify-between">
+              <span>60 Mins:</span> <span className="text-yellow-400">🥇 2.0x Jackpot</span>
+            </p>
+          </div>
           <Button onClick={handleOptimization} disabled={isOptimizing} className="w-full h-12 rounded-2xl bg-[#E11D48] font-black uppercase text-[10px] tracking-[0.2em] shadow-xl text-white border-none">
-            {isOptimizing ? <Loader2 className="animate-spin mr-2" /> : <Zap className="size-4 mr-2" />} Generate Analytics
+            {isOptimizing ? <Loader2 className="animate-spin mr-2" /> : <Zap className="size-4 mr-2" />} Boost Efficiency
           </Button>
         </section>
 
