@@ -1,4 +1,4 @@
-'use server';
+'use client';
 
 import { useState, useRef, useEffect } from "react";
 import { useFirebase } from "@/firebase";

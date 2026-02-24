@@ -160,34 +160,50 @@ export default function HostProfileDashboard() {
         </div>
 
         {/* Multiplier Status Card */}
-        <section className="bg-white/5 p-6 rounded-[2.5rem] border border-white/10 backdrop-blur-xl mb-8 romantic-glow">
+        <section className="bg-white/5 p-6 rounded-[2.5rem] border border-white/10 backdrop-blur-xl mb-8 romantic-glow relative overflow-hidden">
           <div className="flex justify-between items-center mb-4">
             <div className="flex flex-col">
               <span className="text-[9px] font-black uppercase tracking-[0.3em] text-primary">Earning Level</span>
               <h3 className="text-lg font-black italic uppercase text-white flex items-center gap-2 mt-1">
-                <Sparkles className="size-5 text-amber-400" /> {hostProfile?.isLive ? "1.5x Multiplier Active" : "1.0x Base Rate"}
+                <Sparkles className="size-5 text-amber-400 animate-pulse" /> 
+                {hostProfile?.isLive ? "1.5x Multiplier Active" : "1.0x Base Rate"}
               </h3>
             </div>
-            <Badge className="bg-primary/20 text-primary border-none text-[8px] font-black h-8 px-4">1.5x</Badge>
+            <div className="flex flex-col items-end">
+              <Badge className="bg-primary text-white border-none text-[10px] font-black h-8 px-5 romantic-glow">
+                {hostProfile?.isLive ? "1.5x" : "1.0x"}
+              </Badge>
+            </div>
           </div>
-          <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden border border-white/5 p-0.5">
-            <div className="h-full bg-primary rounded-full w-[65%] shadow-[0_0_15px_#E11D48]" />
+          <div className="w-full h-3 bg-white/5 rounded-full overflow-hidden border border-white/5 p-0.5">
+            <div 
+              className="h-full bg-primary rounded-full transition-all duration-1000 shadow-[0_0_15px_#E11D48]" 
+              style={{ width: hostProfile?.isLive ? '65%' : '10%' }}
+            />
           </div>
           <p className="text-[8px] font-black text-slate-500 uppercase mt-3 tracking-[0.2em] text-center">
-            Stream 15 more mins to unlock <span className="text-white">2.0x premium rate</span>
+            Stream more to unlock <span className="text-white">2.0x premium rate</span>
           </p>
         </section>
 
-        {/* Action Buttons: Pic & Video */}
-        <div className="grid grid-cols-2 gap-4">
+        {/* Main Action Buttons */}
+        <div className="grid grid-cols-2 gap-4 mt-6">
             <Link href="/host-f" className="flex-1">
-              <Button variant="outline" className="w-full h-20 rounded-2xl border-white/10 bg-white/5 text-white flex flex-col items-center justify-center gap-2 hover:bg-primary/20 transition-all border-none romantic-card-glow">
-                <Camera className="size-6 text-primary" />
+              <Button variant="outline" className="w-full h-24 rounded-[2rem] border-white/10 bg-white/5 text-white flex flex-col items-center justify-center gap-2 hover:bg-primary/20 transition-all border-none romantic-card-glow group">
+                <div className="size-10 bg-primary/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Camera className="size-6 text-primary" />
+                </div>
                 <span className="text-[10px] font-black uppercase tracking-widest italic">Identity Scan (Pic)</span>
               </Button>
             </Link>
-            <Button variant="outline" onClick={() => toast({ title: "Media Hub", description: "Video setup is active in Live mode." })} className="flex-1 h-20 rounded-2xl border-white/10 bg-white/5 text-white flex flex-col items-center justify-center gap-2 hover:bg-primary/20 transition-all border-none romantic-card-glow">
-              <Video className="size-6 text-secondary" />
+            <Button 
+              onClick={() => toast({ title: "Media Hub", description: "Video setup is active in Live mode." })} 
+              variant="outline" 
+              className="flex-1 h-24 rounded-[2rem] border-white/10 bg-white/5 text-white flex flex-col items-center justify-center gap-2 hover:bg-primary/20 transition-all border-none romantic-card-glow group"
+            >
+              <div className="size-10 bg-secondary/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Video className="size-6 text-secondary" />
+              </div>
               <span className="text-[10px] font-black uppercase tracking-widest italic">Live Hub (Video)</span>
             </Button>
         </div>
