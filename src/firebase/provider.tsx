@@ -69,14 +69,12 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
   });
 
   useEffect(() => {
-    // Safety timeout: Ensure loading screen disappears after 5 seconds no matter what
+    // Safety timeout: Ensure loading screen disappears after 2 seconds no matter what
     const timer = setTimeout(() => {
-      console.warn("Auth timeout reached. Proceeding anyway.");
       setUserAuthState(prev => ({ ...prev, isUserLoading: false }));
-    }, 5000);
+    }, 2000);
 
     if (!auth) {
-      console.warn("Firebase Auth missing. Entering Simulation Mode.");
       setUserAuthState(prev => ({ ...prev, isUserLoading: false }));
       clearTimeout(timer);
       return;
@@ -86,14 +84,12 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
       auth,
       (firebaseUser) => {
         if (!firebaseUser && auth) {
-          // Automatic login to bypass barriers for users/testers
           signInAnonymously(auth).catch(e => console.error("Auto-auth failed:", e));
         }
         setUserAuthState({ user: firebaseUser, isUserLoading: false, userError: null });
         clearTimeout(timer);
       },
       (error) => {
-        console.error("Auth Listener Error:", error);
         setUserAuthState({ user: null, isUserLoading: false, userError: error });
         clearTimeout(timer);
       }

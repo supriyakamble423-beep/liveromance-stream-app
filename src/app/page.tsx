@@ -11,7 +11,7 @@ export default function RootRedirect() {
   useEffect(() => {
     const timer = setTimeout(() => {
       router.push('/global');
-    }, 3000);
+    }, 1500);
     return () => clearTimeout(timer);
   }, [router]);
 
@@ -19,13 +19,13 @@ export default function RootRedirect() {
     <div className="min-h-screen bg-[#2D1B2D] flex flex-col items-center justify-center relative overflow-hidden mesh-gradient">
       <div className="relative flex flex-col items-center gap-8 z-10">
         {/* Luxury Heart Loader with Glow */}
-        <div className="relative size-56 animate-pulse logo-glow flex items-center justify-center">
-          <div className="absolute inset-0 bg-white/10 rounded-full blur-[60px] animate-pulse" />
+        <div className="relative size-48 animate-pulse logo-glow flex items-center justify-center">
+          <div className="absolute inset-0 bg-white/10 rounded-full blur-[40px] animate-pulse" />
           <Image 
             src="/logo.png" 
             alt="Global Love" 
-            width={300}
-            height={300}
+            width={240}
+            height={240}
             className="object-contain relative z-10 logo-glow"
             priority
             onError={(e) => {
@@ -36,10 +36,10 @@ export default function RootRedirect() {
         </div>
         
         <div className="flex flex-col items-center gap-4">
-          <div className="size-12 border-4 border-primary border-t-transparent rounded-full animate-spin shadow-[0_0_20px_rgba(225,29,72,0.5)]" />
+          <div className="size-10 border-4 border-primary border-t-transparent rounded-full animate-spin shadow-[0_0_15px_rgba(225,29,72,0.5)]" />
           <div className="space-y-1 text-center">
-            <p className="text-[11px] font-black tracking-[0.5em] text-white uppercase animate-pulse">Initializing Signal</p>
-            <p className="text-[8px] font-bold tracking-[0.3em] text-primary/60 uppercase">Secure Romantic Grid Active</p>
+            <p className="text-[10px] font-black tracking-[0.4em] text-white uppercase animate-pulse">Establishing Grid</p>
+            <p className="text-[8px] font-bold tracking-[0.2em] text-primary/60 uppercase">Secure Romantic Signal Active</p>
           </div>
         </div>
       </div>

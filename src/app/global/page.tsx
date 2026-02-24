@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
@@ -96,11 +97,10 @@ export default function GlobalMarketplace() {
     } finally { setIsSeeding(false); }
   };
 
-  // Only show full-screen loader if definitely still initializing auth and services are supposedly available
   if (isUserLoading && areServicesAvailable) {
     return (
       <div className="min-h-screen bg-[#2D1B2D] flex flex-col items-center justify-center space-y-8 mesh-gradient">
-        <div className="relative size-40 animate-pulse logo-glow">
+        <div className="relative size-32 animate-pulse logo-glow">
           <Image 
             src="/logo.png" 
             alt="Loading..." 
@@ -109,7 +109,7 @@ export default function GlobalMarketplace() {
             onError={(e) => { (e.target as any).src = "https://placehold.co/400x400/E11D48/white?text=GL" }} 
           />
         </div>
-        <div className="size-10 border-4 border-[#E11D48] border-t-transparent rounded-full animate-spin" />
+        <div className="size-8 border-4 border-[#E11D48] border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -132,10 +132,10 @@ export default function GlobalMarketplace() {
       <Dialog open={showAgeGate} onOpenChange={() => {}}>
         <DialogContent className="bg-[#2D1B2D] border-white/10 text-white rounded-[3rem] max-w-[90vw] mx-auto p-8">
           <DialogHeader className="items-center text-center">
-            <div className="size-20 bg-primary/20 rounded-full flex items-center justify-center mb-4 romantic-glow">
-              <ShieldAlert className="size-10 text-primary" />
+            <div className="size-16 bg-primary/20 rounded-full flex items-center justify-center mb-4 romantic-glow">
+              <ShieldAlert className="size-8 text-primary" />
             </div>
-            <DialogTitle className="text-3xl font-black uppercase italic tracking-tighter text-white">Identity Check</DialogTitle>
+            <DialogTitle className="text-2xl font-black uppercase italic tracking-tighter text-white">Identity Check</DialogTitle>
           </DialogHeader>
           <div className="space-y-6 pt-4 text-center">
              <p className="text-sm font-bold leading-relaxed text-slate-300">You must be <span className="text-primary font-black">18 or older</span> to enter.</p>
@@ -143,30 +143,30 @@ export default function GlobalMarketplace() {
                <p className="flex items-start gap-2"><CheckCircle className="size-3 text-green-400 mt-0.5" /> Public Streams: No Nudity.</p>
                <p className="flex items-start gap-2"><CheckCircle className="size-3 text-green-400 mt-0.5" /> Private Streams: Encrypted.</p>
              </div>
-             <Button onClick={handleAgeVerify} className="w-full h-16 rounded-2xl romantic-gradient font-black uppercase tracking-widest text-white shadow-xl">I am 18+ / Enter</Button>
+             <Button onClick={handleAgeVerify} className="w-full h-14 rounded-2xl romantic-gradient font-black uppercase tracking-widest text-white shadow-xl">I am 18+ / Enter</Button>
           </div>
         </DialogContent>
       </Dialog>
       
       <main className="px-6 pt-8 space-y-8">
         {showAIBot && (
-          <div className="romantic-gradient p-6 rounded-[2.5rem] text-white shadow-2xl relative overflow-hidden border border-white/20 animate-in slide-in-from-right-10">
-            <button onClick={() => setShowAIBot(false)} className="absolute top-5 right-5 text-white/60"><X className="size-5" /></button>
-            <div className="flex items-center gap-4 mb-3">
-               <div className="size-12 rounded-2xl bg-white/20 flex items-center justify-center text-2xl">🤖</div>
-               <span className="text-sm font-black uppercase italic">Safety Agent Active</span>
+          <div className="romantic-gradient p-5 rounded-[2.5rem] text-white shadow-2xl relative overflow-hidden border border-white/20 animate-in slide-in-from-right-10">
+            <button onClick={() => setShowAIBot(false)} className="absolute top-4 right-4 text-white/60"><X className="size-4" /></button>
+            <div className="flex items-center gap-3 mb-2">
+               <div className="size-10 rounded-2xl bg-white/20 flex items-center justify-center text-xl">🤖</div>
+               <span className="text-xs font-black uppercase italic">Safety Agent Active</span>
             </div>
-            <p className="text-xs font-bold leading-relaxed mb-5">"Public nudity is strictly banned. Keep it classy!"</p>
+            <p className="text-[10px] font-bold leading-relaxed mb-4">"Public nudity is strictly banned. Keep it classy!"</p>
           </div>
         )}
 
         <section className="flex items-center justify-between px-2">
           <div className="flex flex-col">
-            <h2 className="text-3xl font-black font-headline tracking-tight uppercase italic text-white">Verified</h2>
-            <p className="text-[10px] text-[#FDA4AF] uppercase tracking-[0.2em] font-black flex items-center gap-2"><Zap className="size-3 text-amber-400 fill-current" /> AI Scanned</p>
+            <h2 className="text-2xl font-black font-headline tracking-tight uppercase italic text-white">Verified</h2>
+            <p className="text-[9px] text-[#FDA4AF] uppercase tracking-[0.2em] font-black flex items-center gap-2"><Zap className="size-3 text-amber-400 fill-current" /> AI Scanned</p>
           </div>
           {(!hosts || hosts.length === 0) && (
-            <Button onClick={seedFakeLiveHosts} disabled={isSeeding} size="sm" variant="outline" className="rounded-full gap-2 text-[10px] font-black uppercase h-10 border-white/10 text-[#FDA4AF]">
+            <Button onClick={seedFakeLiveHosts} disabled={isSeeding} size="sm" variant="outline" className="rounded-full gap-2 text-[9px] font-black uppercase h-9 border-white/10 text-[#FDA4AF]">
               <RefreshCw className={cn("size-3", isSeeding && "animate-spin")} /> Simulate
             </Button>
           )}
@@ -174,7 +174,7 @@ export default function GlobalMarketplace() {
 
         <div className="grid grid-cols-2 gap-5">
           {hosts?.map((host) => (
-            <div key={host.id} className="flex flex-col bg-[#3D263D]/80 rounded-[3rem] overflow-hidden border border-white/5 group transition-all relative hover:border-[#F472B6]/20 shadow-xl">
+            <div key={host.id} className="flex flex-col bg-[#3D263D]/80 rounded-[2.5rem] overflow-hidden border border-white/5 group transition-all relative hover:border-[#F472B6]/20 shadow-xl">
               <div className="relative aspect-[3/4] overflow-hidden bg-[#2D1B2D]">
                 <Image 
                   src={host.previewImageUrl || "https://picsum.photos/seed/host/600/800"} 
@@ -182,21 +182,19 @@ export default function GlobalMarketplace() {
                   fill 
                   className={cn("object-cover transition-transform duration-1000 group-hover:scale-110", (host.streamType === 'private' || host.manualBlur) && "blur-xl opacity-50")} 
                 />
-                <Badge className="absolute top-5 left-5 bg-[#E11D48] border-none text-[9px] font-black uppercase px-4 py-1">Live</Badge>
+                <Badge className="absolute top-4 left-4 bg-[#E11D48] border-none text-[8px] font-black uppercase px-3 py-1">Live</Badge>
                 {host.streamType === 'private' && (
                   <div className="absolute inset-0 bg-[#2D1B2D]/40 backdrop-blur-md flex flex-col items-center justify-center gap-3">
-                    <Lock className="size-12 text-[#F472B6]/80" />
-                    <Badge variant="secondary" className="bg-[#E11D48] text-white text-[9px] border-none font-black px-5 py-1">50 COINS</Badge>
+                    <Lock className="size-10 text-[#F472B6]/80" />
+                    <Badge variant="secondary" className="bg-[#E11D48] text-white text-[8px] border-none font-black px-4 py-1">50 COINS</Badge>
                   </div>
                 )}
               </div>
-              <div className="p-5 space-y-5">
-                <h3 className="font-black text-sm tracking-tight truncate uppercase italic text-white">@{host.username}</h3>
-                <div className="flex gap-2">
-                  <Link href={`/stream/${host.id}`} className="w-full">
-                    <Button variant="outline" className="w-full rounded-2xl h-11 text-[10px] font-black border-white/10 text-white uppercase tracking-widest hover:bg-white/5">View Node</Button>
-                  </Link>
-                </div>
+              <div className="p-4 space-y-4">
+                <h3 className="font-black text-xs tracking-tight truncate uppercase italic text-white">@{host.username}</h3>
+                <Link href={`/stream/${host.id}`} className="w-full block">
+                  <Button variant="outline" className="w-full rounded-xl h-10 text-[9px] font-black border-white/10 text-white uppercase tracking-widest hover:bg-white/5">View Node</Button>
+                </Link>
               </div>
             </div>
           ))}
