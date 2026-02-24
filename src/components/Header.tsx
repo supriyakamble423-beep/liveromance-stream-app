@@ -11,7 +11,7 @@ export function Header() {
   const [activeCategory, setActiveCategory] = useState("All");
 
   return (
-    <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
+    <header className="sticky top-0 z-50 bg-[#2D1B2D]/80 backdrop-blur-md border-b border-white/5">
       <div className="flex items-center justify-between px-4 pt-4 pb-2">
         <div className="flex items-center gap-2">
           <div className="romantic-gradient p-2 rounded-xl flex items-center justify-center shadow-lg shadow-primary/30">
@@ -19,7 +19,7 @@ export function Header() {
           </div>
           <h1 className="text-xl font-black tracking-tighter font-headline italic text-primary">Global Love</h1>
         </div>
-        <Button variant="secondary" size="icon" className="rounded-full size-10 bg-secondary/10 hover:bg-secondary/20">
+        <Button variant="secondary" size="icon" className="rounded-full size-10 bg-white/5 hover:bg-white/10 border border-white/5">
           <SlidersHorizontal className="size-5 text-secondary" />
         </Button>
       </div>
