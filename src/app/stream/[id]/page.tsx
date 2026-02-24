@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useEffect, useRef } from "react";
@@ -32,13 +31,13 @@ export default function StreamPage() {
   const chatEndRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
-  const [stream, setCameraStream] = useState<MediaStream | null>(null);
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
   
   // Logic for testing: If ID is simulate_host, treat as host
-  const isHost = user?.uid === id || id === 'simulate_host';
+  const isHost = user?.uid === id || id === 'simulate_host' || id === 'host_node';
 
   const hostRef = useMemoFirebase(() => {
-    if (!firestore || !id || id === 'simulate_host') return null;
+    if (!firestore || !id || id.toString().includes('simulate')) return null;
     return doc(firestore, 'hosts', id as string);
   }, [firestore, id]);
 
@@ -47,9 +46,12 @@ export default function StreamPage() {
   // Stream Duration Timer for Host
   useEffect(() => {
     if (!isHost) return;
+    
+    // Increment minutes for testing (speed it up for simulation if needed)
     const interval = setInterval(() => {
       setStreamMinutes(prev => prev + 1);
-    }, 60000);
+    }, 60000); // Real time: 60000ms (1 min)
+
     return () => clearInterval(interval);
   }, [isHost]);
 
@@ -77,7 +79,7 @@ export default function StreamPage() {
         toast({ 
           variant: 'destructive', 
           title: 'Camera Access Denied', 
-          description: 'Please enable camera permissions in your browser settings to stream.' 
+          description: 'Please enable camera permissions to stream.' 
         });
       }
     };
@@ -85,8 +87,8 @@ export default function StreamPage() {
     getCameraPermission();
 
     return () => {
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
+      if (cameraStream) {
+        cameraStream.getTracks().forEach(track => track.stop());
       }
     };
   }, [isHost]);
@@ -99,17 +101,6 @@ export default function StreamPage() {
     }
     router.push('/host-p');
   };
-
-  // NSFW AI Monitoring for Hosts (Simulated if no AI)
-  useEffect(() => {
-    if (!isHost || !areServicesAvailable) return;
-
-    const scanInterval = setInterval(async () => {
-      // AI Scanning Logic placeholder
-    }, 20000); 
-
-    return () => clearInterval(scanInterval);
-  }, [isHost, areServicesAvailable]);
 
   if (isLoading && areServicesAvailable) {
     return (
@@ -124,10 +115,10 @@ export default function StreamPage() {
 
   // Use real data or fallback simulation data
   const displayHost = host || {
-    username: id === 'simulate_host' ? 'Simulated_Host' : 'Anonymous_Node',
+    username: isHost ? (user?.displayName || 'Host_Node') : 'Anonymous_Node',
     previewImageUrl: 'https://picsum.photos/seed/demo/600/800',
     viewers: 1250,
-    streamType: id === 'simulate_host' ? 'public' : 'private',
+    streamType: isHost ? 'public' : 'private',
     rating: 4.9
   };
 
@@ -146,7 +137,7 @@ export default function StreamPage() {
               muted 
               className={cn("w-full h-full object-cover scale-x-[-1]", isPrivate && "blur-2xl opacity-60")} 
             />
-            {!(hasCameraPermission) && (
+            {hasCameraPermission === false && (
               <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/80 p-10 text-center">
                 <ShieldAlert className="size-16 text-primary mb-4" />
                 <h2 className="text-xl font-black uppercase italic mb-2">Camera Blocked</h2>
@@ -182,7 +173,7 @@ export default function StreamPage() {
       </div>
 
       {/* Live Status Overlay */}
-      <div className="absolute top-6 left-0 right-0 z-50 flex justify-center px-6 pointer-events-none">
+      <div className="absolute top-6 left-0 right-0 z-[60] flex justify-center px-6 pointer-events-none">
          <div className="flex gap-2">
             <Badge className={cn(
               "h-8 px-4 rounded-full text-[10px] font-black uppercase tracking-widest border-none shadow-xl",
@@ -200,7 +191,7 @@ export default function StreamPage() {
       {isHost && <LiveEarningTimer minutes={streamMinutes} />}
 
       {/* Header Info */}
-      <header className="relative z-10 flex items-center justify-between px-4 pt-20 pb-4">
+      <header className="relative z-10 flex items-center justify-between px-4 pt-20 pb-4 mt-24">
         <div className="flex items-center gap-3 glass-effect rounded-full p-1 pr-5 bg-black/30 backdrop-blur-md border border-white/10">
           <div className="relative size-12 rounded-full border-2 border-primary overflow-hidden">
             <Image src={displayHost.previewImageUrl || "https://api.dicebear.com/7.x/avataaars/svg?seed=host"} alt="Host" fill className="object-cover" />
@@ -234,14 +225,12 @@ export default function StreamPage() {
             </div>
             
             {/* Simulated Chat */}
-            {[1, 2].map(i => (
-              <div key={i} className="px-4 py-2 rounded-2xl max-w-fit bg-white/5 backdrop-blur-md border border-white/5 animate-in slide-in-from-left-4">
-                <p className="text-[10px] text-white">
-                  <span className="font-black mr-2 text-secondary italic">User_{i*421}:</span>
-                  <span className="opacity-70">Looking good! Keep it up.</span>
-                </p>
-              </div>
-            ))}
+            <div className="px-4 py-2 rounded-2xl max-w-fit bg-white/5 backdrop-blur-md border border-white/5 animate-in slide-in-from-left-4">
+              <p className="text-[10px] text-white">
+                <span className="font-black mr-2 text-secondary italic">User_942:</span>
+                <span className="opacity-70">Bonus goal unlock karo host! 🔥</span>
+              </p>
+            </div>
           <div ref={chatEndRef} />
         </div>
 
@@ -267,7 +256,7 @@ export default function StreamPage() {
       
       {/* Decorative Scanline for Host */}
       {isHost && (
-        <div className="absolute inset-0 pointer-events-none z-20 overflow-hidden opacity-20">
+        <div className="absolute inset-0 pointer-events-none z-20 overflow-hidden opacity-10">
           <div className="absolute top-0 left-0 w-full h-1 bg-primary shadow-[0_0_15px_#E11D48] animate-scan" />
         </div>
       )}
