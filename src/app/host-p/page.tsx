@@ -1,12 +1,10 @@
-
 'use client';
 
 import { useFirebase, useDoc, useMemoFirebase } from "@/firebase";
 import { BottomNav } from "@/components/BottomNav";
 import { 
-  ShieldCheck, Settings, Radio, 
-  Power, ChevronRight, Save, Clock, Target, 
-  Activity, Zap, ShieldAlert, AlertCircle, CheckCircle2, Loader2, Wallet, RefreshCw
+  Settings, Radio, Power, ChevronRight, Save, Clock, Target, 
+  Activity, Zap, AlertCircle, Loader2, Wallet
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -44,7 +42,7 @@ export default function HostProfileDashboard() {
     return doc(firestore, 'hosts', userId);
   }, [firestore, userId]);
 
-  const { data: hostProfile, isLoading: isProfileLoading } = useDoc(hostRef);
+  const { data: hostProfile } = useDoc(hostRef);
 
   const startStreamProcess = () => {
     if (hostProfile?.isLive) {
@@ -106,12 +104,18 @@ export default function HostProfileDashboard() {
     }
   };
 
-  // Prevent infinite hang by checking isUserLoading and handling missing services
+  // Only show loader if services are definitely available and still initializing
   if (isUserLoading && areServicesAvailable) {
     return (
       <div className="min-h-screen bg-[#2D1B2D] flex flex-col items-center justify-center space-y-8 mesh-gradient">
         <div className="relative size-40 animate-pulse logo-glow">
-           <Image src="/logo.png" alt="Loading" fill className="object-contain" onError={(e) => { (e.target as any).src = "https://placehold.co/400x400/E11D48/white?text=GL" }} />
+           <Image 
+            src="/logo.png" 
+            alt="Loading" 
+            fill 
+            className="object-contain" 
+            onError={(e) => { (e.target as any).src = "https://placehold.co/400x400/E11D48/white?text=GL" }} 
+          />
         </div>
         <div className="size-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
         <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Connecting Node...</p>
@@ -124,7 +128,7 @@ export default function HostProfileDashboard() {
       {!areServicesAvailable && (
         <div className="mx-8 mt-16 bg-red-500/10 border border-red-500/20 p-4 rounded-2xl flex items-center gap-4 animate-in fade-in slide-in-from-top-4">
            <AlertCircle className="size-6 text-red-500 shrink-0" />
-           <p className="text-[10px] font-black uppercase text-red-200">Simulation Active. Database disconnected.</p>
+           <p className="text-[10px] font-black uppercase text-red-200">Simulation Active. Mode Enabled.</p>
            <Button size="sm" onClick={toggleLiveStatus} className="ml-auto bg-red-500 text-white text-[8px] font-black h-8 px-4">Test Live</Button>
         </div>
       )}
@@ -171,7 +175,7 @@ export default function HostProfileDashboard() {
             <Image src={hostProfile?.previewImageUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${userId}`} alt="Profile" fill className="object-cover" />
           </div>
           <div className="flex-1 min-w-0">
-            <h2 className="text-3xl font-black tracking-tighter uppercase truncate text-white italic">@{hostProfile?.username || 'SimulateHost'}</h2>
+            <h2 className="text-3xl font-black tracking-tighter uppercase truncate text-white italic">@{hostProfile?.username || 'Host_Node'}</h2>
             <div className="flex items-center gap-3 mt-3">
               <Badge className={cn("h-7 text-[10px] px-4 font-black tracking-widest border-none shadow-lg", (hostProfile?.verified || !areServicesAvailable) ? "bg-green-500 text-white" : "bg-white/10")}>
                 {hostProfile?.verified || !areServicesAvailable ? "VERIFIED" : "PENDING"}
@@ -218,17 +222,6 @@ export default function HostProfileDashboard() {
             {hostProfile?.isLive ? "End Stream" : "Go Live Now"}
           </Button>
 
-          <div className="grid grid-cols-2 gap-4">
-             <div className="bg-white/5 border border-white/10 rounded-[2rem] p-5 text-center">
-                <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1">Bonus Status</p>
-                <p className="text-xs font-black text-primary uppercase italic">1.5x Active</p>
-             </div>
-             <div className="bg-white/5 border border-white/10 rounded-[2rem] p-5 text-center">
-                <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1">Target for 2x</p>
-                <p className="text-xs font-black text-amber-400 uppercase italic">8m left</p>
-             </div>
-          </div>
-
           {hostProfile?.isLive && (
             <Link href={`/stream/${userId}`} className="block">
               <Button variant="outline" className="w-full h-16 rounded-[2rem] border-primary text-primary font-black uppercase tracking-widest gap-3 shadow-xl bg-primary/5">
@@ -236,39 +229,6 @@ export default function HostProfileDashboard() {
               </Button>
             </Link>
           )}
-        </section>
-
-        <section className="space-y-6">
-          <h3 className="text-xs font-black uppercase tracking-[0.3em] text-primary flex items-center gap-2">
-            <Target className="size-4" /> Daily Tasks
-          </h3>
-          <div className="space-y-4">
-            {[
-              { id: 1, title: "Marathon Stream", desc: "Stream for 30 mins", target: 30, current: hostProfile?.totalStreamMinutes || 22, reward: "10 Coins", icon: Clock, color: "text-blue-400" },
-              { id: 2, title: "Fan Favorite", desc: "Receive 5 Gifts", target: 5, current: hostProfile?.giftsReceived || 0, reward: "Premium Badge", icon: Zap, color: "text-pink-400" },
-              { id: 3, title: "Network Architect", desc: "Invite 2 New Users", target: 2, current: hostProfile?.referralCount || 0, reward: "20% Extra Comm.", icon: Radio, color: "text-amber-400" }
-            ].map((task) => {
-              const progress = Math.min((task.current / task.target) * 100, 100);
-              return (
-                <div key={task.id} className="bg-[#3D263D]/60 border border-white/5 rounded-[2.5rem] p-6">
-                  <div className="flex items-center gap-5">
-                    <div className={cn("size-12 rounded-2xl flex items-center justify-center bg-white/5", task.color)}>
-                      <task.icon className="size-6" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex justify-between items-start mb-1">
-                        <h4 className="text-sm font-black uppercase text-white italic">{task.title}</h4>
-                        <span className="text-[10px] font-black text-primary uppercase">{task.reward}</span>
-                      </div>
-                      <div className="w-full h-1.5 bg-black/20 rounded-full mt-3 overflow-hidden">
-                        <div className="h-full bg-primary" style={{ width: `${progress}%` }} />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
         </section>
 
         <AdBanner />

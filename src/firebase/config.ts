@@ -1,11 +1,10 @@
 /**
  * Firebase Configuration
- * Directly using environment variables with validation to prevent "invalid-api-key" errors.
+ * Directly using environment variables with validation to prevent initialization errors.
  */
 
 const getEnv = (key: string) => {
   const val = process.env[key];
-  // Check for literal "undefined" string which sometimes happens in some build environments
   if (val === 'undefined' || !val) return "";
   return val;
 };
@@ -17,4 +16,7 @@ export const firebaseConfig = {
   storageBucket: getEnv('NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET'),
   messagingSenderId: getEnv('NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID'),
   appId: getEnv('NEXT_PUBLIC_FIREBASE_APP_ID'),
+  // Manually enable features for simulation and live marketplace
+  ENABLE_LIVE_MARKETPLACE: true,
+  PLATFORM_DEBUG_MODE: true
 };

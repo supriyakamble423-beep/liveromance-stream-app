@@ -1,11 +1,10 @@
-
 'use client';
 
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
-import { collection, doc, setDoc, serverTimestamp, query, where, limit, addDoc } from 'firebase/firestore';
+import { collection, doc, setDoc, serverTimestamp, query, where, limit } from 'firebase/firestore';
 import { Header } from "@/components/Header";
 import { BottomNav } from "@/components/BottomNav";
-import { MessageCircle, Zap, ShieldCheck, Lock, RefreshCw, X, Star, Sparkles, ShieldAlert, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
+import { Zap, Lock, X, CheckCircle, AlertCircle, RefreshCw, ShieldAlert } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -97,11 +96,18 @@ export default function GlobalMarketplace() {
     } finally { setIsSeeding(false); }
   };
 
-  if (isUserLoading) {
+  // Only show full-screen loader if definitely still initializing auth and services are supposedly available
+  if (isUserLoading && areServicesAvailable) {
     return (
       <div className="min-h-screen bg-[#2D1B2D] flex flex-col items-center justify-center space-y-8 mesh-gradient">
         <div className="relative size-40 animate-pulse logo-glow">
-          <Image src="/logo.png" alt="Loading..." fill className="object-contain" onError={(e) => { (e.target as any).src = "https://placehold.co/400x400/E11D48/white?text=GL" }} />
+          <Image 
+            src="/logo.png" 
+            alt="Loading..." 
+            fill 
+            className="object-contain" 
+            onError={(e) => { (e.target as any).src = "https://placehold.co/400x400/E11D48/white?text=GL" }} 
+          />
         </div>
         <div className="size-10 border-4 border-[#E11D48] border-t-transparent rounded-full animate-spin" />
       </div>
@@ -115,8 +121,11 @@ export default function GlobalMarketplace() {
       {!areServicesAvailable && (
         <div className="mx-6 mt-6 bg-red-500/10 border border-red-500/20 p-4 rounded-2xl flex items-center gap-4">
            <AlertCircle className="size-6 text-red-500 shrink-0" />
-           <p className="text-[10px] font-black uppercase text-red-200">Firebase keys missing. Entering simulation mode.</p>
-           <Button size="sm" onClick={seedFakeLiveHosts} className="ml-auto bg-red-500 text-white text-[8px] font-black h-8 px-4">Simulate</Button>
+           <div className="flex-1">
+             <p className="text-[10px] font-black uppercase text-red-200">Simulation Mode Active</p>
+             <p className="text-[8px] font-bold uppercase text-red-300/60">Connect Firebase for Live Nodes</p>
+           </div>
+           <Button size="sm" onClick={seedFakeLiveHosts} className="bg-red-500 text-white text-[8px] font-black h-8 px-4">Initialize</Button>
         </div>
       )}
 
@@ -167,7 +176,12 @@ export default function GlobalMarketplace() {
           {hosts?.map((host) => (
             <div key={host.id} className="flex flex-col bg-[#3D263D]/80 rounded-[3rem] overflow-hidden border border-white/5 group transition-all relative hover:border-[#F472B6]/20 shadow-xl">
               <div className="relative aspect-[3/4] overflow-hidden bg-[#2D1B2D]">
-                <Image src={host.previewImageUrl || "https://picsum.photos/seed/host/600/800"} alt={host.id} fill className={cn("object-cover transition-transform duration-1000 group-hover:scale-110", (host.streamType === 'private' || host.manualBlur) && "blur-xl opacity-50")} />
+                <Image 
+                  src={host.previewImageUrl || "https://picsum.photos/seed/host/600/800"} 
+                  alt={host.id} 
+                  fill 
+                  className={cn("object-cover transition-transform duration-1000 group-hover:scale-110", (host.streamType === 'private' || host.manualBlur) && "blur-xl opacity-50")} 
+                />
                 <Badge className="absolute top-5 left-5 bg-[#E11D48] border-none text-[9px] font-black uppercase px-4 py-1">Live</Badge>
                 {host.streamType === 'private' && (
                   <div className="absolute inset-0 bg-[#2D1B2D]/40 backdrop-blur-md flex flex-col items-center justify-center gap-3">

@@ -52,6 +52,7 @@ export const FirebaseContext = createContext<FirebaseContextState | undefined>(u
 
 /**
  * FirebaseProvider: Core context provider for the entire app.
+ * Optimized to prevent "Configuration Required" hangs.
  */
 export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
   children,
@@ -67,7 +68,9 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
   });
 
   useEffect(() => {
+    // If keys are missing, we stop loading immediately to show simulation UI
     if (!auth) {
+      console.warn("Firebase Auth missing. Entering Simulation Mode.");
       setUserAuthState(prev => ({ ...prev, isUserLoading: false }));
       return;
     }
@@ -76,21 +79,30 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
       auth,
       (firebaseUser) => {
         if (!firebaseUser && auth) {
-          // AUTO-SIGN IN ANONYMOUSLY: Bypasses configuration barriers for testers
-          signInAnonymously(auth).catch(e => console.error("Automatic Auth failed:", e));
+          // Automatic login to bypass barriers for users/testers
+          signInAnonymously(auth).catch(e => console.error("Auto-auth failed:", e));
         }
         setUserAuthState({ user: firebaseUser, isUserLoading: false, userError: null });
       },
       (error) => {
-        console.error("FirebaseProvider Auth Error:", error);
+        console.error("Auth Listener Error:", error);
         setUserAuthState({ user: null, isUserLoading: false, userError: error });
       }
     );
-    return () => unsubscribe();
+    
+    // Safety timeout: Ensure loading screen disappears after 5 seconds no matter what
+    const timer = setTimeout(() => {
+      setUserAuthState(prev => ({ ...prev, isUserLoading: false }));
+    }, 5000);
+
+    return () => {
+      unsubscribe();
+      clearTimeout(timer);
+    };
   }, [auth]);
 
   const contextValue = useMemo((): FirebaseContextState => {
-    // Even if keys are missing, we mark services as available if the objects exist to allow simulation
+    // If the objects exist, we allow the app to function in hybrid mode
     const servicesAvailable = !!(firebaseApp && firestore && auth);
     return {
       areServicesAvailable: servicesAvailable,
