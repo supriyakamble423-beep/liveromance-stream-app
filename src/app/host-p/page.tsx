@@ -1,39 +1,37 @@
 'use client';
 
-import { useFirebase, useDoc, useMemoFirebase, useCollection } from "@/firebase";
+import { useFirebase, useDoc, useMemoFirebase } from "@/firebase";
 import { BottomNav } from "@/components/BottomNav";
 import { 
   ShieldCheck, Wallet, Settings, Radio, 
   Lock, Globe, Users, Loader2, Zap, Sparkles, Camera, Power,
-  ChevronRight, Share2, MapPin, Save, Clock, TrendingUp
+  ChevronRight, Share2, MapPin, Save, Clock, TrendingUp,
+  Trophy, CheckCircle2, Gift, Star, Target
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Progress } from "@/components/ui/progress";
 import { 
   Dialog, 
   DialogContent, 
   DialogHeader, 
   DialogTitle, 
   DialogTrigger,
-  DialogClose
 } from "@/components/ui/dialog";
 import Image from "next/image";
 import Link from "next/link";
-import { doc, serverTimestamp, query, where, orderBy, limit, collection, updateDoc, increment } from "firebase/firestore";
-import { ref, uploadString, getDownloadURL } from "firebase/storage";
+import { doc, serverTimestamp, updateDoc, increment } from "firebase/firestore";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { aiGuidedHostProfileOptimization } from "@/ai/flows/ai-guided-host-profile-optimization-flow";
-import { useState, useRef } from "react";
+import { useState } from "react";
 import AdBanner from "@/components/Ads/AdBanner";
 
 export default function HostProfileDashboard() {
-  const { firestore, storage, user } = useFirebase();
+  const { firestore, user } = useFirebase();
   const { toast } = useToast();
   const userId = user?.uid;
-  const [isOptimizing, setIsOptimizing] = useState(false);
   const [isTogglingLive, setIsTogglingLive] = useState(false);
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
   
@@ -47,16 +45,6 @@ export default function HostProfileDashboard() {
   }, [firestore, userId]);
 
   const { data: hostProfile, isLoading: isProfileLoading } = useDoc(hostRef);
-
-  const updateStreamType = async (type: 'public' | 'private') => {
-    if (!hostRef) return;
-    try {
-      await updateDoc(hostRef, { streamType: type, updatedAt: serverTimestamp() });
-      toast({ title: "Mode Updated", description: `Switched to ${type.toUpperCase()}` });
-    } catch (err) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Update failed.' });
-    }
-  };
 
   const toggleLiveStatus = async () => {
     if (!hostRef) return;
@@ -102,11 +90,45 @@ export default function HostProfileDashboard() {
     }
   };
 
+  // Daily Tasks Logic (Based on Profile Data)
+  const tasks = [
+    {
+      id: 1,
+      title: "Marathon Stream",
+      desc: "Stream for 30 mins",
+      target: 30,
+      current: hostProfile?.totalStreamMinutes || 0,
+      reward: "10 Coins",
+      icon: Clock,
+      color: "text-blue-400"
+    },
+    {
+      id: 2,
+      title: "Fan Favorite",
+      desc: "Receive 5 Gifts",
+      target: 5,
+      current: hostProfile?.giftsReceived || 0,
+      reward: "Premium Badge",
+      icon: Gift,
+      color: "text-pink-400"
+    },
+    {
+      id: 3,
+      title: "Network Architect",
+      desc: "Invite 2 New Users",
+      target: 2,
+      current: hostProfile?.referralCount || 0,
+      reward: "20% Extra Comm.",
+      icon: Share2,
+      color: "text-amber-400"
+    }
+  ];
+
   if (isProfileLoading) {
     return (
       <div className="min-h-screen bg-[#2D1B2D] flex flex-col items-center justify-center space-y-8 mesh-gradient">
         <div className="relative size-40 animate-pulse drop-shadow-[0_0_15px_rgba(255,255,255,0.4)]">
-          <Image src="/logo.png" alt="Loading Profile..." fill className="object-contain" />
+          <Image src="/logo.png" alt="Loading Profile..." fill className="object-contain" onError={(e) => { (e.target as any).src = "https://placehold.co/400x400/E11D48/white?text=GL" }} />
         </div>
         <div className="size-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
       </div>
@@ -160,44 +182,77 @@ export default function HostProfileDashboard() {
           </div>
         </div>
 
-        {/* METRICS: SHOWING STAY-TO-EARN IMPACT */}
         <div className="grid grid-cols-2 gap-5">
           <div className="bg-[#3D263D]/80 p-6 rounded-[2.5rem] border border-white/5 backdrop-blur-xl group hover:border-amber-500/30 transition-all">
             <p className="text-[10px] font-black text-[#FDA4AF]/60 uppercase tracking-[0.2em] mb-2 flex items-center gap-2">
               <Wallet className="size-3 text-amber-400" /> Total Earnings
             </p>
             <span className="text-3xl font-black tracking-tighter text-white">{Math.floor(hostProfile?.earnings || 0)}</span>
-            {hostProfile?.lastSessionBonus > 0 && (
-              <p className="text-[8px] text-green-400 font-bold mt-1 uppercase tracking-widest">+{hostProfile.lastSessionBonus} Last Bonus</p>
-            )}
           </div>
           <div className="bg-[#3D263D]/80 p-6 rounded-[2.5rem] border border-white/5 backdrop-blur-xl group hover:border-primary/30 transition-all">
             <p className="text-[10px] font-black text-[#FDA4AF]/60 uppercase tracking-[0.2em] mb-2 flex items-center gap-2">
-              <Clock className="size-3 text-primary" /> Stream Time
+              <TrendingUp className="size-3 text-primary" /> Multiplier
             </p>
-            <span className="text-3xl font-black tracking-tighter text-white">{hostProfile?.totalStreamMinutes || "0"} <span className="text-sm opacity-40 font-bold tracking-normal uppercase">min</span></span>
+            <span className="text-3xl font-black tracking-tighter text-white">1.2x</span>
           </div>
         </div>
       </header>
 
-      <main className="px-8 space-y-8">
-        <section className="space-y-4">
+      <main className="px-8 space-y-10">
+        {/* DAILY TASK CENTER */}
+        <section className="space-y-6">
           <div className="flex items-center justify-between px-2">
-            <h3 className="text-xs font-black uppercase tracking-[0.3em] text-[#FDA4AF]/60">Earning Performance</h3>
-            <TrendingUp className="size-4 text-green-400" />
+            <div className="flex flex-col">
+              <h3 className="text-xs font-black uppercase tracking-[0.3em] text-primary flex items-center gap-2">
+                <Target className="size-4" /> Daily Task Center
+              </h3>
+              <p className="text-[9px] font-bold text-[#FDA4AF]/40 uppercase mt-1">Refreshes every 24h</p>
+            </div>
+            <Trophy className="size-5 text-amber-400 animate-bounce" />
           </div>
-          <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-6 space-y-4">
-             <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
-                <span className="text-slate-400">Current Rate:</span>
-                <span className="text-primary">1.0x Base</span>
-             </div>
-             <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
-                <span className="text-slate-400">Target (30m):</span>
-                <span className="text-cyan-400">1.5x Multiplier</span>
-             </div>
-             <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden">
-                <div className="h-full romantic-gradient w-1/3 shadow-[0_0_10px_#E11D48]" />
-             </div>
+
+          <div className="space-y-4">
+            {tasks.map((task) => {
+              const progress = Math.min((task.current / task.target) * 100, 100);
+              const isCompleted = progress === 100;
+
+              return (
+                <div key={task.id} className="bg-[#3D263D]/60 border border-white/5 rounded-[2.5rem] p-6 relative overflow-hidden group transition-all hover:bg-[#3D263D]/80">
+                  <div className="flex items-center gap-5 relative z-10">
+                    <div className={cn("size-14 rounded-2xl flex items-center justify-center bg-white/5 border border-white/5", task.color)}>
+                      <task.icon className="size-7" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex justify-between items-start mb-1">
+                        <h4 className="text-sm font-black uppercase tracking-tight text-white">{task.title}</h4>
+                        <span className="text-[10px] font-black text-primary uppercase">{task.reward}</span>
+                      </div>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">{task.desc}</p>
+                      
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center text-[9px] font-black uppercase tracking-tighter">
+                          <span className="text-slate-500">Progress</span>
+                          <span className="text-white">{task.current} / {task.target}</span>
+                        </div>
+                        <div className="w-full h-1.5 bg-black/20 rounded-full overflow-hidden border border-white/5">
+                          <div 
+                            className={cn("h-full transition-all duration-1000", isCompleted ? "bg-green-500 shadow-[0_0_10px_#22c55e]" : "romantic-gradient")}
+                            style={{ width: `${progress}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    {isCompleted && (
+                      <div className="ml-2 animate-in zoom-in duration-500">
+                        <CheckCircle2 className="size-8 text-green-500 drop-shadow-[0_0_8px_#22c55e]" />
+                      </div>
+                    )}
+                  </div>
+                  {/* Decorative background icon */}
+                  <task.icon className="absolute -bottom-4 -right-4 size-24 opacity-[0.03] text-white" />
+                </div>
+              );
+            })}
           </div>
         </section>
 
@@ -237,10 +292,6 @@ export default function HostProfileDashboard() {
             <div className="flex justify-between items-center p-3 rounded-2xl bg-white/5 border border-white/5">
               <span className="text-[11px] font-black text-[#FDA4AF]/80 uppercase italic">30 Mins</span>
               <span className="text-[10px] font-bold text-white bg-cyan-500 px-3 py-1 rounded-full">1.5x Coins</span>
-            </div>
-            <div className="flex justify-between items-center p-3 rounded-2xl bg-white/5 border border-white/5">
-              <span className="text-[11px] font-black text-[#FDA4AF]/80 uppercase italic">60 Mins</span>
-              <span className="text-[10px] font-bold text-black bg-yellow-400 px-3 py-1 rounded-full font-black">2.0x Jackpot</span>
             </div>
           </div>
         </section>
