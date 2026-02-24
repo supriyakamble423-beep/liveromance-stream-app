@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useEffect, useRef } from "react";
@@ -10,7 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useFirebase, useDoc, useMemoFirebase, useCollection } from "@/firebase";
-import { doc, collection, addDoc, serverTimestamp, query, orderBy, limit, updateDoc, where } from "firebase/firestore";
+import { doc, collection, setDoc, serverTimestamp, query, orderBy, limit, where } from "firebase/firestore";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import LiveEarningTimer from "@/components/Stream/LiveEarningTimer";
@@ -106,23 +107,25 @@ export default function StreamPage() {
     }
 
     try {
-      await updateDoc(hostRef, { 
+      // Use setDoc with merge to ensure doc exists
+      await setDoc(hostRef, { 
         streamType: nextMode,
         updatedAt: serverTimestamp() 
-      });
+      }, { merge: true });
+      
       toast({ 
-        title: nextMode === 'private' ? "Private Mode ON" : "Public Mode ON",
-        description: nextMode === 'private' ? "Stream is now encrypted." : "Everyone can watch."
+        title: nextMode === 'private' ? "PRIVATE MODE ACTIVE" : "PUBLIC MODE ACTIVE",
+        description: nextMode === 'private' ? "Encryption enabled." : "Discovery enabled."
       });
     } catch (e) {
       console.error(e);
-      toast({ variant: "destructive", title: "Update Failed", description: "Permissions check failed." });
+      toast({ variant: "destructive", title: "Update Failed" });
     }
   };
 
   const endStream = async () => {
     if (isHost && hostRef && areServicesAvailable) {
-      await updateDoc(hostRef, { isLive: false, updatedAt: serverTimestamp() });
+      await setDoc(hostRef, { isLive: false, updatedAt: serverTimestamp() }, { merge: true });
     }
     router.push('/host-p');
   };
@@ -136,8 +139,8 @@ export default function StreamPage() {
   }
 
   const displayHost = host || {
-    username: isHost ? (user?.displayName || 'Host') : 'Anonymous',
-    previewImageUrl: 'https://picsum.photos/seed/demo/600/800',
+    username: isHost ? (user?.displayName || 'My Stream') : 'Live Host',
+    previewImageUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${id || 'default'}`,
     viewers: 1250,
     streamType: 'public',
     rating: 4.9
@@ -162,7 +165,7 @@ export default function StreamPage() {
         ) : (
           <div className="relative w-full h-full">
             <Image 
-              src={displayHost.previewImageUrl || "https://picsum.photos/seed/stream/800/1200"} 
+              src={displayHost.previewImageUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${id}`} 
               alt="Stream" 
               fill 
               className={cn("object-cover", isPrivate ? "blur-3xl opacity-40" : "opacity-90")} 
@@ -192,7 +195,7 @@ export default function StreamPage() {
                 )}
               >
                 {isPrivate ? <Lock className="size-3 mr-2" /> : <Zap className="size-3 mr-2 fill-current" />}
-                {isPrivate ? "Mode: Private" : "Mode: Public"}
+                {isPrivate ? "MODE: PRIVATE" : "MODE: PUBLIC"}
               </Button>
             )}
             <Badge className="h-10 px-6 rounded-full bg-black/40 backdrop-blur-md border border-white/10 text-[10px] font-black uppercase tracking-widest text-white">
@@ -223,7 +226,12 @@ export default function StreamPage() {
       <header className="relative z-10 flex items-center justify-between px-4 pt-20 pb-4 mt-24">
         <div className="flex items-center gap-3 glass-effect rounded-full p-1 pr-5 bg-black/30 backdrop-blur-md border border-white/10">
           <div className="relative size-12 rounded-full border-2 border-primary overflow-hidden">
-            <Image src={displayHost.previewImageUrl || "https://api.dicebear.com/7.x/avataaars/svg?seed=host"} alt="Host" fill className="object-cover" />
+            <Image 
+              src={displayHost.previewImageUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${displayHost.username}`} 
+              alt="Host" 
+              fill 
+              className="object-cover" 
+            />
           </div>
           <div>
             <h3 className="text-xs font-black leading-none text-white uppercase tracking-tighter italic">@{displayHost.username}</h3>

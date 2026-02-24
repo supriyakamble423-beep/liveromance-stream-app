@@ -1,11 +1,11 @@
+
 'use client';
 
 import { useFirebase, useDoc, useMemoFirebase } from "@/firebase";
 import { BottomNav } from "@/components/BottomNav";
 import { 
-  Settings, Radio, Power, ChevronRight, Save, Clock, Target, 
-  Activity, Zap, AlertCircle, Loader2, Wallet, Camera, Video, ShieldCheck, Sparkles, Star,
-  CheckCircle2
+  Settings, Radio, Power, ChevronRight, Save, Clock, 
+  Sparkles, Star, Camera, Video, ShieldCheck, Wallet, Loader2, CheckCircle2, AlertCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -72,7 +72,7 @@ export default function HostProfileDashboard() {
         isLive: newStatus,
         updatedAt: serverTimestamp(),
         streamStartTime: newStatus ? serverTimestamp() : null,
-        username: hostProfile?.username || user?.displayName || "New Host",
+        username: editName || hostProfile?.username || user?.displayName || "New Host",
         previewImageUrl: hostProfile?.previewImageUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${userId}`,
         streamType: hostProfile?.streamType || 'public',
         rating: hostProfile?.rating || 4.9,
@@ -91,7 +91,7 @@ export default function HostProfileDashboard() {
       }
     } catch (err) {
       console.error(err);
-      toast({ variant: 'destructive', title: 'Error', description: 'Permission denied.' });
+      toast({ variant: 'destructive', title: 'Error', description: 'Failed to toggle stream.' });
     } finally {
       setIsTogglingLive(false);
     }
@@ -101,12 +101,12 @@ export default function HostProfileDashboard() {
     if (!hostRef) return;
     setIsUpdatingProfile(true);
     try {
-      await updateDoc(hostRef, {
+      await setDoc(hostRef, {
         username: editName || hostProfile?.username,
         bio: editBio || hostProfile?.bio,
         country: editCountry || hostProfile?.country,
         updatedAt: serverTimestamp()
-      });
+      }, { merge: true });
       toast({ title: "Profile Updated" });
     } catch (e) {
       toast({ variant: "destructive", title: "Error" });
@@ -159,7 +159,7 @@ export default function HostProfileDashboard() {
             <Image src={hostProfile?.previewImageUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${userId}`} alt="Profile" fill className="object-cover" />
           </div>
           <div className="flex-1 min-w-0">
-            <h2 className="text-2xl font-black tracking-tighter uppercase truncate text-white italic">@{hostProfile?.username || 'Host_Node'}</h2>
+            <h2 className="text-2xl font-black tracking-tighter uppercase truncate text-white italic">@{hostProfile?.username || 'New Host'}</h2>
             <div className="flex items-center gap-2 mt-2">
               <Badge className={cn("h-6 text-[9px] px-3 font-black tracking-widest border-none", hostProfile?.verified ? "bg-green-500 text-white" : "bg-white/10 text-slate-400")}>
                 {hostProfile?.verified ? "VERIFIED" : "UNVERIFIED"}
@@ -275,9 +275,9 @@ export default function HostProfileDashboard() {
           </DialogHeader>
           <div className="space-y-6 pt-4">
              <div className="bg-white/5 rounded-2xl p-5 text-[10px] space-y-4 border border-white/10 font-bold uppercase tracking-widest">
-               <p className="flex items-start gap-3 text-green-400"><CheckCircle2 className="size-4 shrink-0" /> Public: Bra / Panty Allowed.</p>
-               <p className="flex items-start gap-3 text-red-500"><AlertCircle className="size-4 shrink-0" /> Public: No Full Nudity.</p>
-               <p className="flex items-start gap-3 text-blue-400"><Sparkles className="size-4 shrink-0" /> Private: Encrypted Freedom.</p>
+               <p className="flex items-start gap-3 text-green-400"><CheckCircle2 className="size-4 shrink-0" /> Public Mode: Bra / Panty Allowed.</p>
+               <p className="flex items-start gap-3 text-red-500"><AlertCircle className="size-4 shrink-0" /> Public Mode: No Full Nudity.</p>
+               <p className="flex items-start gap-3 text-blue-400"><Sparkles className="size-4 shrink-0" /> Private Mode: Full Freedom.</p>
              </div>
              <p className="text-[8px] text-center text-slate-500 font-black uppercase italic leading-relaxed px-6">
                Violating Public rules will result in a permanent ban.
