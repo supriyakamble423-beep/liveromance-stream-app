@@ -34,8 +34,7 @@ export default function StreamPage() {
 
   const hostRef = useMemoFirebase(() => {
     if (!firestore || !id) return null;
-    // Handle simulation ID properly
-    const hostId = id === 'simulate_host' || id === 'host_node' ? (user?.uid || 'fake_host') : id;
+    const hostId = (id === 'simulate_host' || id === 'host_node') ? (user?.uid || 'fake_host') : id;
     return doc(firestore, 'hosts', hostId as string);
   }, [firestore, id, user?.uid]);
 
@@ -44,7 +43,7 @@ export default function StreamPage() {
   // Monitor Private Entry/Requests for Host
   const requestsQuery = useMemoFirebase(() => {
     if (!firestore || !isHost) return null;
-    const hostId = id === 'simulate_host' || id === 'host_node' ? (user?.uid || 'fake_host') : id;
+    const hostId = (id === 'simulate_host' || id === 'host_node') ? (user?.uid || 'fake_host') : id;
     return query(
       collection(firestore, 'streamRequests'),
       where('hostId', '==', hostId),
