@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useFirebase, useDoc, useMemoFirebase } from "@/firebase";
@@ -29,7 +28,7 @@ import { useState } from "react";
 import AdBanner from "@/components/Ads/AdBanner";
 
 export default function HostProfileDashboard() {
-  const { firestore, user } = useFirebase();
+  const { firestore, user, areServicesAvailable, isUserLoading } = useFirebase();
   const { toast } = useToast();
   const userId = user?.uid;
   const [isTogglingLive, setIsTogglingLive] = useState(false);
@@ -51,7 +50,6 @@ export default function HostProfileDashboard() {
     setIsTogglingLive(true);
     const newStatus = !hostProfile?.isLive;
     try {
-      // Ensure host document exists before updating
       await setDoc(hostRef, {
         userId,
         isLive: newStatus,
@@ -127,13 +125,14 @@ export default function HostProfileDashboard() {
     }
   ];
 
-  if (isProfileLoading) {
+  if (isUserLoading || isProfileLoading || !areServicesAvailable) {
     return (
       <div className="min-h-screen bg-[#2D1B2D] flex flex-col items-center justify-center space-y-8 mesh-gradient">
-        <div className="relative size-40 animate-pulse">
+        <div className="relative size-40 animate-pulse logo-glow">
            <Image src="/logo.png" alt="Loading" fill className="object-contain" onError={(e) => { (e.target as any).src = "https://placehold.co/400x400/E11D48/white?text=GL" }} />
         </div>
         <div className="size-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Initializing Node...</p>
       </div>
     );
   }

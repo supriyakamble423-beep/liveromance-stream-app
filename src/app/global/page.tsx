@@ -1,11 +1,10 @@
-
 'use client';
 
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 import { collection, doc, setDoc, serverTimestamp, query, where, limit, addDoc } from 'firebase/firestore';
 import { Header } from "@/components/Header";
 import { BottomNav } from "@/components/BottomNav";
-import { MessageCircle, Zap, ShieldCheck, Lock, RefreshCw, X, Star, Sparkles, TrendingUp } from "lucide-react";
+import { MessageCircle, Zap, ShieldCheck, Lock, RefreshCw, X, Star, Sparkles, TrendingUp, ShieldAlert, CheckCircle } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -18,18 +17,30 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import AdBanner from "@/components/Ads/AdBanner";
 import { personalizedHostRecommendations, type PersonalizedHostRecommendationsOutput } from "@/ai/flows/personalized-host-recommendations-flow";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export default function GlobalMarketplace() {
-  const { firestore, auth, user } = useFirebase();
+  const { firestore, user, areServicesAvailable } = useFirebase();
   const { toast } = useToast();
   const [isSeeding, setIsSeeding] = useState(false);
   const [showAIBot, setShowAIBot] = useState(false);
+  const [showAgeGate, setShowAgeGate] = useState(true);
   const [recommendations, setRecommendations] = useState<PersonalizedHostRecommendationsOutput["recommendations"]>([]);
 
+  // Check age verification from localStorage
   useEffect(() => {
-    const timer = setTimeout(() => setShowAIBot(true), 1500);
+    const isVerified = localStorage.getItem('age-verified-18');
+    if (isVerified) setShowAgeGate(false);
+    
+    const timer = setTimeout(() => setShowAIBot(true), 2500);
     return () => clearTimeout(timer);
   }, []);
+
+  const handleAgeVerify = () => {
+    localStorage.setItem('age-verified-18', 'true');
+    setShowAgeGate(false);
+    toast({ title: "Welcome to Global Love", description: "Identity check passed. Stay safe!" });
+  };
 
   const liveHostsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -131,10 +142,10 @@ export default function GlobalMarketplace() {
       });
   };
 
-  if (isLoading) {
+  if (isLoading || !areServicesAvailable) {
     return (
       <div className="min-h-screen bg-[#2D1B2D] flex flex-col items-center justify-center space-y-8 mesh-gradient">
-        <div className="relative size-40 animate-pulse drop-shadow-[0_0_20px_rgba(255,255,255,0.4)]">
+        <div className="relative size-40 animate-pulse drop-shadow-[0_0_20px_rgba(255,255,255,0.4)] logo-glow">
           <Image 
             src="/logo.png" 
             alt="Loading..." 
@@ -155,8 +166,40 @@ export default function GlobalMarketplace() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-32 max-w-lg mx-auto border-x border-white/5 mesh-gradient">
+    <div className="min-h-screen bg-background pb-32 max-w-lg mx-auto border-x border-white/5 mesh-gradient screen-guard-active">
       <Header />
+
+      {/* 18+ Age Gate & Policy Modal */}
+      <Dialog open={showAgeGate} onOpenChange={() => {}}>
+        <DialogContent className="bg-[#2D1B2D] border-white/10 text-white rounded-[3rem] max-w-[90vw] mx-auto p-8 overflow-hidden">
+          <DialogHeader className="items-center text-center">
+            <div className="size-20 bg-primary/20 rounded-full flex items-center justify-center mb-4 romantic-glow">
+              <ShieldAlert className="size-10 text-primary" />
+            </div>
+            <DialogTitle className="text-3xl font-black uppercase italic tracking-tighter">Identity Check</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-6 pt-4 text-center">
+             <div className="space-y-4">
+               <p className="text-sm font-bold leading-relaxed text-slate-300">
+                 You must be <span className="text-primary font-black">18 or older</span> to enter Global Love.
+               </p>
+               <div className="bg-white/5 rounded-2xl p-4 text-[10px] text-left space-y-2 border border-white/10">
+                 <p className="flex items-start gap-2"><CheckCircle className="size-3 text-green-400 mt-0.5" /> Public Streams: NO Nudity allowed.</p>
+                 <p className="flex items-start gap-2"><CheckCircle className="size-3 text-green-400 mt-0.5" /> Private Streams: Encrypted & Private.</p>
+                 <p className="flex items-start gap-2"><CheckCircle className="size-3 text-green-400 mt-0.5" /> Users are responsible for shared data.</p>
+               </div>
+             </div>
+             <div className="flex flex-col gap-3">
+               <Button onClick={handleAgeVerify} className="h-16 rounded-2xl romantic-gradient font-black uppercase tracking-widest text-white shadow-xl">
+                 I am 18+ / Enter
+               </Button>
+               <Link href="https://google.com" className="text-[10px] font-bold text-slate-500 uppercase underline decoration-slate-700">
+                 Exit Platform
+               </Link>
+             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
       
       <main className="px-6 pt-8 space-y-8">
         {showAIBot && (
