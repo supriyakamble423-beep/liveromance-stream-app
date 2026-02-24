@@ -6,7 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import { 
   X, Eye, Heart, Send, 
-  Lock, Zap, UserPlus
+  Lock, Zap, UserPlus, ShieldOff, ShieldCheck
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -100,14 +100,12 @@ export default function StreamPage() {
     const currentMode = host?.streamType || 'public';
     const nextMode = currentMode === 'public' ? 'private' : 'public';
 
-    // Simulation fallback
     if (!areServicesAvailable || !hostRef) {
       toast({ title: `Simulation: Switched to ${nextMode.toUpperCase()}` });
       return;
     }
 
     try {
-      // Use setDoc with merge to ensure doc exists
       await setDoc(hostRef, { 
         streamType: nextMode,
         updatedAt: serverTimestamp() 
@@ -118,7 +116,20 @@ export default function StreamPage() {
         description: nextMode === 'private' ? "Encryption enabled." : "Discovery enabled."
       });
     } catch (e) {
-      console.error(e);
+      toast({ variant: "destructive", title: "Update Failed" });
+    }
+  };
+
+  const toggleManualBlur = async () => {
+    if (!isHost || !hostRef) return;
+    const currentBlur = host?.manualBlur || false;
+    try {
+      await setDoc(hostRef, { 
+        manualBlur: !currentBlur,
+        updatedAt: serverTimestamp() 
+      }, { merge: true });
+      toast({ title: !currentBlur ? "Blur On" : "Blur Off" });
+    } catch (e) {
       toast({ variant: "destructive", title: "Update Failed" });
     }
   };
@@ -143,10 +154,13 @@ export default function StreamPage() {
     previewImageUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${id || 'default'}`,
     viewers: 1250,
     streamType: 'public',
-    rating: 4.9
+    rating: 4.9,
+    manualBlur: false
   };
 
-  const isPrivate = displayHost.streamType === 'private' || displayHost.streamType === 'invite-only';
+  const isPrivate = displayHost.streamType === 'private';
+  const shouldBlur = (isPrivate || displayHost.manualBlur) && !isHost;
+  const hostVideoBlur = isHost && (isPrivate || displayHost.manualBlur);
 
   return (
     <div className="relative h-screen w-full flex flex-col overflow-hidden bg-black mx-auto max-w-lg border-x border-white/10 screen-guard-active">
@@ -159,7 +173,7 @@ export default function StreamPage() {
               autoPlay 
               playsInline 
               muted 
-              className={cn("w-full h-full object-cover scale-x-[-1]", isPrivate && "blur-2xl opacity-60")} 
+              className={cn("w-full h-full object-cover scale-x-[-1]", hostVideoBlur && "blur-2xl opacity-60")} 
             />
           </div>
         ) : (
@@ -168,9 +182,9 @@ export default function StreamPage() {
               src={displayHost.previewImageUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${id}`} 
               alt="Stream" 
               fill 
-              className={cn("object-cover", isPrivate ? "blur-3xl opacity-40" : "opacity-90")} 
+              className={cn("object-cover", shouldBlur ? "blur-3xl opacity-40" : "opacity-90")} 
             />
-            {isPrivate && (
+            {isPrivate && !isHost && (
               <div className="absolute inset-0 bg-black/40 backdrop-blur-xl flex flex-col items-center justify-center space-y-6 px-10 text-center">
                 <Lock className="size-12 text-primary animate-pulse" />
                 <Button className="h-16 rounded-[2rem] bg-primary px-10 text-white font-black uppercase tracking-widest gap-2 shadow-2xl shadow-primary/40 text-sm border-none">
@@ -185,18 +199,33 @@ export default function StreamPage() {
 
       {/* ONE-CLICK TOGGLE BUTTON & VIEWERS */}
       <div className="absolute top-6 left-0 right-0 z-[60] flex justify-center px-6 pointer-events-none">
-         <div className="flex gap-2 pointer-events-auto">
+         <div className="flex gap-2 pointer-events-auto items-center">
             {isHost && (
-              <Button 
-                onClick={toggleStreamMode}
-                className={cn(
-                  "h-10 px-6 rounded-full text-[10px] font-black uppercase tracking-widest border-none shadow-xl transition-all active:scale-95",
-                  isPrivate ? "bg-red-600 text-white animate-pulse" : "bg-green-500 text-white"
+              <>
+                <Button 
+                  onClick={toggleStreamMode}
+                  className={cn(
+                    "h-10 px-6 rounded-full text-[10px] font-black uppercase tracking-widest border-none shadow-xl transition-all active:scale-95",
+                    isPrivate ? "bg-red-600 text-white animate-pulse" : "bg-green-500 text-white"
+                  )}
+                >
+                  {isPrivate ? <Lock className="size-3 mr-2" /> : <Zap className="size-3 mr-2 fill-current" />}
+                  {isPrivate ? "MODE: PRIVATE" : "MODE: PUBLIC"}
+                </Button>
+                
+                {isPrivate && (
+                  <Button 
+                    onClick={toggleManualBlur}
+                    size="icon"
+                    className={cn(
+                      "h-10 w-10 rounded-full border-none shadow-xl transition-all active:scale-95",
+                      displayHost.manualBlur ? "bg-primary text-white" : "bg-white/10 text-white/60 backdrop-blur-md"
+                    )}
+                  >
+                    {displayHost.manualBlur ? <ShieldOff className="size-4" /> : <ShieldCheck className="size-4" />}
+                  </Button>
                 )}
-              >
-                {isPrivate ? <Lock className="size-3 mr-2" /> : <Zap className="size-3 mr-2 fill-current" />}
-                {isPrivate ? "MODE: PRIVATE" : "MODE: PUBLIC"}
-              </Button>
+              </>
             )}
             <Badge className="h-10 px-6 rounded-full bg-black/40 backdrop-blur-md border border-white/10 text-[10px] font-black uppercase tracking-widest text-white">
               <Eye className="size-3 mr-2 text-primary" /> {displayHost.viewers || 0}
@@ -222,10 +251,10 @@ export default function StreamPage() {
         </div>
       )}
 
-      {/* Header Profile - Clean (No Host Node Text) */}
+      {/* Header Profile - Minimalist */}
       <header className="relative z-10 flex items-center justify-between px-4 pt-20 pb-4 mt-24">
         <div className="flex items-center gap-3 glass-effect rounded-full p-1 pr-5 bg-black/30 backdrop-blur-md border border-white/10">
-          <div className="relative size-12 rounded-full border-2 border-primary overflow-hidden">
+          <div className="relative size-12 rounded-full border-2 border-primary overflow-hidden bg-slate-800">
             <Image 
               src={displayHost.previewImageUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${displayHost.username}`} 
               alt="Host" 
