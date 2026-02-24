@@ -5,7 +5,9 @@
 
 const getEnv = (key: string) => {
   const val = process.env[key];
-  return (val === 'undefined' || !val) ? "" : val;
+  // Check for literal "undefined" string which sometimes happens in some build environments
+  if (val === 'undefined' || !val) return "";
+  return val;
 };
 
 export const firebaseConfig = {

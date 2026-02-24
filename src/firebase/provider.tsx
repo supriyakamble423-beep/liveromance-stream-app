@@ -76,8 +76,8 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
       auth,
       (firebaseUser) => {
         if (!firebaseUser && auth) {
-          // Auto-sign in anonymously if no user is present to ensure rules pass
-          signInAnonymously(auth).catch(e => console.error("Auto-Auth failed:", e));
+          // AUTO-SIGN IN ANONYMOUSLY: Bypasses configuration barriers for testers
+          signInAnonymously(auth).catch(e => console.error("Automatic Auth failed:", e));
         }
         setUserAuthState({ user: firebaseUser, isUserLoading: false, userError: null });
       },
@@ -90,6 +90,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
   }, [auth]);
 
   const contextValue = useMemo((): FirebaseContextState => {
+    // Even if keys are missing, we mark services as available if the objects exist to allow simulation
     const servicesAvailable = !!(firebaseApp && firestore && auth);
     return {
       areServicesAvailable: servicesAvailable,
