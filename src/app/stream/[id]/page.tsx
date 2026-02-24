@@ -4,8 +4,8 @@ import { useState, useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import { 
-  X, Eye, Heart, MessageCircle, Send, 
-  Lock, Loader2, Zap, ShieldAlert, CheckCircle2, AlertTriangle, Flag, EyeOff, Ghost, Camera, Video, ShieldCheck, Sparkles, UserPlus
+  X, Eye, Heart, Send, 
+  Lock, Zap, UserPlus
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,38 +28,39 @@ export default function StreamPage() {
   
   const chatEndRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
   
   const isHost = user?.uid === id || id === 'simulate_host' || id === 'host_node';
 
   const hostRef = useMemoFirebase(() => {
-    if (!firestore || !id || id.toString().includes('simulate')) return null;
-    return doc(firestore, 'hosts', id as string);
-  }, [firestore, id]);
+    if (!firestore || !id) return null;
+    // Handle simulation ID properly
+    const hostId = id === 'simulate_host' || id === 'host_node' ? (user?.uid || 'fake_host') : id;
+    return doc(firestore, 'hosts', hostId as string);
+  }, [firestore, id, user?.uid]);
 
   const { data: host, isLoading } = useDoc(hostRef);
 
-  // Monitor Private Entry/Requests
+  // Monitor Private Entry/Requests for Host
   const requestsQuery = useMemoFirebase(() => {
     if (!firestore || !isHost) return null;
+    const hostId = id === 'simulate_host' || id === 'host_node' ? (user?.uid || 'fake_host') : id;
     return query(
       collection(firestore, 'streamRequests'),
-      where('hostId', '==', id),
+      where('hostId', '==', hostId),
       orderBy('timestamp', 'desc'),
       limit(1)
     );
-  }, [firestore, isHost, id]);
+  }, [firestore, isHost, id, user?.uid]);
 
   const { data: latestRequests } = useCollection(requestsQuery);
 
   useEffect(() => {
     if (latestRequests && latestRequests.length > 0) {
       const req = latestRequests[0];
-      // Only show if it's fresh (last 10 seconds)
       const isFresh = req.timestamp && (Date.now() - req.timestamp.toMillis() < 10000);
       if (isFresh) {
-        setActiveNotification({ name: req.userName || 'Anonymous', type: req.type || 'Requested Access' });
+        setActiveNotification({ name: req.userName || 'User', type: req.type || 'Requested Access' });
         const timer = setTimeout(() => setActiveNotification(null), 5000);
         return () => clearTimeout(timer);
       }
@@ -82,11 +83,9 @@ export default function StreamPage() {
           video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } }, 
           audio: true
         });
-        setHasCameraPermission(true);
         setCameraStream(s);
         if (videoRef.current) videoRef.current.srcObject = s;
       } catch (error) {
-        setHasCameraPermission(false);
         toast({ variant: 'destructive', title: 'Camera Blocked' });
       }
     };
@@ -94,22 +93,36 @@ export default function StreamPage() {
     return () => cameraStream?.getTracks().forEach(track => track.stop());
   }, [isHost]);
 
+  // ONE-CLICK TOGGLE LOGIC
   const toggleStreamMode = async () => {
-    if (!isHost || !hostRef) {
-      toast({ title: "Simulation: Mode Switched" });
+    if (!isHost) return;
+
+    const currentMode = host?.streamType || 'public';
+    const nextMode = currentMode === 'public' ? 'private' : 'public';
+
+    // Simulation fallback
+    if (!areServicesAvailable || !hostRef) {
+      toast({ title: `Simulation: Switched to ${nextMode.toUpperCase()}` });
       return;
     }
-    const nextMode = (host?.streamType === 'private' || host?.streamType === 'invite-only') ? 'public' : 'private';
+
     try {
-      await updateDoc(hostRef, { streamType: nextMode, updatedAt: serverTimestamp() });
-      toast({ title: `Mode: ${nextMode.toUpperCase()}` });
+      await updateDoc(hostRef, { 
+        streamType: nextMode,
+        updatedAt: serverTimestamp() 
+      });
+      toast({ 
+        title: nextMode === 'private' ? "Private Mode ON" : "Public Mode ON",
+        description: nextMode === 'private' ? "Stream is now encrypted." : "Everyone can watch."
+      });
     } catch (e) {
-      toast({ variant: "destructive", title: "Update Failed" });
+      console.error(e);
+      toast({ variant: "destructive", title: "Update Failed", description: "Permissions check failed." });
     }
   };
 
   const endStream = async () => {
-    if (isHost && hostRef) {
+    if (isHost && hostRef && areServicesAvailable) {
       await updateDoc(hostRef, { isLive: false, updatedAt: serverTimestamp() });
     }
     router.push('/host-p');
@@ -117,14 +130,14 @@ export default function StreamPage() {
 
   if (isLoading && areServicesAvailable) {
     return (
-      <div className="h-screen bg-background flex flex-col items-center justify-center space-y-8 mesh-gradient">
+      <div className="h-screen bg-background flex flex-col items-center justify-center mesh-gradient">
         <div className="size-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
   const displayHost = host || {
-    username: isHost ? (user?.displayName || 'Host_Node') : 'Anonymous',
+    username: isHost ? (user?.displayName || 'Host') : 'Anonymous',
     previewImageUrl: 'https://picsum.photos/seed/demo/600/800',
     viewers: 1250,
     streamType: 'public',
@@ -135,7 +148,7 @@ export default function StreamPage() {
 
   return (
     <div className="relative h-screen w-full flex flex-col overflow-hidden bg-black mx-auto max-w-lg border-x border-white/10 screen-guard-active">
-      {/* Background Layer */}
+      {/* Background Video/Image Layer */}
       <div className="absolute inset-0 z-0 bg-black">
         {isHost ? (
           <div className="relative w-full h-full">
@@ -168,20 +181,22 @@ export default function StreamPage() {
         <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-transparent to-black/90 pointer-events-none" />
       </div>
 
-      {/* Mode Toggle & Viewers */}
+      {/* ONE-CLICK TOGGLE BUTTON & VIEWERS */}
       <div className="absolute top-6 left-0 right-0 z-[60] flex justify-center px-6 pointer-events-none">
          <div className="flex gap-2 pointer-events-auto">
-            <Button 
-              onClick={toggleStreamMode}
-              className={cn(
-                "h-9 px-5 rounded-full text-[10px] font-black uppercase tracking-widest border-none shadow-xl transition-all active:scale-95",
-                isPrivate ? "bg-red-600 text-white animate-pulse" : "bg-green-500 text-white"
-              )}
-            >
-              {isPrivate ? <Lock className="size-3 mr-2" /> : <Zap className="size-3 mr-2 fill-current" />}
-              {isPrivate ? "Private Mode" : "Public Mode"}
-            </Button>
-            <Badge className="h-9 px-5 rounded-full bg-black/40 backdrop-blur-md border border-white/10 text-[10px] font-black uppercase tracking-widest text-white">
+            {isHost && (
+              <Button 
+                onClick={toggleStreamMode}
+                className={cn(
+                  "h-10 px-6 rounded-full text-[10px] font-black uppercase tracking-widest border-none shadow-xl transition-all active:scale-95",
+                  isPrivate ? "bg-red-600 text-white animate-pulse" : "bg-green-500 text-white"
+                )}
+              >
+                {isPrivate ? <Lock className="size-3 mr-2" /> : <Zap className="size-3 mr-2 fill-current" />}
+                {isPrivate ? "Mode: Private" : "Mode: Public"}
+              </Button>
+            )}
+            <Badge className="h-10 px-6 rounded-full bg-black/40 backdrop-blur-md border border-white/10 text-[10px] font-black uppercase tracking-widest text-white">
               <Eye className="size-3 mr-2 text-primary" /> {displayHost.viewers || 0}
             </Badge>
          </div>
@@ -189,7 +204,7 @@ export default function StreamPage() {
 
       {isHost && <LiveEarningTimer minutes={streamMinutes} />}
 
-      {/* Private Entry Notification Popup */}
+      {/* USER ENTRY POPUP (5 SECONDS) */}
       {isHost && activeNotification && (
         <div className="absolute top-48 left-6 right-6 z-[100] animate-in slide-in-from-top-10 duration-500">
            <div className="romantic-gradient p-5 rounded-3xl shadow-2xl flex items-center gap-4 border border-white/20 romantic-glow">
@@ -197,15 +212,15 @@ export default function StreamPage() {
                  <UserPlus className="size-6 text-white" />
               </div>
               <div className="flex-1">
-                 <p className="text-[10px] font-black uppercase text-white/70">New Activity</p>
-                 <p className="text-sm font-black text-white italic">@{activeNotification.name} {activeNotification.type}</p>
+                 <p className="text-[10px] font-black uppercase text-white/70">Activity Alert</p>
+                 <p className="text-sm font-black text-white italic truncate">@{activeNotification.name} {activeNotification.type}</p>
               </div>
               <div className="size-2 rounded-full bg-white animate-ping" />
            </div>
         </div>
       )}
 
-      {/* Header Info */}
+      {/* Header Profile - Clean (No Host Node Text) */}
       <header className="relative z-10 flex items-center justify-between px-4 pt-20 pb-4 mt-24">
         <div className="flex items-center gap-3 glass-effect rounded-full p-1 pr-5 bg-black/30 backdrop-blur-md border border-white/10">
           <div className="relative size-12 rounded-full border-2 border-primary overflow-hidden">
@@ -234,7 +249,7 @@ export default function StreamPage() {
             <div className="px-4 py-3 rounded-2xl max-w-fit bg-black/60 backdrop-blur-lg border border-white/10 shadow-xl">
               <p className="text-[11px] text-white font-medium leading-relaxed">
                 <span className="font-black mr-2 text-primary text-[10px] uppercase italic">System:</span>
-                <span className="opacity-90">Secure signal established. {isPrivate ? "Encryption Active." : "Broadcast is Public."}</span>
+                <span className="opacity-90">{isPrivate ? "Encryption Active. Private Room Open." : "Broadcast is Public. Enjoy."}</span>
               </p>
             </div>
           <div ref={chatEndRef} />
