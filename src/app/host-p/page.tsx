@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useFirebase, useDoc, useMemoFirebase } from "@/firebase";
@@ -12,7 +13,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Progress } from "@/components/ui/progress";
 import { 
   Dialog, 
   DialogContent, 
@@ -22,10 +22,10 @@ import {
 } from "@/components/ui/dialog";
 import Image from "next/image";
 import Link from "next/link";
-import { doc, serverTimestamp, updateDoc, increment } from "firebase/firestore";
+import { doc, serverTimestamp, updateDoc, increment, setDoc } from "firebase/firestore";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import AdBanner from "@/components/Ads/AdBanner";
 
 export default function HostProfileDashboard() {
@@ -47,26 +47,30 @@ export default function HostProfileDashboard() {
   const { data: hostProfile, isLoading: isProfileLoading } = useDoc(hostRef);
 
   const toggleLiveStatus = async () => {
-    if (!hostRef) return;
+    if (!hostRef || !firestore || !userId) return;
     setIsTogglingLive(true);
     const newStatus = !hostProfile?.isLive;
     try {
-      const updateData: any = { 
-        isLive: newStatus, 
-        updatedAt: serverTimestamp() 
-      };
+      // Ensure host document exists before updating
+      await setDoc(hostRef, {
+        userId,
+        isLive: newStatus,
+        updatedAt: serverTimestamp(),
+        streamStartTime: newStatus ? serverTimestamp() : null,
+        username: hostProfile?.username || user?.displayName || "New Host",
+        previewImageUrl: hostProfile?.previewImageUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${userId}`,
+        streamType: hostProfile?.streamType || 'public',
+        rating: hostProfile?.rating || 4.9,
+        verified: hostProfile?.verified || true
+      }, { merge: true });
 
-      if (newStatus) {
-        updateData.streamStartTime = serverTimestamp();
-      }
-
-      await updateDoc(hostRef, updateData);
       toast({ 
         title: newStatus ? "Broadcast Active" : "Stream Offline",
-        description: newStatus ? "Stay-to-Earn logic is now tracking your session." : "Session data synced to wallet."
+        description: newStatus ? "Users can now find you in the marketplace." : "Session data saved."
       });
     } catch (err) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Action failed.' });
+      console.error(err);
+      toast({ variant: 'destructive', title: 'Error', description: 'Permission denied.' });
     } finally {
       setIsTogglingLive(false);
     }
@@ -90,27 +94,13 @@ export default function HostProfileDashboard() {
     }
   };
 
-  // Profit Tracking Logic
-  const totalMins = hostProfile?.totalStreamMinutes || 0;
-  const totalEarnings = Math.floor(hostProfile?.earnings || 0);
-  
-  // Calculate Multiplier Status
-  const getMultiplierStatus = () => {
-    if (totalMins >= 60) return { label: "2.0x (Jackpot)", color: "text-yellow-400", next: null };
-    if (totalMins >= 30) return { label: "1.5x (Silver)", color: "text-cyan-400", next: 60 - totalMins };
-    return { label: "1.0x (Base)", color: "text-slate-400", next: 30 - totalMins };
-  };
-
-  const multiplier = getMultiplierStatus();
-
-  // Daily Tasks
   const tasks = [
     {
       id: 1,
       title: "Marathon Stream",
       desc: "Stream for 30 mins",
       target: 30,
-      current: totalMins,
+      current: hostProfile?.totalStreamMinutes || 0,
       reward: "10 Coins",
       icon: Clock,
       color: "text-blue-400"
@@ -195,130 +185,77 @@ export default function HostProfileDashboard() {
           </div>
         </div>
 
-        {/* REAL-TIME PROFIT DASHBOARD */}
-        <section className="space-y-4">
-           <div className="flex items-center justify-between px-2">
-              <h3 className="text-xs font-black uppercase tracking-[0.2em] text-[#FDA4AF] flex items-center gap-2 italic">
-                <BarChart3 className="size-4" /> Today&apos;s Profit Center
-              </h3>
-              <Activity className="size-4 text-primary animate-pulse" />
-           </div>
-
-           <div className="grid grid-cols-2 gap-4">
-              {/* Minutes Card */}
-              <div className="bg-[#3D263D]/80 p-6 rounded-[2.5rem] border border-white/5 backdrop-blur-xl group hover:border-blue-500/30 transition-all">
+        <section className="grid grid-cols-2 gap-4">
+            <div className="bg-[#3D263D]/80 p-6 rounded-[2.5rem] border border-white/5 backdrop-blur-xl">
                 <p className="text-[10px] font-black text-[#FDA4AF]/60 uppercase tracking-[0.2em] mb-2 flex items-center gap-2">
-                  <Timer className="size-3 text-blue-400" /> Minutes
+                    <Activity className="size-3 text-blue-400" /> Minutes
                 </p>
                 <div className="flex items-baseline gap-1">
-                  <span className="text-3xl font-black tracking-tighter text-white">{totalMins}</span>
-                  <span className="text-[10px] font-bold text-slate-500">M</span>
+                    <span className="text-3xl font-black tracking-tighter text-white">{hostProfile?.totalStreamMinutes || 0}</span>
                 </div>
-              </div>
-
-              {/* Coins Card */}
-              <div className="bg-[#3D263D]/80 p-6 rounded-[2.5rem] border border-white/5 backdrop-blur-xl group hover:border-amber-500/30 transition-all">
+            </div>
+            <div className="bg-[#3D263D]/80 p-6 rounded-[2.5rem] border border-white/5 backdrop-blur-xl">
                 <p className="text-[10px] font-black text-[#FDA4AF]/60 uppercase tracking-[0.2em] mb-2 flex items-center gap-2">
-                  <Zap className="size-3 text-amber-400 fill-current" /> Coins Earned
+                    <Zap className="size-3 text-amber-400 fill-current" /> Earnings
                 </p>
                 <div className="flex items-baseline gap-1">
-                  <span className="text-3xl font-black tracking-tighter text-white">{totalEarnings}</span>
-                  <span className="text-amber-400">💎</span>
+                    <span className="text-3xl font-black tracking-tighter text-white">{Math.floor(hostProfile?.earnings || 0)}</span>
+                    <span className="text-amber-400">💎</span>
                 </div>
-              </div>
-
-              {/* Bonus Multiplier Card */}
-              <div className="col-span-2 bg-[#3D263D]/80 p-6 rounded-[2.5rem] border border-white/5 backdrop-blur-xl flex justify-between items-center group hover:border-primary/30 transition-all">
-                <div>
-                  <p className="text-[10px] font-black text-[#FDA4AF]/60 uppercase tracking-[0.2em] mb-2">Bonus Status</p>
-                  <p className={cn("text-xl font-black italic tracking-tight", multiplier.color)}>
-                    {multiplier.label}
-                  </p>
-                </div>
-                <div className="text-right">
-                  {multiplier.next ? (
-                    <>
-                      <p className="text-[9px] font-black text-slate-500 uppercase">Target for 2x</p>
-                      <p className="text-lg font-black text-white italic tracking-tighter">{multiplier.next}m left</p>
-                    </>
-                  ) : (
-                    <Badge className="bg-yellow-500 text-black font-black italic px-4 py-1 border-none shadow-[0_0_15px_#eab308]">MAX TIER</Badge>
-                  )}
-                </div>
-              </div>
-           </div>
+            </div>
         </section>
       </header>
 
       <main className="px-8 space-y-10 pt-10">
-        {/* DAILY TASK CENTER */}
-        <section className="space-y-6">
-          <div className="flex items-center justify-between px-2">
-            <div className="flex flex-col">
-              <h3 className="text-xs font-black uppercase tracking-[0.3em] text-primary flex items-center gap-2">
-                <Target className="size-4" /> Daily Task Center
-              </h3>
-              <p className="text-[9px] font-bold text-[#FDA4AF]/40 uppercase mt-1 italic">Complete to boost multipliers</p>
-            </div>
-            <Trophy className="size-5 text-amber-400 animate-bounce" />
-          </div>
-
-          <div className="space-y-4">
-            {tasks.map((task) => {
-              const progress = Math.min((task.current / task.target) * 100, 100);
-              const isCompleted = progress === 100;
-
-              return (
-                <div key={task.id} className="bg-[#3D263D]/60 border border-white/5 rounded-[2.5rem] p-6 relative overflow-hidden group transition-all hover:bg-[#3D263D]/80">
-                  <div className="flex items-center gap-5 relative z-10">
-                    <div className={cn("size-14 rounded-2xl flex items-center justify-center bg-white/5 border border-white/5", task.color)}>
-                      <task.icon className="size-7" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex justify-between items-start mb-1">
-                        <h4 className="text-sm font-black uppercase tracking-tight text-white italic">{task.title}</h4>
-                        <span className="text-[10px] font-black text-primary uppercase">{task.reward}</span>
-                      </div>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 truncate">{task.desc}</p>
-                      
-                      <div className="space-y-2">
-                        <div className="flex justify-between items-center text-[9px] font-black uppercase tracking-tighter">
-                          <span className="text-slate-500">Progress</span>
-                          <span className="text-white">{task.current} / {task.target}</span>
-                        </div>
-                        <div className="w-full h-1.5 bg-black/20 rounded-full overflow-hidden border border-white/5">
-                          <div 
-                            className={cn("h-full transition-all duration-1000", isCompleted ? "bg-green-500 shadow-[0_0_10px_#22c55e]" : "romantic-gradient")}
-                            style={{ width: `${progress}%` }}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                    {isCompleted && (
-                      <div className="ml-2 animate-in zoom-in duration-500">
-                        <CheckCircle2 className="size-8 text-green-500 drop-shadow-[0_0_8px_#22c55e]" />
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-
         <section className="space-y-4">
-          <Button onClick={toggleLiveStatus} disabled={isTogglingLive} className={cn("w-full h-28 rounded-[3.5rem] font-black text-3xl uppercase tracking-[0.1em] gap-5 shadow-2xl transition-all border-none text-white italic", hostProfile?.isLive ? "bg-[#E11D48] hover:bg-[#E11D48]/90" : "bg-green-500 hover:bg-green-600 shadow-green-500/20")}>
+          <Button 
+            onClick={toggleLiveStatus} 
+            disabled={isTogglingLive} 
+            className={cn(
+              "w-full h-28 rounded-[3.5rem] font-black text-3xl uppercase tracking-[0.1em] gap-5 shadow-2xl transition-all border-none text-white italic", 
+              hostProfile?.isLive ? "bg-[#E11D48]" : "bg-green-500"
+            )}
+          >
             {isTogglingLive ? <Loader2 className="size-10 animate-spin" /> : <Power className="size-12" />}
             {hostProfile?.isLive ? "End Stream" : "Go Live Now"}
           </Button>
           
           {hostProfile?.isLive && (
             <Link href={`/stream/${userId}`} className="block">
-              <Button variant="outline" className="w-full h-16 rounded-[2rem] border-primary text-primary font-black uppercase tracking-widest gap-3 shadow-xl bg-primary/5 hover:bg-primary/10">
-                <Radio className="size-6" /> Preview My Signal
+              <Button variant="outline" className="w-full h-16 rounded-[2rem] border-primary text-primary font-black uppercase tracking-widest gap-3 shadow-xl bg-primary/5">
+                <Radio className="size-6" /> Preview Stream
               </Button>
             </Link>
           )}
+        </section>
+
+        <section className="space-y-6">
+          <h3 className="text-xs font-black uppercase tracking-[0.3em] text-primary flex items-center gap-2">
+            <Target className="size-4" /> Daily Tasks
+          </h3>
+          <div className="space-y-4">
+            {tasks.map((task) => {
+              const progress = Math.min((task.current / task.target) * 100, 100);
+              return (
+                <div key={task.id} className="bg-[#3D263D]/60 border border-white/5 rounded-[2.5rem] p-6">
+                  <div className="flex items-center gap-5">
+                    <div className={cn("size-12 rounded-2xl flex items-center justify-center bg-white/5", task.color)}>
+                      <task.icon className="size-6" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex justify-between items-start mb-1">
+                        <h4 className="text-sm font-black uppercase text-white italic">{task.title}</h4>
+                        <span className="text-[10px] font-black text-primary uppercase">{task.reward}</span>
+                      </div>
+                      <div className="w-full h-1.5 bg-black/20 rounded-full mt-3 overflow-hidden">
+                        <div className="h-full bg-primary" style={{ width: `${progress}%` }} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </section>
 
         <AdBanner />

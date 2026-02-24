@@ -25,7 +25,6 @@ export default function GlobalMarketplace() {
   const [isSeeding, setIsSeeding] = useState(false);
   const [showAIBot, setShowAIBot] = useState(false);
   const [recommendations, setRecommendations] = useState<PersonalizedHostRecommendationsOutput["recommendations"]>([]);
-  const [isRecLoading, setIsRecLoading] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => setShowAIBot(true), 1500);
@@ -43,12 +42,10 @@ export default function GlobalMarketplace() {
 
   const { data: hosts, isLoading } = useCollection(liveHostsQuery);
 
-  // AI Logic: Fetch Personalized Recommendations
   useEffect(() => {
     if (!hosts || hosts.length === 0 || !user || recommendations.length > 0) return;
 
     async function getAIRecommendations() {
-      setIsRecLoading(true);
       try {
         const availableHosts = hosts.map(h => ({
           id: h.id,
@@ -68,8 +65,6 @@ export default function GlobalMarketplace() {
         setRecommendations(res.recommendations);
       } catch (e) {
         console.error("AI Recommendation Error:", e);
-      } finally {
-        setIsRecLoading(false);
       }
     }
 
@@ -95,11 +90,7 @@ export default function GlobalMarketplace() {
           updatedAt: serverTimestamp(),
           createdAt: serverTimestamp()
         }, { merge: true }).catch(err => {
-          errorEmitter.emit('permission-error', new FirestorePermissionError({
-            path: hostRef.path,
-            operation: 'write',
-            requestResourceData: mock
-          }));
+          console.error("Seed error", err);
         });
       }
       toast({ title: "Live Simulation Active", description: "Global nodes have been populated." });
@@ -111,14 +102,14 @@ export default function GlobalMarketplace() {
   };
 
   const zapConnect = (hostId: string, streamType: string) => {
-    if (!auth?.currentUser || !firestore) {
+    if (!user || !firestore) {
       toast({ variant: "destructive", title: "Sign in required", description: "Please log in to interact." });
       return;
     }
 
     const requestData = {
       hostId,
-      userId: auth.currentUser.uid,
+      userId: user.uid,
       status: 'pending',
       requestType: 'zap',
       coins: 50,
@@ -257,7 +248,7 @@ export default function GlobalMarketplace() {
               <Zap className="size-3 text-amber-400 fill-current" /> AI Scanned Every 10s
             </p>
           </div>
-          {hosts?.length === 0 && !isLoading && (
+          {(!hosts || hosts.length === 0) && !isLoading && (
             <Button onClick={seedFakeLiveHosts} disabled={isSeeding} size="sm" variant="outline" className="rounded-full gap-2 text-[10px] font-black uppercase tracking-widest h-10 border-white/10 text-[#FDA4AF] hover:bg-white/5">
               <RefreshCw className={cn("size-3", isSeeding && "animate-spin")} /> Simulate
             </Button>
@@ -272,7 +263,7 @@ export default function GlobalMarketplace() {
                   src={host.previewImageUrl || "https://picsum.photos/seed/host/600/800"} 
                   alt={host.id} 
                   fill 
-                  className="object-cover transition-transform duration-1000 group-hover:scale-110"
+                  className={cn("object-cover transition-transform duration-1000 group-hover:scale-110", host.streamType === 'private' && "blur-xl opacity-50")}
                 />
                 <div className="absolute top-5 left-5 flex flex-col gap-2">
                   <Badge className="bg-[#E11D48] border-none text-[9px] font-black uppercase tracking-widest px-4 py-1 shadow-2xl">Live</Badge>
@@ -283,7 +274,7 @@ export default function GlobalMarketplace() {
                   </div>
                 </div>
                 {host.streamType === 'private' && (
-                  <div className="absolute inset-0 bg-[#2D1B2D]/70 backdrop-blur-md flex flex-col items-center justify-center gap-3 animate-in fade-in duration-500">
+                  <div className="absolute inset-0 bg-[#2D1B2D]/40 backdrop-blur-md flex flex-col items-center justify-center gap-3 animate-in fade-in duration-500">
                     <Lock className="size-12 text-[#F472B6]/80" />
                     <p className="text-[10px] font-black text-white/90 uppercase tracking-[0.2em]">Private Hub</p>
                     <Badge variant="secondary" className="bg-[#E11D48] text-white text-[9px] border-none font-black px-5 py-1 shadow-lg">50 COINS</Badge>
@@ -315,6 +306,16 @@ export default function GlobalMarketplace() {
             </div>
           ))}
         </div>
+
+        {(!hosts || hosts.length === 0) && !isLoading && (
+          <div className="flex flex-col items-center py-20 space-y-4">
+             <div className="size-20 bg-white/5 rounded-full flex items-center justify-center border border-dashed border-white/10">
+                <TrendingUp className="size-10 text-slate-500" />
+             </div>
+             <p className="text-xs font-black uppercase text-slate-500 tracking-[0.2em]">No Active Nodes Found</p>
+             <Button onClick={seedFakeLiveHosts} variant="secondary" className="rounded-2xl px-8 h-12 font-black uppercase text-[10px]">Populate Market</Button>
+          </div>
+        )}
 
         <AdBanner />
       </main>

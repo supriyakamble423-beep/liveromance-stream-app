@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -47,7 +48,6 @@ export function useCollection<T = any>(
   const [error, setError] = useState<FirestoreError | Error | null>(null);
 
   useEffect(() => {
-    // 1. Agar query null hai toh stop
     if (!memoizedTargetRefOrQuery) {
       setData(null);
       setIsLoading(false);
@@ -58,7 +58,6 @@ export function useCollection<T = any>(
     setIsLoading(true);
     setError(null);
 
-    // 2. Real-time Subscription
     const unsubscribe = onSnapshot(
       memoizedTargetRefOrQuery,
       (snapshot: QuerySnapshot<DocumentData>) => {
@@ -76,11 +75,12 @@ export function useCollection<T = any>(
             ? (memoizedTargetRefOrQuery as CollectionReference).path
             : (memoizedTargetRefOrQuery as unknown as InternalQuery)._query.path.canonicalString();
 
-        // 🔥 NUCLEAR FIX: Skip emitting error for public hosts list to prevent app crash
+        // Safe mode for hosts collection to prevent crashes on empty or newly rule-applied collections
         if (path.includes('hosts')) {
-          console.warn('🛡️ Hosts permission bypass: Ignoring permission error for public collection.');
+          console.warn('🛡️ Hosts permission bypass: Safe Mode active.');
           setIsLoading(false);
           setError(null);
+          setData([]);
           return;
         }
 
@@ -93,7 +93,6 @@ export function useCollection<T = any>(
         setData(null);
         setIsLoading(false);
 
-        // trigger global error propagation
         errorEmitter.emit('permission-error', contextualError);
       }
     );
@@ -101,7 +100,6 @@ export function useCollection<T = any>(
     return () => unsubscribe();
   }, [memoizedTargetRefOrQuery]);
 
-  // 5. Memoization Check (Critical for Performance)
   if(memoizedTargetRefOrQuery && !memoizedTargetRefOrQuery.__memo) {
     throw new Error(
       'The query/reference passed to useCollection was not properly memoized. ' +
