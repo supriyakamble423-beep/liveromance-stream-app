@@ -20,14 +20,14 @@ service cloud.firestore {
     }
 
     match /hosts/{hostId} {
-      allow read, list, get: if true;
+      allow read, list, get: if true; // Discovery is fully public
       allow create: if isSignedIn();
       allow update: if isOwner(hostId) || isAdmin() || (hostId.startsWith('fake_') && isSignedIn());
       allow delete: if isAdmin();
     }
     
     match /users/{userId} {
-      allow read: if true;
+      allow read: if true; // Discovery is fully public
       allow create, update: if isOwner(userId) || isAdmin();
       allow delete: if isAdmin();
     }

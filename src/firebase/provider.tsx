@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { DependencyList, createContext, useContext, ReactNode, useMemo, useState, useEffect } from 'react';
@@ -68,10 +69,16 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
   });
 
   useEffect(() => {
-    // If keys are missing, we stop loading immediately to show simulation UI
+    // Safety timeout: Ensure loading screen disappears after 5 seconds no matter what
+    const timer = setTimeout(() => {
+      console.warn("Auth timeout reached. Proceeding anyway.");
+      setUserAuthState(prev => ({ ...prev, isUserLoading: false }));
+    }, 5000);
+
     if (!auth) {
       console.warn("Firebase Auth missing. Entering Simulation Mode.");
       setUserAuthState(prev => ({ ...prev, isUserLoading: false }));
+      clearTimeout(timer);
       return;
     }
 
@@ -83,18 +90,15 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
           signInAnonymously(auth).catch(e => console.error("Auto-auth failed:", e));
         }
         setUserAuthState({ user: firebaseUser, isUserLoading: false, userError: null });
+        clearTimeout(timer);
       },
       (error) => {
         console.error("Auth Listener Error:", error);
         setUserAuthState({ user: null, isUserLoading: false, userError: error });
+        clearTimeout(timer);
       }
     );
     
-    // Safety timeout: Ensure loading screen disappears after 5 seconds no matter what
-    const timer = setTimeout(() => {
-      setUserAuthState(prev => ({ ...prev, isUserLoading: false }));
-    }, 5000);
-
     return () => {
       unsubscribe();
       clearTimeout(timer);
@@ -102,7 +106,6 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
   }, [auth]);
 
   const contextValue = useMemo((): FirebaseContextState => {
-    // If the objects exist, we allow the app to function in hybrid mode
     const servicesAvailable = !!(firebaseApp && firestore && auth);
     return {
       areServicesAvailable: servicesAvailable,
@@ -124,8 +127,6 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
   );
 };
 
-// --- HOOKS ---
-
 export const useFirebase = (): FirebaseServicesAndUser => {
   const context = useContext(FirebaseContext);
   if (context === undefined) throw new Error('useFirebase must be used within a FirebaseProvider.');
@@ -145,7 +146,6 @@ export const useAuth = () => useFirebase().auth;
 export const useFirestore = () => useFirebase().firestore;
 export const useFirebaseApp = () => useFirebase().firebaseApp;
 
-// Helper to memoize Firestore queries
 type MemoFirebase <T> = T & {__memo?: boolean};
 export function useMemoFirebase<T>(factory: () => T, deps: DependencyList): T | (MemoFirebase<T>) {
   const memoized = useMemo(factory, deps);

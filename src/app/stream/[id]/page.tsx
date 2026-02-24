@@ -44,14 +44,13 @@ export default function StreamPage() {
 
   const { data: host, isLoading } = useDoc(hostRef);
 
-  // --- AI NSFW AUTO-MODERATION LOOP ---
   useEffect(() => {
     if (!isHost || !host?.isLive || host?.streamType !== 'public') return;
 
     const captureFrame = () => {
       if (videoRef.current) {
         const canvas = document.createElement('canvas');
-        canvas.width = 400; // Smaller for faster AI processing
+        canvas.width = 400; 
         canvas.height = 300;
         const ctx = canvas.getContext('2d');
         ctx?.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
@@ -76,12 +75,11 @@ export default function StreamPage() {
               description: `Stream terminated: ${result.reason}` 
             });
             
-            // Auto-terminate on Firestore
             if (hostRef) {
               updateDoc(hostRef, { 
                 isLive: false, 
                 violationReason: result.reason,
-                reportsCount: increment(5) // Instant flag
+                reportsCount: increment(5) 
               });
             }
             router.push('/host-p');
@@ -90,12 +88,11 @@ export default function StreamPage() {
           console.error("AI Scan failed", e);
         }
       }
-    }, 20000); // Scan every 20 seconds
+    }, 20000); 
 
     return () => clearInterval(scanInterval);
   }, [isHost, host?.isLive, host?.streamType, hostRef, router, toast]);
 
-  // Auto-terminate logic for public streams if reports >= 3
   useEffect(() => {
     if (host?.isLive && host?.streamType === 'public' && (host?.reportsCount || 0) >= 3) {
       if (isHost) {
@@ -151,20 +148,6 @@ export default function StreamPage() {
     return () => clearInterval(interval);
   }, [isHost, host?.isLive, host?.streamStartTime]);
 
-  const minutesLive = Math.floor(secondsLive / 60);
-
-  useEffect(() => {
-    if (!isHost || minutesLive === 0) return;
-    if (minutesLive >= 15 && !achievedMilestones.includes(15)) {
-      setAchievedMilestones(prev => [...prev, 15]);
-      toast({ title: "🥉 BRONZE BONUS UNLOCKED!", description: "15 minutes live! +50 Coins pending." });
-    }
-    if (minutesLive >= 30 && !achievedMilestones.includes(30)) {
-      setAchievedMilestones(prev => [...prev, 30]);
-      toast({ title: "🥈 SILVER MULTIPLIER ACTIVE!", description: "30 mins live! 1.5x Multiplier UNLOCKED." });
-    }
-  }, [minutesLive, achievedMilestones, isHost, toast]);
-
   useEffect(() => {
     const getCameraPermission = async () => {
       if (!isHost) return;
@@ -187,29 +170,12 @@ export default function StreamPage() {
       const res = await processPayment(firestore, 'private_session', 50, user.uid, host.id);
       if (res.success) {
         setShowPrivateWarning(false);
-        toast({ title: "Access Granted!", description: "30-min session started. Reconnect free if dropped." });
+        toast({ title: "Access Granted!", description: "30-min session started." });
       }
     } catch (e) {
       toast({ variant: "destructive", title: "Payment Failed", description: "Insufficient coins." });
     } finally {
       setIsProcessingPayment(false);
-    }
-  };
-
-  const toggleQuickBlur = async () => {
-    if (!hostRef || !isHost) return;
-    const currentBlur = host?.manualBlur || false;
-    await updateDoc(hostRef, { manualBlur: !currentBlur });
-    toast({ title: !currentBlur ? "Quick Blur ON" : "Quick Blur OFF" });
-  };
-
-  const reportNudity = async () => {
-    if (!hostRef || isHost) return;
-    try {
-      await updateDoc(hostRef, { reportsCount: increment(1) });
-      toast({ title: "Report Submitted", description: "System safety scan initiated." });
-    } catch (e) {
-      console.error(e);
     }
   };
 
@@ -236,7 +202,9 @@ export default function StreamPage() {
   if (isLoading) {
     return (
       <div className="h-screen bg-[#2D1B2D] flex flex-col items-center justify-center space-y-8 mesh-gradient">
-        <div className="relative size-40 animate-pulse"><Image src="/logo.png" alt="Logo" fill className="object-contain" /></div>
+        <div className="relative size-40 animate-pulse logo-glow">
+          <Image src="/logo.png" alt="Logo" fill className="object-contain" onError={(e) => { (e.target as any).src = "https://placehold.co/400x400/E11D48/white?text=GL" }} />
+        </div>
         <div className="size-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
       </div>
     );
@@ -248,25 +216,13 @@ export default function StreamPage() {
 
   return (
     <div className="relative h-screen w-full flex flex-col overflow-hidden bg-black mx-auto max-w-lg border-x border-white/10 screen-guard-active">
-      {/* Video layer */}
       <div className="absolute inset-0 z-0 bg-black">
         <div className="relative w-full h-full">
           {isHost ? (
-            <video 
-              ref={videoRef} 
-              autoPlay 
-              playsInline 
-              muted 
-              className={cn("w-full h-full object-cover scale-x-[-1]", isBlurred && "blur-3xl")} 
-            />
+            <video ref={videoRef} autoPlay playsInline muted className={cn("w-full h-full object-cover scale-x-[-1]", isBlurred && "blur-3xl")} />
           ) : (
             <div className="relative w-full h-full">
-              <Image 
-                src={host?.previewImageUrl || "https://picsum.photos/seed/stream/800/1200"} 
-                alt="Stream" 
-                fill 
-                className={cn("object-cover", (!canAccessStream || isBlurred) ? "blur-3xl opacity-40" : "opacity-90")} 
-              />
+              <Image src={host?.previewImageUrl || "https://picsum.photos/seed/stream/800/1200"} alt="Stream" fill className={cn("object-cover", (!canAccessStream || isBlurred) ? "blur-3xl opacity-40" : "opacity-90")} />
               {!canAccessStream && (
                 <div className="absolute inset-0 bg-black/40 backdrop-blur-xl flex flex-col items-center justify-center space-y-6 px-10 text-center">
                   <div className="size-20 bg-primary/20 rounded-full flex items-center justify-center romantic-glow mb-2">
@@ -274,60 +230,18 @@ export default function StreamPage() {
                   </div>
                   <div className="space-y-2">
                     <h2 className="text-3xl font-black uppercase italic text-white tracking-tighter">Private Hub</h2>
-                    <p className="text-[10px] font-black text-[#FDA4AF] uppercase tracking-widest">Adult Content Possible • End-to-End Secure</p>
+                    <p className="text-[10px] font-black text-[#FDA4AF] uppercase tracking-widest">Adult Content Possible</p>
                   </div>
                   <Button onClick={() => setShowPrivateWarning(true)} className="h-16 rounded-2xl bg-primary px-10 text-white font-black uppercase tracking-widest gap-2 shadow-2xl shadow-primary/40 text-sm">
                     <Zap className="size-5 fill-current" /> Pay 50 Coins
                   </Button>
                 </div>
               )}
-              {canAccessStream && isBlurred && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
-                  <Ghost className="size-12 text-white/20 animate-bounce" />
-                  <p className="text-[10px] font-black uppercase text-white/40 tracking-widest">Host activated Blur</p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Watermark for Private Room */}
-          {isPrivate && canAccessStream && (
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none opacity-20 rotate-45">
-              <p className="text-5xl font-black uppercase tracking-[0.5em] text-white whitespace-nowrap">Strictly 18+ Private Room</p>
             </div>
           )}
         </div>
         <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/80" />
       </div>
-
-      <Dialog open={showPrivateWarning} onOpenChange={setShowPrivateWarning}>
-        <DialogContent className="bg-[#2D1B2D] border-white/10 text-white rounded-[3rem] max-w-[90vw] mx-auto p-8 overflow-hidden">
-          <DialogHeader className="items-center text-center">
-            <div className="size-16 bg-red-500/20 rounded-full flex items-center justify-center mb-4">
-              <ShieldAlert className="size-8 text-red-500" />
-            </div>
-            <DialogTitle className="text-2xl font-black uppercase italic tracking-tighter">Private Directive</DialogTitle>
-            <DialogDescription className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-              Nudity & Adult Content permitted here.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-6 pt-4 text-center">
-            <div className="bg-white/5 rounded-2xl p-4 text-[10px] text-left space-y-3 border border-white/10">
-              <p className="flex items-start gap-2 leading-relaxed"><CheckCircle2 className="size-3 text-primary mt-0.5" /> Full freedom for Host and User.</p>
-              <p className="flex items-start gap-2 leading-relaxed"><CheckCircle2 className="size-3 text-primary mt-0.5" /> Screenshots strictly prohibited.</p>
-              <p className="flex items-start gap-2 leading-relaxed"><CheckCircle2 className="size-3 text-primary mt-0.5" /> End-to-End Encryption Active.</p>
-            </div>
-            <div className="flex flex-col gap-3">
-              <Button onClick={handleJoinPrivate} disabled={isProcessingPayment} className="h-16 rounded-2xl romantic-gradient font-black uppercase tracking-widest text-white shadow-xl">
-                {isProcessingPayment ? <Loader2 className="animate-spin mr-2" /> : "Confirm & Pay 50💎"}
-              </Button>
-              <Button variant="ghost" onClick={() => setShowPrivateWarning(false)} className="text-[10px] font-black text-slate-500 uppercase">Cancel</Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {isHost && host?.isLive && <LiveEarningTracker minutes={minutesLive} />}
 
       <header className="relative z-10 flex items-center justify-between px-4 pt-16 pb-4">
         <div className="flex items-center gap-3 glass-effect rounded-full p-1 pr-4 bg-black/30 backdrop-blur-md border border-white/10">
@@ -343,24 +257,10 @@ export default function StreamPage() {
           </div>
         </div>
         <div className="flex gap-2">
-          {isHost && (
-            <Button onClick={toggleQuickBlur} variant="ghost" size="icon" className={cn("glass-effect size-10 rounded-full border-none transition-colors", isBlurred ? "bg-red-500 text-white" : "bg-white/10 text-white/60")}>
-              <EyeOff className="size-5" />
-            </Button>
-          )}
-          {!isHost && host?.streamType === 'public' && (
-            <Button onClick={reportNudity} variant="ghost" size="icon" className="glass-effect size-10 rounded-full text-red-500 border-none bg-red-500/10">
-              <Flag className="size-5" />
-            </Button>
-          )}
           {isHost ? (
-            <Button variant="destructive" size="sm" onClick={endStream} className="rounded-full font-black uppercase text-[10px] tracking-widest h-10 px-6 shadow-2xl">
-              End Signal
-            </Button>
+            <Button variant="destructive" size="sm" onClick={endStream} className="rounded-full font-black uppercase text-[10px] tracking-widest h-10 px-6 shadow-2xl">End Signal</Button>
           ) : (
-            <Button variant="secondary" size="icon" onClick={() => router.back()} className="glass-effect size-10 rounded-full text-white border-none bg-white/10">
-              <X className="size-5" />
-            </Button>
+            <Button variant="secondary" size="icon" onClick={() => router.back()} className="glass-effect size-10 rounded-full text-white border-none bg-white/10"><X className="size-5" /></Button>
           )}
         </div>
       </header>
@@ -368,7 +268,7 @@ export default function StreamPage() {
       <div className="flex-1 relative z-10 flex flex-col justify-end px-4 pb-6">
         <div className="w-full max-w-[85%] flex flex-col gap-2 overflow-y-auto max-h-[35vh] mb-6 no-scrollbar">
           {messages?.map((m) => (
-            <div key={m.id} className="px-3 py-2 rounded-2xl max-w-fit bg-black/40 backdrop-blur-md border border-white/5 animate-in slide-in-from-left-2">
+            <div key={m.id} className="px-3 py-2 rounded-2xl max-w-fit bg-black/40 backdrop-blur-md border border-white/5">
               <p className="text-xs text-white">
                 <span className="font-black mr-2 text-secondary text-[10px] uppercase italic">{m.senderName}:</span>
                 <span className="opacity-90">{m.text}</span>
@@ -381,13 +281,7 @@ export default function StreamPage() {
         {canAccessStream && (
           <footer className="flex items-center gap-3 w-full">
             <div className="flex-1 flex items-center glass-effect rounded-[2rem] px-6 h-14 bg-white/10 border-white/10 backdrop-blur-md">
-              <Input 
-                value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
-                className="bg-transparent border-none focus-visible:ring-0 text-white placeholder-white/30 font-bold text-sm" 
-                placeholder="Secure signal..." 
-              />
+              <Input value={inputText} onChange={(e) => setInputText(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && sendMessage()} className="bg-transparent border-none focus-visible:ring-0 text-white placeholder-white/30 font-bold text-sm" placeholder="Secure signal..." />
               <button onClick={sendMessage} className="ml-2 text-primary"><Send className="size-5" /></button>
             </div>
           </footer>
