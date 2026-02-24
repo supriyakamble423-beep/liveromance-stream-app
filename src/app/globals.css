@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -36,7 +37,7 @@
   }
 }
 
-/* Security Screen Guard: Prevent Selection and Discourage Screenshots */
+/* 🔥 SECURITY SCREEN GUARD: Prevent Selection and Discourage Screenshots */
 body {
   -webkit-user-select: none;
   -moz-user-select: none;
@@ -45,7 +46,7 @@ body {
   -webkit-touch-callout: none;
 }
 
-/* Anti-Screenshot Overlay Logic (Visual only for web) */
+/* Anti-Screenshot Overlay Logic (Visual pattern to disrupt recording) */
 .screen-guard-active::after {
   content: "";
   position: fixed;
@@ -56,6 +57,7 @@ body {
   pointer-events: none;
   z-index: 9999;
   background: radial-gradient(circle, transparent 90%, rgba(225, 29, 72, 0.05) 100%);
+  background-image: repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255, 255, 255, 0.01) 10px, rgba(255, 255, 255, 0.01) 11px);
 }
 
 .no-scrollbar::-webkit-scrollbar {
@@ -96,4 +98,12 @@ body {
 
 .logo-glow {
   filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.3));
+}
+
+@keyframes scan {
+  from { top: 0%; }
+  to { top: 100%; }
+}
+.animate-scan {
+  animation: scan 2s linear infinite;
 }

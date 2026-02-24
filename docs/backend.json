@@ -113,6 +113,18 @@
         "isLive",
         "verified"
       ]
+    },
+    "StreamSession": {
+      "title": "StreamSession",
+      "type": "object",
+      "description": "Tracks a paid private stream session for a specific user and host.",
+      "properties": {
+        "userId": { "type": "string" },
+        "hostId": { "type": "string" },
+        "expiresAt": { "type": "string", "format": "date-time" },
+        "lastPaidAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "hostId", "expiresAt"]
     }
   },
   "auth": {
@@ -156,6 +168,16 @@
             }
           },
           "description": "Direct messages from admin to hosts."
+        }
+      },
+      {
+        "path": "/streamSessions/{sessionId}",
+        "definition": {
+          "entityName": "StreamSession",
+          "schema": {
+            "$ref": "#/backend/entities/StreamSession"
+          },
+          "description": "Manages paid session access for private rooms."
         }
       }
     ]

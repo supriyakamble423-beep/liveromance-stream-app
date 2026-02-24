@@ -1,3 +1,4 @@
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -18,9 +19,6 @@ service cloud.firestore {
       );
     }
 
-    // 🔥 NUCLEAR FIX: GLOBAL HOSTS ACCESS
-    // Everyone can list and read hosts. 
-    // Deployment Update: 2024-05-24 10:00 UTC - Explicitly allowing 'list' to fix marketplace errors.
     match /hosts/{hostId} {
       allow read, list, get: if true;
       allow create: if isSignedIn();
@@ -31,6 +29,12 @@ service cloud.firestore {
     match /users/{userId} {
       allow read: if true;
       allow create, update: if isOwner(userId) || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /streamSessions/{sessionId} {
+      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create, update: if isSignedIn() && (request.resource.data.userId == request.auth.uid || isAdmin());
       allow delete: if isAdmin();
     }
 
@@ -62,7 +66,6 @@ service cloud.firestore {
       allow create: if isSignedIn();
     }
 
-    // Default Fallback - Allow reading of configuration but restrict writes
     match /{document=**} {
       allow read: if true;
       allow write: if isSignedIn();

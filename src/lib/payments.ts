@@ -1,15 +1,16 @@
 
 'use client';
 
-import { Firestore, doc, updateDoc, increment, addDoc, collection, serverTimestamp } from "firebase/firestore";
+import { Firestore, doc, updateDoc, increment, addDoc, collection, serverTimestamp, setDoc } from "firebase/firestore";
 import { errorEmitter } from "@/firebase/error-emitter";
 import { FirestorePermissionError } from "@/firebase/errors";
 
-export type PaymentType = 'zap' | 'tip' | 'referral';
+export type PaymentType = 'zap' | 'tip' | 'referral' | 'private_session';
 
 /**
  * processPayment
  * Handles coin deduction from user, 80% to host, 1% to referrer.
+ * Also handles Private Session activation if type is 'private_session'.
  */
 export async function processPayment(
   db: Firestore,
@@ -19,12 +20,11 @@ export async function processPayment(
   hostId: string,
   referrerId?: string
 ) {
-  // 1. Cut Calculations
-  const hostCut = amount * 0.80; // 80% to Host
-  const referralCut = amount * 0.01; // 1% Lifetime to Referrer (A -> B)
+  const hostCut = amount * 0.80; 
+  const referralCut = amount * 0.01; 
 
   try {
-    // 2. User Wallet (Coins minus) - In a real app, this should be a Transaction or Cloud Function
+    // 1. User Wallet (Coins minus)
     const userRef = doc(db, 'users', userId);
     updateDoc(userRef, {
       coins: increment(-amount),
@@ -37,7 +37,7 @@ export async function processPayment(
       }));
     });
 
-    // 3. Host Wallet (80% plus)
+    // 2. Host Wallet (80% plus)
     const hostRef = doc(db, 'hosts', hostId);
     updateDoc(hostRef, {
       earnings: increment(hostCut),
@@ -50,7 +50,7 @@ export async function processPayment(
       }));
     });
 
-    // 4. Referral Logic (A -> B)
+    // 3. Referral Logic (A -> B)
     if (referrerId) {
       const referrerRef = doc(db, 'users', referrerId);
       updateDoc(referrerRef, {
@@ -62,6 +62,30 @@ export async function processPayment(
           path: referrerRef.path,
           operation: 'update',
           requestResourceData: { coins: referralCut }
+        }));
+      });
+    }
+
+    // 4. Private Session Activation (Smart Reconnect Logic)
+    if (type === 'private_session') {
+      const sessionId = `${userId}_${hostId}`;
+      const sessionRef = doc(db, 'streamSessions', sessionId);
+      
+      // Session valid for 30 minutes
+      const expiresAt = new Date();
+      expiresAt.setMinutes(expiresAt.getMinutes() + 30);
+
+      setDoc(sessionRef, {
+        userId,
+        hostId,
+        expiresAt,
+        lastPaidAt: serverTimestamp(),
+        status: 'active'
+      }, { merge: true }).catch(e => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: sessionRef.path,
+          operation: 'write',
+          requestResourceData: { status: 'active' }
         }));
       });
     }
