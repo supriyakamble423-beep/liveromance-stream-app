@@ -42,7 +42,14 @@ export default function PayoutDashboard() {
 
   const { data: requests, isLoading: isRequestsLoading } = useCollection(requestsQuery);
 
-  const DIAMOND_RATE = 0.1; // 1 Diamond = 0.1 INR
+  /** 
+   * PROFIT MODEL: 80% Platform Fee
+   * User pays ~₹100 for 1000 Diamonds.
+   * Host gets 1000 Diamonds.
+   * Conversion: 1000 Diamonds -> ₹20 Cash.
+   * Rate: 0.02 INR per Diamond.
+   */
+  const DIAMOND_RATE = 0.02; 
   const MIN_PAYOUT_INR = 500;
   const currentEarnings = hostProfile?.earnings || 0;
   const cashValue = (currentEarnings * DIAMOND_RATE).toFixed(2);
@@ -128,11 +135,11 @@ export default function PayoutDashboard() {
             <div className="h-px bg-white/10" />
             <div className="flex justify-between items-end">
               <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Cash Value</p>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Net Cash Value</p>
                 <p className="text-3xl font-black text-green-400 tracking-tighter">₹{cashValue}</p>
               </div>
               <Badge className="bg-primary/20 text-primary border-none text-[8px] font-black uppercase px-3 py-1">
-                Rate: 1💎 = ₹0.10
+                Rate: 1000💎 = ₹20
               </Badge>
             </div>
           </div>
@@ -161,7 +168,7 @@ export default function PayoutDashboard() {
               <AlertCircle className="size-4 text-primary shrink-0" />
               <p className="text-[9px] font-bold text-slate-400 leading-relaxed">
                 Min. Withdrawal: <span className="text-white">₹{MIN_PAYOUT_INR}</span>. 
-                Payments are processed manually by Admin.
+                Values shown are after platform service fees.
               </p>
             </div>
             <Button 
@@ -203,7 +210,7 @@ export default function PayoutDashboard() {
                   </div>
                   <div>
                     <p className="text-[11px] font-black uppercase tracking-tight text-white">₹{req.amountCash}</p>
-                    <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">{new Date(req.requestedAt?.toDate()).toLocaleDateString()}</p>
+                    <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">{req.requestedAt ? new Date(req.requestedAt?.toDate()).toLocaleDateString() : 'Pending'}</p>
                   </div>
                 </div>
                 <Badge className={cn(

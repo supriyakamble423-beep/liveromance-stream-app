@@ -9,8 +9,9 @@ export type PaymentType = 'zap' | 'tip' | 'referral' | 'private_session';
 
 /**
  * processPayment
- * Handles coin deduction from user, 80% to host, 1% to referrer.
- * Also handles Private Session activation if type is 'private_session'.
+ * Handles coin deduction from user.
+ * Profit Model: Platform Fee is taken during withdrawal (Conversion).
+ * For now, host receives 100% of gifted diamonds to their 'earnings' field.
  */
 export async function processPayment(
   db: Firestore,
@@ -20,7 +21,9 @@ export async function processPayment(
   hostId: string,
   referrerId?: string
 ) {
-  const hostCut = amount * 0.80; 
+  // Profit is now 80% on conversion (Withdrawal level).
+  // Giving host 100% of diamonds gifted by user.
+  const hostCut = amount; 
   const referralCut = amount * 0.01; 
 
   try {
@@ -37,7 +40,7 @@ export async function processPayment(
       }));
     });
 
-    // 2. Host Wallet (80% plus)
+    // 2. Host Wallet (Diamonds plus)
     const hostRef = doc(db, 'hosts', hostId);
     updateDoc(hostRef, {
       earnings: increment(hostCut),

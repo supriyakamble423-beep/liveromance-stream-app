@@ -74,7 +74,7 @@ export default function AdminPayouts() {
             <Banknote className="size-6 text-white" />
           </div>
           <div>
-            <p className="text-xs font-black uppercase text-white">Pending Volume</p>
+            <p className="text-xs font-black uppercase text-white">Pending Payout Vol.</p>
             <p className="text-xl font-black text-primary">₹{requests?.reduce((acc, r) => acc + (r.amountCash || 0), 0).toFixed(2)}</p>
           </div>
         </div>
@@ -144,9 +144,9 @@ export default function AdminPayouts() {
         <section className="bg-slate-900/50 p-6 rounded-[2rem] border border-white/5 flex items-start gap-4 mt-8">
           <ShieldCheck className="size-6 text-primary shrink-0" />
           <div>
-            <p className="text-[10px] font-black uppercase text-white mb-1 tracking-widest">Audit Policy</p>
+            <p className="text-[10px] font-black uppercase text-white mb-1 tracking-widest">Audit Policy (80% Platform Commission)</p>
             <p className="text-[9px] text-slate-500 font-bold uppercase leading-relaxed">
-              Ensure manual transfer is completed before clicking 'Mark as Paid'. All actions are logged under Admin ID.
+              Rate is fixed at ₹20 per 1000 Diamonds. Ensure manual transfer is completed before clicking 'Mark as Paid'.
             </p>
           </div>
         </section>
