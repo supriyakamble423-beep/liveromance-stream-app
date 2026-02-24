@@ -10,15 +10,18 @@ interface LiveEarningTimerProps {
 
 export default function LiveEarningTimer({ minutes }: LiveEarningTimerProps) {
   const [showPopup, setShowPopup] = useState(false);
+  const [lastMilestone, setLastMilestone] = useState(0);
 
-  // Trigger popup animation every 15 minutes
+  // Trigger luxury popup every 15 minutes
   useEffect(() => {
-    if (minutes > 0 && minutes % 15 === 0) {
+    const currentMilestone = Math.floor(minutes / 15);
+    if (minutes > 0 && minutes % 15 === 0 && currentMilestone > lastMilestone) {
       setShowPopup(true);
+      setLastMilestone(currentMilestone);
       const timer = setTimeout(() => setShowPopup(false), 5000);
       return () => clearTimeout(timer);
     }
-  }, [minutes]);
+  }, [minutes, lastMilestone]);
 
   const getLevelDetails = () => {
     if (minutes >= 60) return { 
@@ -69,19 +72,24 @@ export default function LiveEarningTimer({ minutes }: LiveEarningTimerProps) {
 
   return (
     <div className="absolute top-24 left-6 right-6 z-50 pointer-events-none">
-      {/* Goal Reached Popup Overlay */}
+      {/* 🏆 LUXURY BONUS POPUP OVERLAY */}
       {showPopup && (
-        <div className="fixed inset-0 flex items-center justify-center z-[100] animate-in zoom-in fade-in duration-500">
-           <div className="bg-white/10 backdrop-blur-3xl border-2 border-primary p-10 rounded-[4rem] text-center shadow-[0_0_100px_rgba(225,29,72,0.6)] romantic-glow">
-              <Trophy className="size-20 text-yellow-400 mx-auto mb-4 animate-bounce" />
-              <h2 className="text-4xl font-black italic uppercase tracking-tighter text-white mb-2">BONUS UNLOCKED!</h2>
-              <p className="text-xl font-black text-primary uppercase tracking-widest">{level.multiplier} EARNINGS ACTIVE</p>
-              <p className="text-[10px] text-white/60 font-black uppercase mt-4 tracking-[0.5em]">Establishing Next Goal...</p>
+        <div className="fixed inset-0 flex items-center justify-center z-[100] animate-in zoom-in fade-in duration-700 bg-black/40 backdrop-blur-sm">
+           <div className="bg-[#2D1B2D]/90 backdrop-blur-3xl border-4 border-primary p-12 rounded-[4rem] text-center shadow-[0_0_120px_rgba(225,29,72,0.8)] romantic-glow animate-bounce">
+              <Trophy className="size-24 text-yellow-400 mx-auto mb-6 animate-pulse" />
+              <div className="space-y-2">
+                <h2 className="text-5xl font-black italic uppercase tracking-tighter text-white">GOAL REACHED!</h2>
+                <div className="bg-primary px-6 py-2 rounded-2xl inline-block shadow-xl">
+                   <p className="text-2xl font-black text-white uppercase tracking-widest">{level.multiplier} BONUS UNLOCKED</p>
+                </div>
+              </div>
+              <p className="text-[12px] text-white/60 font-black uppercase mt-8 tracking-[0.6em] animate-pulse">Establishing Next Milestone...</p>
            </div>
         </div>
       )}
 
-      <div className="bg-[#2D1B2D]/90 backdrop-blur-2xl border border-white/10 rounded-[2.5rem] p-6 shadow-2xl romantic-card-glow animate-in slide-in-from-top-4">
+      {/* 📊 MINI HUD (Focus on Goals, not Stopwatch) */}
+      <div className="bg-[#2D1B2D]/80 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-6 shadow-2xl romantic-card-glow animate-in slide-in-from-top-4">
         <div className="flex justify-between items-start mb-4">
           <div className="flex flex-col">
             <div className={cn("flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.25em] mb-1", level.color)}>
@@ -89,32 +97,31 @@ export default function LiveEarningTimer({ minutes }: LiveEarningTimerProps) {
               {level.label}
             </div>
             <h4 className="text-base font-black text-white uppercase tracking-tight italic flex items-center gap-2">
-              <span className="text-primary">{level.multiplier}</span> 
-              {minutes >= 15 ? "Premium Rate Active" : `Goal: ${level.nextGoal} Mins`}
+              Current Rate: <span className="text-primary text-xl">{level.multiplier}</span> 
             </h4>
           </div>
-          <div className="text-right">
-            <div className="bg-white/5 px-4 py-2 rounded-2xl border border-white/10 backdrop-blur-md">
-              <span className="text-sm font-black text-white italic">{minutes}m</span>
-              <span className="text-[10px] font-bold text-white/30 ml-1">Live</span>
-            </div>
+          <div className="text-right flex flex-col items-end">
+            <Badge className="bg-white/5 border-none text-primary font-black italic px-4 py-1 rounded-xl">
+              GOAL: {level.nextGoal}m
+            </Badge>
           </div>
         </div>
         
-        <div className="w-full h-4 bg-white/5 rounded-full overflow-hidden border border-white/10 p-1">
+        <div className="w-full h-3 bg-white/5 rounded-full overflow-hidden border border-white/10 p-0.5">
           <div 
             className={cn("h-full transition-all duration-1000 rounded-full", level.bar)}
             style={{ width: `${Math.min(progress, 100)}%` }}
           />
         </div>
 
-        <div className="flex items-center justify-between mt-4">
-          <p className="text-[9px] font-black uppercase text-slate-500 tracking-widest">
-            Level Progress
+        <div className="flex items-center justify-between mt-3">
+          <p className="text-[8px] font-black uppercase text-slate-500 tracking-[0.3em]">
+            Establishment Progress
           </p>
-          <p className={cn("text-[9px] font-black uppercase tracking-widest flex items-center gap-2", level.color)}>
-            Next Bonus: {level.nextGoal}m
-          </p>
+          <div className="flex items-center gap-2 opacity-40">
+            <span className="size-1.5 rounded-full bg-primary animate-pulse" />
+            <span className="text-[8px] font-black uppercase text-white tracking-widest">Signal Active</span>
+          </div>
         </div>
       </div>
     </div>
