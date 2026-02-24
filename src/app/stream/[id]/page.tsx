@@ -11,7 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useFirebase, useDoc, useMemoFirebase, useCollection } from "@/firebase";
-import { doc, collection, addDoc, serverTimestamp, query, orderBy, limit, setDoc, updateDoc } from "firebase/firestore";
+import { doc, collection, addDoc, serverTimestamp, query, orderBy, limit, setDoc, updateDoc, increment } from "firebase/firestore";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { errorEmitter } from "@/firebase/error-emitter";
@@ -66,7 +66,9 @@ export default function StreamPage() {
       return;
     }
     
-    const startTime = host.streamStartTime.toDate().getTime();
+    // Check if it's a Firestore Timestamp or a string
+    const startTime = host.streamStartTime?.toDate?.()?.getTime() || new Date(host.streamStartTime).getTime();
+    
     const updateTimer = () => {
       const now = Date.now();
       setSecondsLive(Math.floor((now - startTime) / 1000));
@@ -80,7 +82,7 @@ export default function StreamPage() {
 
   const minutesLive = Math.floor(secondsLive / 60);
 
-  // MILESTONE ALERTS
+  // MILESTONE ALERTS & EARNINGS LOGIC
   useEffect(() => {
     if (!isHost || minutesLive === 0) return;
 
@@ -88,7 +90,7 @@ export default function StreamPage() {
       setAchievedMilestones(prev => [...prev, 15]);
       toast({ 
         title: "🥉 Bronze Bonus!", 
-        description: "15 minutes live! You are a Rising Star.",
+        description: "15 minutes live! You are now a Rising Star.",
         className: "bg-[#CD7F32] text-white border-none shadow-[0_0_20px_#CD7F32]"
       });
     }
@@ -169,15 +171,15 @@ export default function StreamPage() {
             toast({ 
               variant: "destructive", 
               title: "AI AUTO-CUT ACTIVE", 
-              description: "Safety Bot detected nudity. Terminating broadcast." 
+              description: "Safety Bot detected prohibited content. Terminating broadcast." 
             });
             
             if (hostRef) {
-              await setDoc(hostRef, { 
+              await updateDoc(hostRef, { 
                 isLive: false, 
                 nsfwReason: result.reason,
                 updatedAt: serverTimestamp() 
-              }, { merge: true });
+              });
               router.push('/host-p');
             }
           }
@@ -211,6 +213,30 @@ export default function StreamPage() {
       setIsUpdatingMode(false);
     }
   };
+
+  const endStream = async () => {
+    if (!isHost || !hostRef) return;
+    try {
+      // Calculate bonus based on duration
+      let bonus = 0;
+      if (minutesLive >= 60) bonus = 500;
+      else if (minutesLive >= 30) bonus = 150;
+      else if (minutesLive >= 15) bonus = 50;
+
+      await updateDoc(hostRef, {
+        isLive: false,
+        earnings: increment(bonus),
+        updatedAt: serverTimestamp()
+      });
+
+      if (bonus > 0) {
+        toast({ title: "Session Bonus!", description: `You earned ${bonus} bonus coins!` });
+      }
+      router.push('/host-p');
+    } catch (e) {
+      toast({ variant: "destructive", title: "Error ending stream" });
+    }
+  }
 
   const sendMessage = () => {
     if (!inputText.trim() || !user || !firestore || !id) return;
@@ -264,8 +290,17 @@ export default function StreamPage() {
   if (isLoading) {
     return (
       <div className="h-screen bg-[#2D1B2D] flex flex-col items-center justify-center space-y-8 mesh-gradient">
-        <div className="relative size-40 animate-pulse drop-shadow-[0_0_15px_rgba(255,255,255,0.4)]">
-          <Image src="/logo.png" alt="Loading Signal..." fill className="object-contain" />
+        <div className="relative size-40 animate-pulse drop-shadow-[0_0_30px_rgba(255,255,255,0.4)]">
+          <Image 
+            src="/logo.png" 
+            alt="Loading Signal..." 
+            fill 
+            className="object-contain"
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              target.src = "https://placehold.co/400x400/E11D48/white?text=GL";
+            }}
+          />
         </div>
         <div className="size-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
       </div>
@@ -333,7 +368,7 @@ export default function StreamPage() {
       </div>
 
       {isHost && (
-        <div className="absolute top-[160px] left-0 right-0 z-40 flex flex-col items-center gap-3">
+        <div className="absolute top-[165px] left-0 right-0 z-40 flex flex-col items-center gap-3">
           <div className="flex gap-2">
             <Button 
               onClick={toggleStreamMode} 
@@ -379,9 +414,15 @@ export default function StreamPage() {
           </div>
         </div>
         <div className="flex gap-2">
-          <Button variant="secondary" size="icon" onClick={() => router.back()} className="glass-effect size-10 rounded-full text-white border-none bg-white/10 hover:bg-white/20">
-            <X className="size-5" />
-          </Button>
+          {isHost ? (
+            <Button variant="destructive" size="sm" onClick={endStream} className="rounded-full font-black uppercase text-[10px] tracking-widest h-10 px-6">
+              End Stream
+            </Button>
+          ) : (
+            <Button variant="secondary" size="icon" onClick={() => router.back()} className="glass-effect size-10 rounded-full text-white border-none bg-white/10 hover:bg-white/20">
+              <X className="size-5" />
+            </Button>
+          )}
         </div>
       </header>
 
