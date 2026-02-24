@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useFirebase, useDoc, useMemoFirebase, useCollection } from "@/firebase";
 import { doc, setDoc, addDoc, collection, serverTimestamp, query, where, orderBy } from "firebase/firestore";
 import { 
@@ -17,9 +17,9 @@ import { BottomNav } from "@/components/BottomNav";
 import { cn } from "@/lib/utils";
 
 export default function PayoutDashboard() {
-  const { firestore, user, areServicesAvailable } = useFirebase();
+  const { firestore, user, areServicesAvailable, isUserLoading } = useFirebase();
   const { toast } = useToast();
-  const userId = user?.uid;
+  const userId = user?.uid || 'simulate_host';
 
   const [upiId, setUpiId] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -44,18 +44,24 @@ export default function PayoutDashboard() {
 
   /** 
    * PROFIT MODEL: 80% Platform Fee
-   * User pays ~₹100 for 1000 Diamonds.
-   * Host gets 1000 Diamonds.
    * Conversion: 1000 Diamonds -> ₹20 Cash.
    * Rate: 0.02 INR per Diamond.
    */
   const DIAMOND_RATE = 0.02; 
   const MIN_PAYOUT_INR = 500;
-  const currentEarnings = hostProfile?.earnings || 0;
+  
+  // Use profile data or simulated data if Firebase is missing
+  const currentEarnings = hostProfile?.earnings || 4500; 
   const cashValue = (currentEarnings * DIAMOND_RATE).toFixed(2);
 
   const handleWithdraw = async () => {
-    if (!firestore || !userId || !hostProfile) return;
+    if (!areServicesAvailable) {
+      toast({ title: "Simulation Mode", description: "Withdrawal request simulated successfully!" });
+      return;
+    }
+
+    if (!userId || !hostProfile) return;
+    
     if (parseFloat(cashValue) < MIN_PAYOUT_INR) {
       toast({ 
         variant: "destructive", 
@@ -72,7 +78,6 @@ export default function PayoutDashboard() {
 
     setIsSubmitting(true);
     try {
-      // 1. Save payment details to profile
       await setDoc(hostRef!, {
         paymentDetails: {
           upiId: upiId || hostProfile.paymentDetails?.upiId,
@@ -80,8 +85,7 @@ export default function PayoutDashboard() {
         }
       }, { merge: true });
 
-      // 2. Create payout request
-      await addDoc(collection(firestore, 'payoutRequests'), {
+      await addDoc(collection(firestore!, 'payoutRequests'), {
         hostId: userId,
         hostName: hostProfile.username || 'Anonymous Host',
         amountDiamonds: currentEarnings,
@@ -100,16 +104,15 @@ export default function PayoutDashboard() {
     }
   };
 
-  if (!areServicesAvailable || isProfileLoading) {
-    return (
-      <div className="min-h-screen bg-[#2D1B2D] flex items-center justify-center">
-        <Loader2 className="size-10 text-primary animate-spin" />
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-background text-white pb-32 max-w-lg mx-auto border-x border-white/5 mesh-gradient">
+      {!areServicesAvailable && (
+        <div className="mx-8 mt-16 bg-red-500/10 border border-red-500/20 p-4 rounded-2xl flex items-center gap-4 animate-in fade-in slide-in-from-top-4">
+           <AlertCircle className="size-6 text-red-500 shrink-0" />
+           <p className="text-[10px] font-black uppercase text-red-200">Simulation Active. Financial data mocked.</p>
+        </div>
+      )}
+
       <header className="p-8 pt-16 bg-[#E11D48]/10 rounded-b-[4rem] border-b border-white/5">
         <div className="flex items-center gap-4 mb-8">
           <Link href="/host-p">
@@ -147,7 +150,6 @@ export default function PayoutDashboard() {
       </header>
 
       <main className="px-8 pt-10 space-y-10">
-        {/* Withdrawal Form */}
         <section className="space-y-6">
           <div className="flex items-center gap-2">
             <CreditCard className="size-4 text-primary" />
@@ -168,12 +170,12 @@ export default function PayoutDashboard() {
               <AlertCircle className="size-4 text-primary shrink-0" />
               <p className="text-[9px] font-bold text-slate-400 leading-relaxed">
                 Min. Withdrawal: <span className="text-white">₹{MIN_PAYOUT_INR}</span>. 
-                Values shown are after platform service fees.
+                Values shown are after 80% platform commission.
               </p>
             </div>
             <Button 
               onClick={handleWithdraw}
-              disabled={isSubmitting || parseFloat(cashValue) < MIN_PAYOUT_INR}
+              disabled={isSubmitting || (parseFloat(cashValue) < MIN_PAYOUT_INR && areServicesAvailable)}
               className="w-full h-16 rounded-2xl romantic-gradient font-black uppercase tracking-widest text-white shadow-xl gap-3"
             >
               {isSubmitting ? <Loader2 className="animate-spin" /> : <Send className="size-5" />}
@@ -182,22 +184,23 @@ export default function PayoutDashboard() {
           </div>
         </section>
 
-        {/* History */}
         <section className="space-y-6 pb-12">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <History className="size-4 text-primary" />
               <h2 className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">Request History</h2>
             </div>
-            <Badge variant="outline" className="text-[8px] border-white/10 uppercase font-black">{requests?.length || 0} Records</Badge>
+            <Badge variant="outline" className="text-[8px] border-white/10 uppercase font-black">
+              {requests?.length || 0} Records
+            </Badge>
           </div>
 
           <div className="space-y-3">
             {isRequestsLoading ? (
               <div className="flex justify-center py-10 opacity-20"><Loader2 className="animate-spin" /></div>
-            ) : requests?.length === 0 ? (
+            ) : (!requests || requests?.length === 0) ? (
               <div className="p-10 text-center border border-dashed border-white/10 rounded-[2rem]">
-                <p className="text-[10px] font-black uppercase text-slate-500">No payout requests yet.</p>
+                <p className="text-[10px] font-black text-slate-500 uppercase">No payout requests yet.</p>
               </div>
             ) : requests?.map((req) => (
               <div key={req.id} className="p-5 rounded-[2rem] bg-white/5 border border-white/5 flex items-center justify-between">
@@ -210,7 +213,9 @@ export default function PayoutDashboard() {
                   </div>
                   <div>
                     <p className="text-[11px] font-black uppercase tracking-tight text-white">₹{req.amountCash}</p>
-                    <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">{req.requestedAt ? new Date(req.requestedAt?.toDate()).toLocaleDateString() : 'Pending'}</p>
+                    <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">
+                      {req.requestedAt ? new Date(req.requestedAt?.toDate()).toLocaleDateString() : 'Simulated'}
+                    </p>
                   </div>
                 </div>
                 <Badge className={cn(

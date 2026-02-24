@@ -18,8 +18,6 @@ import {
   DialogHeader, 
   DialogTitle, 
   DialogTrigger,
-  DialogDescription,
-  DialogFooter
 } from "@/components/ui/dialog";
 import Image from "next/image";
 import Link from "next/link";
@@ -58,7 +56,6 @@ export default function HostProfileDashboard() {
 
   const toggleLiveStatus = async () => {
     if (!hostRef || !firestore || !userId) {
-       // Mock toggle for simulation
        toast({ title: hostProfile?.isLive ? "Offline" : "Live Simulation Active" });
        return;
     }
@@ -109,14 +106,15 @@ export default function HostProfileDashboard() {
     }
   };
 
-  if (isUserLoading || isProfileLoading) {
+  // Prevent infinite hang by checking isUserLoading and handling missing services
+  if (isUserLoading && areServicesAvailable) {
     return (
       <div className="min-h-screen bg-[#2D1B2D] flex flex-col items-center justify-center space-y-8 mesh-gradient">
         <div className="relative size-40 animate-pulse logo-glow">
            <Image src="/logo.png" alt="Loading" fill className="object-contain" onError={(e) => { (e.target as any).src = "https://placehold.co/400x400/E11D48/white?text=GL" }} />
         </div>
         <div className="size-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Initializing Node...</p>
+        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Connecting Node...</p>
       </div>
     );
   }
@@ -198,7 +196,7 @@ export default function HostProfileDashboard() {
                       <Zap className="size-3 text-amber-400 fill-current" /> Earnings
                   </p>
                   <div className="flex items-baseline gap-1">
-                      <span className="text-3xl font-black tracking-tighter text-white">{Math.floor(hostProfile?.earnings || 450)}</span>
+                      <span className="text-3xl font-black tracking-tighter text-white">{Math.floor(hostProfile?.earnings || 4500)}</span>
                       <span className="text-amber-400">💎</span>
                   </div>
               </div>
@@ -220,44 +218,6 @@ export default function HostProfileDashboard() {
             {hostProfile?.isLive ? "End Stream" : "Go Live Now"}
           </Button>
 
-          <Dialog open={showRulebook} onOpenChange={setShowRulebook}>
-            <DialogContent className="bg-[#2D1B2D] border-white/10 text-white rounded-[3rem] max-w-[90vw] mx-auto p-8 overflow-hidden">
-              <DialogHeader className="items-center text-center">
-                <div className="size-16 bg-primary/20 rounded-full flex items-center justify-center mb-4">
-                  <ShieldAlert className="size-8 text-primary" />
-                </div>
-                <DialogTitle className="text-2xl font-black uppercase italic tracking-tighter">Public Rulebook</DialogTitle>
-                <DialogDescription className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                  Compliance is mandatory for all hosts.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-6 pt-4">
-                <div className="bg-white/5 rounded-2xl p-5 text-[10px] text-left space-y-4 border border-white/10">
-                  <div className="flex items-start gap-3">
-                    <CheckCircle2 className="size-4 text-green-400 mt-0.5 shrink-0" />
-                    <p className="leading-relaxed">Allowed: Bra, Panty, Bikini, Dance, and Chatting.</p>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <ShieldAlert className="size-4 text-red-500 mt-0.5 shrink-0" />
-                    <p className="leading-relaxed text-red-400 font-black">STRICTLY BANNED: Full nudity, private parts, or sexual acts in Public mode.</p>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <AlertCircle className="size-4 text-amber-400 mt-0.5 shrink-0" />
-                    <p className="leading-relaxed opacity-70 italic">3 User reports for nudity will automatically terminate your session.</p>
-                  </div>
-                </div>
-                <div className="flex flex-col gap-3 pt-2">
-                  <Button onClick={toggleLiveStatus} className="h-16 rounded-2xl romantic-gradient font-black uppercase tracking-widest text-white shadow-xl">
-                    I Accept / Go Live
-                  </Button>
-                  <Button variant="ghost" onClick={() => setShowRulebook(false)} className="text-[10px] font-black text-slate-500 uppercase">
-                    Decline / Exit
-                  </Button>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
-          
           <div className="grid grid-cols-2 gap-4">
              <div className="bg-white/5 border border-white/10 rounded-[2rem] p-5 text-center">
                 <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1">Bonus Status</p>
