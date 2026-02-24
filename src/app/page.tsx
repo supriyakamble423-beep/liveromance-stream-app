@@ -1,23 +1,40 @@
-
 'use client';
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 
 export default function RootRedirect() {
   const router = useRouter();
 
-    useEffect(() => {
-        router.push('/global');
-          }, [router]);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      router.push('/global');
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, [router]);
 
-            return (
-                <div className="min-h-screen bg-black flex items-center justify-center">
-                      <div className="flex flex-col items-center gap-4">
-                              <div className="size-16 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-                                      <h1 className="text-xl font-bold tracking-widest text-primary uppercase animate-pulse">Stream-X Loading...</h1>
-                                            </div>
-                                                </div>
-                                                  );
-                                                  }
-                                                  
+  return (
+    <div className="min-h-screen bg-[#2D1B2D] flex flex-col items-center justify-center relative overflow-hidden mesh-gradient">
+      <div className="relative flex flex-col items-center gap-8 z-10">
+        <div className="relative size-48 animate-pulse drop-shadow-[0_0_20px_rgba(255,255,255,0.5)]">
+          <Image 
+            src="/logo.png" 
+            alt="Global Love" 
+            fill 
+            className="object-contain"
+            priority
+          />
+        </div>
+        <div className="flex flex-col items-center gap-3">
+          <div className="size-10 border-4 border-[#E11D48] border-t-transparent rounded-full animate-spin shadow-[0_0_15px_rgba(225,29,72,0.4)]" />
+          <p className="text-[10px] font-black tracking-[0.4em] text-[#FDA4AF] uppercase animate-pulse">Initializing Romance...</p>
+        </div>
+      </div>
+      
+      {/* Decorative background hearts */}
+      <div className="absolute top-1/4 -left-10 size-64 bg-[#E11D48]/5 rounded-full blur-3xl" />
+      <div className="absolute bottom-1/4 -right-10 size-64 bg-[#F472B6]/5 rounded-full blur-3xl" />
+    </div>
+  );
+}

@@ -139,6 +139,20 @@ export default function GlobalMarketplace() {
       });
   };
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#2D1B2D] flex flex-col items-center justify-center space-y-8 mesh-gradient">
+        <div className="relative size-40 animate-pulse drop-shadow-[0_0_15px_rgba(255,255,255,0.4)]">
+          <Image src="/logo.png" alt="Loading..." fill className="object-contain" />
+        </div>
+        <div className="flex flex-col items-center gap-3">
+          <div className="size-10 border-4 border-[#E11D48] border-t-transparent rounded-full animate-spin" />
+          <p className="text-[9px] font-black uppercase tracking-[0.3em] text-[#FDA4AF]">Connecting to Global Love...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background pb-32 max-w-lg mx-auto border-x border-white/5 mesh-gradient">
       <Header />
@@ -240,64 +254,57 @@ export default function GlobalMarketplace() {
           )}
         </section>
 
-        {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-24 space-y-6 opacity-50">
-            <div className="size-16 border-4 border-[#E11D48] border-t-transparent rounded-full animate-spin shadow-[0_0_20px_#E11D48]" />
-            <p className="text-xs font-black uppercase tracking-[0.3em] text-[#FDA4AF]">Connecting to AI Grid...</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 gap-5">
-            {hosts?.map((host) => (
-              <div key={host.id} className="flex flex-col bg-[#3D263D]/80 rounded-[3rem] overflow-hidden border border-white/5 group transition-all duration-500 hover:shadow-[0_20px_50px_rgba(0,0,0,0.4)] relative hover:border-[#F472B6]/20">
-                <div className="relative aspect-[3/4] overflow-hidden bg-[#2D1B2D]">
-                  <Image 
-                    src={host.previewImageUrl || "https://picsum.photos/seed/host/600/800"} 
-                    alt={host.id} 
-                    fill 
-                    className="object-cover transition-transform duration-1000 group-hover:scale-110"
-                  />
-                  <div className="absolute top-5 left-5 flex flex-col gap-2">
-                    <Badge className="bg-[#E11D48] border-none text-[9px] font-black uppercase tracking-widest px-4 py-1 shadow-2xl">Live</Badge>
-                  </div>
-                  <div className="absolute top-5 right-5">
-                    <div className="size-8 rounded-full bg-black/40 backdrop-blur-xl flex items-center justify-center text-xs shadow-2xl border border-white/10">
-                      {host.country || '🌍'}
-                    </div>
-                  </div>
-                  {host.streamType === 'private' && (
-                    <div className="absolute inset-0 bg-[#2D1B2D]/70 backdrop-blur-md flex flex-col items-center justify-center gap-3 animate-in fade-in duration-500">
-                      <Lock className="size-12 text-[#F472B6]/80" />
-                      <p className="text-[10px] font-black text-white/90 uppercase tracking-[0.2em]">Private Hub</p>
-                      <Badge variant="secondary" className="bg-[#E11D48] text-white text-[9px] border-none font-black px-5 py-1 shadow-lg">50 COINS</Badge>
-                    </div>
-                  )}
+        <div className="grid grid-cols-2 gap-5">
+          {hosts?.map((host) => (
+            <div key={host.id} className="flex flex-col bg-[#3D263D]/80 rounded-[3rem] overflow-hidden border border-white/5 group transition-all duration-500 hover:shadow-[0_20px_50px_rgba(0,0,0,0.4)] relative hover:border-[#F472B6]/20">
+              <div className="relative aspect-[3/4] overflow-hidden bg-[#2D1B2D]">
+                <Image 
+                  src={host.previewImageUrl || "https://picsum.photos/seed/host/600/800"} 
+                  alt={host.id} 
+                  fill 
+                  className="object-cover transition-transform duration-1000 group-hover:scale-110"
+                />
+                <div className="absolute top-5 left-5 flex flex-col gap-2">
+                  <Badge className="bg-[#E11D48] border-none text-[9px] font-black uppercase tracking-widest px-4 py-1 shadow-2xl">Live</Badge>
                 </div>
-                <div className="p-5 space-y-5">
-                  <div className="flex justify-between items-center">
-                    <h3 className="font-black text-sm tracking-tight truncate uppercase italic text-white">@{host.username || `Host_${host.id.slice(0, 4)}`}</h3>
-                    <div className="flex items-center gap-1.5">
-                      <Star className="size-3 text-amber-400 fill-current" />
-                      <span className="text-[11px] font-black text-[#FDA4AF]">{host.rating || '4.9'}</span>
-                    </div>
+                <div className="absolute top-5 right-5">
+                  <div className="size-8 rounded-full bg-black/40 backdrop-blur-xl flex items-center justify-center text-xs shadow-2xl border border-white/10">
+                    {host.country || '🌍'}
                   </div>
-                  <div className="flex gap-2">
-                    <Button 
-                      onClick={() => zapConnect(host.id, host.streamType || 'public')}
-                      className="flex-1 romantic-gradient rounded-2xl h-11 text-[10px] font-black gap-2 uppercase tracking-widest text-white hover:scale-105 transition-transform shadow-xl border-none"
-                    >
-                      <Zap className="size-3 fill-current" /> {host.streamType === 'private' ? 'Unlock' : 'Zap'}
+                </div>
+                {host.streamType === 'private' && (
+                  <div className="absolute inset-0 bg-[#2D1B2D]/70 backdrop-blur-md flex flex-col items-center justify-center gap-3 animate-in fade-in duration-500">
+                    <Lock className="size-12 text-[#F472B6]/80" />
+                    <p className="text-[10px] font-black text-white/90 uppercase tracking-[0.2em]">Private Hub</p>
+                    <Badge variant="secondary" className="bg-[#E11D48] text-white text-[9px] border-none font-black px-5 py-1 shadow-lg">50 COINS</Badge>
+                  </div>
+                )}
+              </div>
+              <div className="p-5 space-y-5">
+                <div className="flex justify-between items-center">
+                  <h3 className="font-black text-sm tracking-tight truncate uppercase italic text-white">@{host.username || `Host_${host.id.slice(0, 4)}`}</h3>
+                  <div className="flex items-center gap-1.5">
+                    <Star className="size-3 text-amber-400 fill-current" />
+                    <span className="text-[11px] font-black text-[#FDA4AF]">{host.rating || '4.9'}</span>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button 
+                    onClick={() => zapConnect(host.id, host.streamType || 'public')}
+                    className="flex-1 romantic-gradient rounded-2xl h-11 text-[10px] font-black gap-2 uppercase tracking-widest text-white hover:scale-105 transition-transform shadow-xl border-none"
+                  >
+                    <Zap className="size-3 fill-current" /> {host.streamType === 'private' ? 'Unlock' : 'Zap'}
+                  </Button>
+                  <Link href={`/stream/${host.id}`} className="flex-1">
+                    <Button variant="outline" className="w-full rounded-2xl h-11 text-[10px] font-black gap-2 border-white/10 text-white uppercase tracking-widest hover:bg-white/5">
+                      <MessageCircle className="size-3" /> View
                     </Button>
-                    <Link href={`/stream/${host.id}`} className="flex-1">
-                      <Button variant="outline" className="w-full rounded-2xl h-11 text-[10px] font-black gap-2 border-white/10 text-white uppercase tracking-widest hover:bg-white/5">
-                        <MessageCircle className="size-3" /> View
-                      </Button>
-                    </Link>
-                  </div>
+                  </Link>
                 </div>
               </div>
-            ))}
-          </div>
-        )}
+            </div>
+          ))}
+        </div>
 
         <AdBanner />
       </main>

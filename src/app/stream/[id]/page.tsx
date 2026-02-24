@@ -261,7 +261,16 @@ export default function StreamPage() {
       });
   };
 
-  if (isLoading) return <div className="h-screen bg-black flex items-center justify-center"><Loader2 className="animate-spin text-primary" /></div>;
+  if (isLoading) {
+    return (
+      <div className="h-screen bg-[#2D1B2D] flex flex-col items-center justify-center space-y-8 mesh-gradient">
+        <div className="relative size-40 animate-pulse drop-shadow-[0_0_15px_rgba(255,255,255,0.4)]">
+          <Image src="/logo.png" alt="Loading Signal..." fill className="object-contain" />
+        </div>
+        <div className="size-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   const isPrivate = host?.streamType === 'private' || host?.streamType === 'invite-only';
 
