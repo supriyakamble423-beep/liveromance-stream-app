@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { Sparkles, Trophy, Zap, Star } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 interface LiveEarningTimerProps {
   minutes: number;
