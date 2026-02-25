@@ -74,12 +74,12 @@ export default function LiveEarningTimer({ minutes }: LiveEarningTimerProps) {
            <div className="bg-[#2D1B2D]/90 backdrop-blur-3xl border-4 border-primary p-12 rounded-[4rem] text-center shadow-[0_0_120px_rgba(225,29,72,0.8)] romantic-glow">
               <Trophy className="size-24 text-yellow-400 mx-auto mb-6 animate-pulse" />
               <div className="space-y-2">
-                <h2 className="text-5xl font-black italic uppercase tracking-tighter text-white">GOAL REACHED!</h2>
+                <h2 className="text-5xl font-black italic uppercase tracking-tighter text-white">BONUS UNLOCKED!</h2>
                 <div className="bg-primary px-6 py-2 rounded-2xl inline-block shadow-xl">
-                   <p className="text-2xl font-black text-white uppercase tracking-widest">{level.multiplier} BONUS UNLOCKED</p>
+                   <p className="text-2xl font-black text-white uppercase tracking-widest">{level.multiplier} BOOST ACTIVE</p>
                 </div>
               </div>
-              <p className="text-[12px] text-white/60 font-black uppercase mt-8 tracking-[0.6em] animate-pulse">Establishing Next Milestone...</p>
+              <p className="text-[12px] text-white/60 font-black uppercase mt-8 tracking-[0.6em] animate-pulse">Earning Rate Upgraded</p>
            </div>
         </div>
       )}

@@ -31,10 +31,8 @@ export default function StreamPage() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
   
-  // Logic to determine if the user is the host
   const isHost = user?.uid === id || id === 'simulate_host' || id === 'host_node' || id === 'host_node_active';
 
-  // Memoized Host Reference
   const hostRef = useMemoFirebase(() => {
     if (!firestore || !id) return null;
     const hostId = (id === 'simulate_host' || id === 'host_node' || id === 'host_node_active') ? (user?.uid || 'fake_host') : id;
@@ -43,7 +41,6 @@ export default function StreamPage() {
 
   const { data: host, isLoading } = useDoc(hostRef);
 
-  // Monitor Private Call Requests
   const requestsQuery = useMemoFirebase(() => {
     if (!firestore || !isHost) return null;
     const hostId = (id === 'simulate_host' || id === 'host_node' || id === 'host_node_active') ? (user?.uid || 'fake_host') : id;
@@ -58,7 +55,6 @@ export default function StreamPage() {
 
   const { data: latestRequests } = useCollection(requestsQuery);
 
-  // Handle Request Popup Timer (5 Seconds)
   useEffect(() => {
     if (latestRequests && latestRequests.length > 0) {
       const req = latestRequests[0];
@@ -73,7 +69,6 @@ export default function StreamPage() {
     }
   }, [latestRequests]);
 
-  // Stream Duration Tracking
   useEffect(() => {
     if (!isHost) return;
     const interval = setInterval(() => {
@@ -82,7 +77,6 @@ export default function StreamPage() {
     return () => clearInterval(interval);
   }, [isHost]);
 
-  // Camera Initialization
   useEffect(() => {
     const getCameraPermission = async () => {
       if (!isHost) return;
@@ -101,7 +95,6 @@ export default function StreamPage() {
     return () => cameraStream?.getTracks().forEach(track => track.stop());
   }, [isHost]);
 
-  // True One-Click Mode Toggle (Firestore Update)
   const toggleStreamMode = async () => {
     if (!isHost || !hostRef) {
       toast({ title: "Simulation: Mode Toggled" });
@@ -121,7 +114,6 @@ export default function StreamPage() {
     }
   };
 
-  // Manual Privacy Mask (Blur) Toggle
   const toggleManualBlur = async () => {
     if (!isHost || !hostRef) return;
     const currentBlur = host?.manualBlur || false;
@@ -222,7 +214,6 @@ export default function StreamPage() {
                   {isPrivate ? "MODE: PRIVATE" : "MODE: PUBLIC"}
                 </Button>
                 
-                {/* Blur button ONLY visible in Private Mode */}
                 {isPrivate && (
                   <Button 
                     onClick={toggleManualBlur}
@@ -245,7 +236,6 @@ export default function StreamPage() {
          </div>
       </div>
 
-      {/* Bonus Earning Timer HUD */}
       {isHost && <LiveEarningTimer minutes={streamMinutes} />}
 
       {/* PRIVATE REQUEST POPUP: 5-Second Automatic UI */}
