@@ -16,9 +16,12 @@ import { useToast } from "@/hooks/use-toast";
 import LiveEarningTimer from "@/components/Stream/LiveEarningTimer";
 import { PrivateRequestPopup } from "@/components/Stream/PrivateRequestPopup";
 
+/**
+ * Optimized Stream Page
+ * Manual Fixes: Clean Header (@username only), Instant Toggle, Conditional Blur.
+ */
 export default function StreamPage() {
   const params = useParams();
-  const id = params.id as string;
   const router = useRouter();
   const { firestore, user, areServicesAvailable } = useFirebase();
   const { toast } = useToast();
@@ -29,6 +32,7 @@ export default function StreamPage() {
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
+  const id = params?.id as string;
   const isHost = user?.uid === id || id === 'simulate_host';
   const effectiveId = (id === 'simulate_host') ? (user?.uid || 'simulate_host') : id;
 
@@ -39,34 +43,25 @@ export default function StreamPage() {
 
   const { data: host, isLoading } = useDoc(hostRef);
 
-  // Timer for stream duration
   useEffect(() => {
     if (!isHost) return;
     const interval = setInterval(() => setStreamMinutes((prev) => prev + 1), 60000);
     return () => clearInterval(interval);
   }, [isHost]);
 
-  // Camera initialization
   useEffect(() => {
     if (!isHost) return;
-
     const startCamera = async () => {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
         setCameraStream(stream);
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-        }
+        if (videoRef.current) videoRef.current.srcObject = stream;
       } catch (err) {
         console.error("Camera Error:", err);
-        toast({ variant: "destructive", title: "Camera Error", description: "Enable permissions to stream." });
       }
     };
     startCamera();
-
-    return () => {
-      cameraStream?.getTracks().forEach(t => t.stop());
-    };
+    return () => cameraStream?.getTracks().forEach(t => t.stop());
   }, [isHost]);
 
   const toggleMode = async () => {
@@ -79,7 +74,7 @@ export default function StreamPage() {
         isLive: true, 
         updatedAt: serverTimestamp() 
       }, { merge: true });
-      toast({ title: `Signal: ${nextMode.toUpperCase()}`, className: nextMode === 'private' ? "bg-red-600 text-white" : "bg-green-600 text-white" });
+      toast({ title: `Signal: ${nextMode.toUpperCase()}` });
     } catch (e) {
       toast({ variant: "destructive", title: "Sync Failed" });
     } finally {
@@ -125,7 +120,6 @@ export default function StreamPage() {
 
   return (
     <div className="relative h-screen w-full flex flex-col overflow-hidden bg-black max-w-lg mx-auto border-x border-white/10 screen-guard-active">
-      {/* Background Video/Image */}
       <div className="absolute inset-0 z-0">
         {isHost ? (
           <video 
@@ -146,7 +140,6 @@ export default function StreamPage() {
         <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/80" />
       </div>
 
-      {/* Top Controls: True Toggle & Blur */}
       <div className="absolute top-12 left-0 right-0 z-50 flex flex-col items-center gap-4">
         <div className="flex items-center gap-3">
           <Button
@@ -176,17 +169,14 @@ export default function StreamPage() {
         </div>
       </div>
 
-      {/* Private Request System */}
       {isHost && <PrivateRequestPopup firestore={firestore} hostId={effectiveId} />}
 
-      {/* Revenue HUD */}
       {isHost && (
         <div className="absolute top-28 right-6 z-50">
           <LiveEarningTimer minutes={streamMinutes} />
         </div>
       )}
 
-      {/* Simple Header */}
       <header className="relative z-10 flex items-center justify-between px-6 mt-44">
         <div className="flex items-center gap-3 bg-black/40 backdrop-blur-md rounded-full p-2 pr-6 border border-white/10 shadow-xl">
           <div className="relative size-10 rounded-full overflow-hidden border-2 border-primary">
@@ -203,7 +193,6 @@ export default function StreamPage() {
         </Button>
       </header>
 
-      {/* Interaction Area */}
       <div className="flex-1 relative z-10 flex flex-col justify-end px-6 pb-12">
         <div className="bg-black/40 backdrop-blur-md rounded-2xl p-4 mb-4 border border-white/10 shadow-2xl">
           <p className="text-[10px] font-bold text-white/80 uppercase leading-relaxed italic">

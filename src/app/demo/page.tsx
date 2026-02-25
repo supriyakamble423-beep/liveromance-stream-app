@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 
 /**
  * Demo Redirect Page
- * Ensures redirection happens only on the client.
+ * Added 'use client' to prevent Internal Server Error during SSR.
  */
 export default function DemoRedirect() {
   const router = useRouter();
