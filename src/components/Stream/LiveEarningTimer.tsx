@@ -4,6 +4,7 @@
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { Sparkles, Trophy, Zap, Star } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 interface LiveEarningTimerProps {
   minutes: number;
@@ -67,38 +68,40 @@ export default function LiveEarningTimer({ minutes }: LiveEarningTimerProps) {
   const progress = ((minutes - currentIntervalStart) / 30) * 100;
 
   return (
-    <div className="absolute top-20 left-10 right-10 z-50 pointer-events-none">
-      {/* 🏆 LUXURY BONUS POPUP OVERLAY */}
+    <div className="absolute top-24 left-10 right-10 z-50 pointer-events-none">
+      {/* BONUS CELEBRATION OVERLAY */}
       {showPopup && (
-        <div className="fixed inset-0 flex items-center justify-center z-[100] animate-in zoom-in fade-in duration-700 bg-black/40 backdrop-blur-sm">
+        <div className="fixed inset-0 flex items-center justify-center z-[110] animate-in zoom-in fade-in duration-700 bg-black/60 backdrop-blur-md">
            <div className="bg-[#2D1B2D]/90 backdrop-blur-3xl border-4 border-primary p-12 rounded-[4rem] text-center shadow-[0_0_120px_rgba(225,29,72,0.8)] romantic-glow">
-              <Trophy className="size-24 text-yellow-400 mx-auto mb-6 animate-pulse" />
-              <div className="space-y-2">
-                <h2 className="text-5xl font-black italic uppercase tracking-tighter text-white">BONUS UNLOCKED!</h2>
-                <div className="bg-primary px-6 py-2 rounded-2xl inline-block shadow-xl">
-                   <p className="text-2xl font-black text-white uppercase tracking-widest">{level.multiplier} BOOST ACTIVE</p>
+              <Trophy className="size-24 text-yellow-400 mx-auto mb-6 animate-bounce" />
+              <div className="space-y-4">
+                <h2 className="text-5xl font-black italic uppercase tracking-tighter text-white leading-none">GOAL REACHED!</h2>
+                <div className="bg-primary px-8 py-3 rounded-2xl inline-block shadow-2xl">
+                   <p className="text-3xl font-black text-white uppercase tracking-widest">{level.multiplier} MULTIPLIER ACTIVE</p>
                 </div>
               </div>
-              <p className="text-[12px] text-white/60 font-black uppercase mt-8 tracking-[0.6em] animate-pulse">Earning Rate Upgraded</p>
+              <p className="text-[12px] text-white/60 font-black uppercase mt-10 tracking-[0.6em] animate-pulse">Earning Levels Upgraded</p>
            </div>
         </div>
       )}
 
-      {/* 📊 MINI HUD (Minimalist to keep face clear) */}
-      <div className="bg-[#2D1B2D]/30 backdrop-blur-xl border border-white/5 rounded-3xl p-4 shadow-xl transition-all">
-        <div className="flex justify-between items-center mb-2">
+      {/* MINIMALIST HUD */}
+      <div className="bg-black/20 backdrop-blur-lg border border-white/5 rounded-[2rem] p-4 shadow-xl transition-all">
+        <div className="flex justify-between items-center mb-3">
           <div className="flex flex-col">
-            <h4 className="text-xs font-black text-white uppercase tracking-tight italic flex items-center gap-1">
+            <h4 className="text-[10px] font-black text-white uppercase tracking-widest italic flex items-center gap-2">
               {level.icon}
-              Multiplier: <span className="text-primary">{level.multiplier}</span> 
+              {level.multiplier} RATE
             </h4>
           </div>
           <div className="text-right flex flex-col items-end">
-            <p className="text-[10px] font-black text-white/40 uppercase tracking-widest italic">GOAL: {level.nextGoal}m</p>
+            <Badge className="bg-white/5 border-none text-primary font-black italic px-4 py-1 rounded-xl">
+              GOAL: {level.nextGoal}m
+            </Badge>
           </div>
         </div>
         
-        <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden border border-white/5">
+        <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden border border-white/5">
           <div 
             className={cn("h-full transition-all duration-1000 rounded-full", level.bar)}
             style={{ width: `${Math.min(progress, 100)}%` }}
@@ -108,3 +111,4 @@ export default function LiveEarningTimer({ minutes }: LiveEarningTimerProps) {
     </div>
   );
 }
+

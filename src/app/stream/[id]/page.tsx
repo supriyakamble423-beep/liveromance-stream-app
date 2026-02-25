@@ -6,12 +6,12 @@ import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import { 
   X, Eye, Heart, Send, 
-  Lock, Zap, UserPlus, ShieldOff, ShieldCheck, Check, Ban
+  Lock, Zap, UserPlus, ShieldOff, ShieldCheck, Check, Ban, Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useFirebase, useDoc, useMemoFirebase, useCollection } from "@/firebase";
-import { doc, collection, setDoc, serverTimestamp, query, orderBy, limit, where, updateDoc } from "firebase/firestore";
+import { doc, collection, setDoc, serverTimestamp, query, orderBy, limit, where, updateDoc, onSnapshot } from "firebase/firestore";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import LiveEarningTimer from "@/components/Stream/LiveEarningTimer";
@@ -26,49 +26,53 @@ export default function StreamPage() {
   const [inputText, setInputText] = useState("");
   const [streamMinutes, setStreamMinutes] = useState(0);
   const [requestPopup, setRequestPopup] = useState<{ id: string, name: string } | null>(null);
+  const [isUpdating, setIsUpdating] = useState(false);
   
   const chatEndRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
   
-  const isHost = user?.uid === id || id === 'simulate_host' || id === 'host_node' || id === 'host_node_active';
+  const isHost = user?.uid === id || id === 'simulate_host' || id === 'host_node_active';
+  const effectiveId = (id === 'simulate_host' || id === 'host_node_active') ? (user?.uid || 'simulate_host') : id;
 
   const hostRef = useMemoFirebase(() => {
-    if (!firestore || !id) return null;
-    const hostId = (id === 'simulate_host' || id === 'host_node' || id === 'host_node_active') ? (user?.uid || 'fake_host') : id;
-    return doc(firestore, 'hosts', hostId as string);
-  }, [firestore, id, user?.uid]);
+    if (!firestore || !effectiveId) return null;
+    return doc(firestore, 'hosts', effectiveId as string);
+  }, [firestore, effectiveId]);
 
   const { data: host, isLoading } = useDoc(hostRef);
 
-  const requestsQuery = useMemoFirebase(() => {
-    if (!firestore || !isHost) return null;
-    const hostId = (id === 'simulate_host' || id === 'host_node' || id === 'host_node_active') ? (user?.uid || 'fake_host') : id;
-    return query(
+  // Listen for Private Call Requests (A -> B Interaction)
+  useEffect(() => {
+    if (!firestore || !isHost || !effectiveId) return;
+
+    const q = query(
       collection(firestore, 'streamRequests'),
-      where('hostId', '==', hostId),
+      where('hostId', '==', effectiveId),
       where('status', '==', 'pending'),
       orderBy('timestamp', 'desc'),
       limit(1)
     );
-  }, [firestore, isHost, id, user?.uid]);
 
-  const { data: latestRequests } = useCollection(requestsQuery);
-
-  useEffect(() => {
-    if (latestRequests && latestRequests.length > 0) {
-      const req = latestRequests[0];
-      const reqTimestamp = req.timestamp?.toMillis() || Date.now();
-      const isFresh = (Date.now() - reqTimestamp < 5000);
-      
-      if (isFresh) {
-        setRequestPopup({ id: req.id, name: req.userName || 'Unknown User' });
-        const timer = setTimeout(() => setRequestPopup(null), 5000);
-        return () => clearTimeout(timer);
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      if (!snapshot.empty) {
+        const docData = snapshot.docs[0].data();
+        const docId = snapshot.docs[0].id;
+        
+        // Only show if the request is fresh (last 10 seconds)
+        const requestTime = docData.timestamp?.toMillis() || Date.now();
+        if (Date.now() - requestTime < 10000) {
+          setRequestPopup({ id: docId, name: docData.userName || 'Anonymous' });
+          // Auto-dismiss after 5 seconds
+          setTimeout(() => setRequestPopup(null), 5000);
+        }
       }
-    }
-  }, [latestRequests]);
+    });
 
+    return () => unsubscribe();
+  }, [firestore, isHost, effectiveId]);
+
+  // Track stream duration
   useEffect(() => {
     if (!isHost) return;
     const interval = setInterval(() => {
@@ -77,6 +81,7 @@ export default function StreamPage() {
     return () => clearInterval(interval);
   }, [isHost]);
 
+  // Camera initialization
   useEffect(() => {
     const getCameraPermission = async () => {
       if (!isHost) return;
@@ -88,18 +93,28 @@ export default function StreamPage() {
         setCameraStream(s);
         if (videoRef.current) videoRef.current.srcObject = s;
       } catch (error) {
-        toast({ variant: 'destructive', title: 'Camera Blocked', description: 'Face node requires camera access.' });
+        console.error("Camera access failed:", error);
+        toast({ 
+          variant: 'destructive', 
+          title: 'Camera Access Denied', 
+          description: 'Please enable camera permissions to stream.' 
+        });
       }
     };
     getCameraPermission();
-    return () => cameraStream?.getTracks().forEach(track => track.stop());
+    return () => {
+      cameraStream?.getTracks().forEach(track => track.stop());
+    };
   }, [isHost]);
 
+  // ONE-CLICK TRUE TOGGLE: Instantly updates Firestore
   const toggleStreamMode = async () => {
     if (!isHost || !hostRef) {
-      toast({ title: "Simulation: Mode Toggled" });
+      toast({ title: "Simulation: Mode Toggled locally" });
       return;
     }
+
+    setIsUpdating(true);
     const currentMode = host?.streamType || 'public';
     const nextMode = currentMode === 'public' ? 'private' : 'public';
 
@@ -108,22 +123,29 @@ export default function StreamPage() {
         streamType: nextMode,
         updatedAt: serverTimestamp() 
       }, { merge: true });
-      toast({ title: `SIGNAL: ${nextMode.toUpperCase()} ACTIVE` });
+      
+      toast({ 
+        title: `SIGNAL: ${nextMode.toUpperCase()} ACTIVE`,
+        description: nextMode === 'private' ? "Encrypted session started." : "Broadcast is now public."
+      });
     } catch (e) {
-      toast({ variant: "destructive", title: "Sync Failed" });
+      console.error("Toggle error:", e);
+      toast({ variant: "destructive", title: "Update Failed", description: "Could not sync with grid." });
+    } finally {
+      setIsUpdating(false);
     }
   };
 
+  // MANUAL BLUR (Only for Private Mode)
   const toggleManualBlur = async () => {
     if (!isHost || !hostRef) return;
-    const currentBlur = host?.manualBlur || false;
     try {
-      await setDoc(hostRef, { 
-        manualBlur: !currentBlur,
+      await updateDoc(hostRef, { 
+        manualBlur: !host?.manualBlur,
         updatedAt: serverTimestamp() 
-      }, { merge: true });
+      });
     } catch (e) {
-      toast({ variant: "destructive", title: "Update Failed" });
+      toast({ variant: "destructive", title: "Sync Error", description: "Privacy mask failed." });
     }
   };
 
@@ -132,42 +154,41 @@ export default function StreamPage() {
     try {
       await updateDoc(doc(firestore, 'streamRequests', requestId), { status: action });
       setRequestPopup(null);
-      toast({ title: action === 'approved' ? "Call Accepted" : "Call Rejected" });
+      toast({ 
+        title: action === 'approved' ? "Call Accepted" : "Call Rejected",
+        variant: action === 'approved' ? 'default' : 'destructive'
+      });
     } catch (e) {
-      console.error(e);
+      toast({ variant: 'destructive', title: 'Error', description: 'Action failed.' });
     }
   };
 
   const endStream = async () => {
-    if (isHost && hostRef) {
-      await setDoc(hostRef, { isLive: false, updatedAt: serverTimestamp() }, { merge: true });
+    if (confirm("End your live broadcast?")) {
+      if (isHost && hostRef) {
+        try {
+          await updateDoc(hostRef, { isLive: false, updatedAt: serverTimestamp() });
+        } catch (e) { console.error(e); }
+      }
+      router.push('/host-p');
     }
-    router.push('/host-p');
   };
 
   if (isLoading && areServicesAvailable) {
     return (
       <div className="h-screen bg-background flex flex-col items-center justify-center mesh-gradient">
-        <div className="size-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+        <Loader2 className="size-12 border-primary animate-spin text-primary" />
       </div>
     );
   }
 
-  const displayHost = host || {
-    username: isHost ? (user?.displayName || 'My Signal') : 'Live Node',
-    previewImageUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${id || 'default'}`,
-    viewers: 0,
-    streamType: 'public',
-    manualBlur: false
-  };
-
-  const isPrivate = displayHost.streamType === 'private';
-  const shouldBlurVideo = (isPrivate || displayHost.manualBlur) && !isHost;
-  const hostPreviewBlur = isHost && (isPrivate || displayHost.manualBlur);
+  const isPrivateMode = host?.streamType === 'private';
+  const displayUsername = host?.username || (isHost ? (user?.displayName || 'My Live') : 'Live Node');
+  const displayImage = host?.previewImageUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${displayUsername}`;
 
   return (
     <div className="relative h-screen w-full flex flex-col overflow-hidden bg-black mx-auto max-w-lg border-x border-white/10 screen-guard-active">
-      {/* Background Feed */}
+      {/* BACKGROUND FEED */}
       <div className="absolute inset-0 z-0 bg-black">
         {isHost ? (
           <video 
@@ -175,21 +196,24 @@ export default function StreamPage() {
             autoPlay 
             playsInline 
             muted 
-            className={cn("w-full h-full object-cover scale-x-[-1]", hostPreviewBlur && "blur-3xl opacity-60")} 
+            className={cn(
+              "w-full h-full object-cover scale-x-[-1]", 
+              (isPrivateMode || host?.manualBlur) && "blur-3xl opacity-60"
+            )} 
           />
         ) : (
           <div className="relative w-full h-full">
             <Image 
-              src={displayHost.previewImageUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${id}`} 
+              src={displayImage} 
               alt="Stream" 
               fill 
-              className={cn("object-cover", shouldBlurVideo ? "blur-3xl opacity-40" : "opacity-90")} 
+              className={cn("object-cover", (isPrivateMode || host?.manualBlur) ? "blur-3xl opacity-40" : "opacity-90")} 
             />
-            {isPrivate && !isHost && (
+            {isPrivateMode && (
               <div className="absolute inset-0 bg-black/40 backdrop-blur-xl flex flex-col items-center justify-center space-y-6 px-10 text-center">
                 <Lock className="size-12 text-primary animate-pulse" />
                 <Button className="h-16 rounded-[2rem] bg-primary px-10 text-white font-black uppercase tracking-widest gap-2 shadow-2xl shadow-primary/40 text-sm border-none">
-                  <Zap className="size-5 fill-current" /> Unlock for 50 Coins
+                  <Zap className="size-5 fill-current" /> Unlock Private Entry
                 </Button>
               </div>
             )}
@@ -198,39 +222,41 @@ export default function StreamPage() {
         <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/80 pointer-events-none" />
       </div>
 
-      {/* TOP CONTROLS: True Mode Toggle & Blur Button */}
+      {/* TOP CONTROLS: Mode Toggle & Privacy Mask */}
       <div className="absolute top-8 left-0 right-0 z-[60] flex justify-center px-6 pointer-events-none">
          <div className="flex gap-3 pointer-events-auto items-center">
             {isHost && (
               <>
                 <Button 
                   onClick={toggleStreamMode}
+                  disabled={isUpdating}
                   className={cn(
                     "h-12 px-8 rounded-full text-[10px] font-black uppercase tracking-[0.2em] border-none shadow-2xl transition-all active:scale-95",
-                    isPrivate ? "bg-red-600 text-white animate-pulse" : "bg-green-500 text-white"
+                    isPrivateMode ? "bg-red-600 text-white animate-pulse" : "bg-green-500 text-white"
                   )}
                 >
-                  {isPrivate ? <Lock className="size-4 mr-2" /> : <Zap className="size-4 mr-2 fill-current text-amber-300" />}
-                  {isPrivate ? "MODE: PRIVATE" : "MODE: PUBLIC"}
+                  {isUpdating ? <Loader2 className="size-4 mr-2 animate-spin" /> : isPrivateMode ? <Lock className="size-4 mr-2" /> : <Zap className="size-4 mr-2 fill-current text-amber-300" />}
+                  {isPrivateMode ? "MODE: PRIVATE" : "MODE: PUBLIC"}
                 </Button>
                 
-                {isPrivate && (
+                {/* BLUR BUTTON: Only visible in Private Mode */}
+                {isPrivateMode && (
                   <Button 
                     onClick={toggleManualBlur}
                     size="icon"
                     className={cn(
                       "h-12 w-12 rounded-full border-none shadow-2xl transition-all active:scale-95",
-                      displayHost.manualBlur ? "bg-primary text-white" : "bg-white/10 text-white/60 backdrop-blur-md border border-white/10"
+                      host?.manualBlur ? "bg-primary text-white" : "bg-white/10 text-white/60 backdrop-blur-md border border-white/10"
                     )}
                   >
-                    {displayHost.manualBlur ? <ShieldOff className="size-5" /> : <ShieldCheck className="size-5" />}
+                    {host?.manualBlur ? <ShieldOff className="size-5" /> : <ShieldCheck className="size-5" />}
                   </Button>
                 )}
               </>
             )}
             {!isHost && (
               <Badge className="h-10 px-6 rounded-full bg-black/40 backdrop-blur-md border border-white/10 text-[10px] font-black uppercase tracking-widest text-white">
-                <Eye className="size-3 mr-2 text-primary" /> {displayHost.viewers || 0}
+                <Eye className="size-3 mr-2 text-primary" /> {host?.viewers || 0}
               </Badge>
             )}
          </div>
@@ -238,54 +264,53 @@ export default function StreamPage() {
 
       {isHost && <LiveEarningTimer minutes={streamMinutes} />}
 
-      {/* PRIVATE REQUEST POPUP: 5-Second Automatic UI */}
+      {/* PRIVATE REQUEST POPUP: 5-Second Centered Overlay */}
       {isHost && requestPopup && (
         <div className="absolute top-1/2 left-6 right-6 -translate-y-1/2 z-[100] animate-in zoom-in fade-in duration-500">
            <div className="romantic-gradient p-8 rounded-[3rem] shadow-[0_20px_60px_rgba(225,29,72,0.5)] flex flex-col items-center text-center space-y-6 border border-white/20 romantic-glow">
-              <div className="size-20 rounded-[2rem] bg-white/20 flex items-center justify-center relative overflow-hidden">
+              <div className="size-20 rounded-[2rem] bg-white/20 flex items-center justify-center">
                  <UserPlus className="size-10 text-white" />
-                 <div className="absolute inset-0 bg-white/10 animate-pulse" />
               </div>
               <div className="space-y-1">
-                 <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/70">Private Call Request</p>
-                 <h3 className="text-xl font-black text-white italic uppercase tracking-tighter leading-tight">
+                 <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/70">Private Session Request</p>
+                 <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">
                    @{requestPopup.name} wants a Private Call
                  </h3>
               </div>
-              <div className="flex gap-3 w-full">
+              <div className="flex gap-3 w-full pt-2">
                 <Button 
                   onClick={() => handleRequestAction(requestPopup.id, 'approved')}
-                  className="flex-1 h-14 rounded-2xl bg-white text-primary font-black uppercase text-[10px] tracking-widest border-none shadow-xl hover:scale-105"
+                  className="flex-1 h-14 rounded-2xl bg-white text-primary font-black uppercase text-[10px] tracking-widest border-none"
                 >
                   <Check className="size-4 mr-2" /> Accept
                 </Button>
                 <Button 
                   onClick={() => handleRequestAction(requestPopup.id, 'rejected')}
                   variant="outline"
-                  className="flex-1 h-14 rounded-2xl border-white/20 bg-black/20 text-white font-black uppercase text-[10px] tracking-widest hover:bg-black/40"
+                  className="flex-1 h-14 rounded-2xl border-white/20 bg-black/20 text-white font-black uppercase text-[10px] tracking-widest"
                 >
                   <Ban className="size-4 mr-2" /> Reject
                 </Button>
               </div>
-              <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden mt-2">
+              <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden mt-4">
                 <div className="h-full bg-white animate-[progress_5s_linear_forwards]" />
               </div>
            </div>
         </div>
       )}
 
-      {/* HEADER: Clean UI */}
+      {/* HEADER: Clean & Minimalist */}
       <header className="relative z-10 flex items-center justify-between px-6 pt-24 pb-4 mt-20">
         <div className="flex items-center gap-4 glass-effect rounded-full p-1.5 pr-6 bg-black/40 backdrop-blur-xl border border-white/10 shadow-lg">
           <div className="relative size-14 rounded-full border-2 border-primary overflow-hidden bg-slate-900 shadow-inner">
             <Image 
-              src={displayHost.previewImageUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${displayHost.username}`} 
+              src={displayImage} 
               alt="Profile" 
               fill 
               className="object-cover" 
             />
           </div>
-          <h3 className="text-sm font-black text-white uppercase tracking-tighter italic">@{displayHost.username}</h3>
+          <h3 className="text-sm font-black text-white uppercase tracking-tighter italic">@{displayUsername}</h3>
         </div>
         
         <div className="flex gap-3">
@@ -301,26 +326,29 @@ export default function StreamPage() {
         </div>
       </header>
 
-      {/* BOTTOM AREA: Chat & Interaction */}
+      {/* CHAT AREA */}
       <div className="flex-1 relative z-10 flex flex-col justify-end px-6 pb-12">
         <div className="w-full max-w-[85%] flex flex-col gap-3 overflow-y-auto max-h-[25vh] mb-8 no-scrollbar">
             <div className="px-5 py-3.5 rounded-[1.5rem] max-w-fit bg-black/60 backdrop-blur-xl border border-white/10 shadow-2xl">
               <p className="text-[11px] text-white font-medium leading-relaxed uppercase tracking-tight">
                 <span className="font-black mr-2 text-primary">Sentinel:</span>
-                <span className="opacity-80">{isPrivate ? "Encryption Active. Private Mode Engaged." : "Broadcast is Public. Stay Safe."}</span>
+                <span className="opacity-80">
+                  {isPrivateMode ? "Encrypted Signal Active. Only Invited Nodes Can View." : "Public Signal Active. Global Marketplace Discovery Enabled."}
+                </span>
               </p>
             </div>
           <div ref={chatEndRef} />
         </div>
 
-        {!isPrivate && (
+        {/* INTERACTION BAR (Hidden if Private & Not Host) */}
+        {(!isPrivateMode || isHost) && (
           <footer className="flex items-center gap-4 w-full animate-in slide-in-from-bottom-6 duration-500">
             <div className="flex-1 flex items-center glass-effect rounded-[2.5rem] px-8 h-16 bg-white/5 border-white/10 backdrop-blur-2xl">
               <Input 
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
                 className="bg-transparent border-none focus-visible:ring-0 text-white placeholder-white/20 font-black text-xs uppercase tracking-widest" 
-                placeholder="Send a message..." 
+                placeholder="Send a secure message..." 
               />
               <button onClick={() => setInputText("")} className="ml-3 text-primary hover:scale-125 transition-transform active:scale-95">
                 <Send className="size-7" />
@@ -342,3 +370,4 @@ export default function StreamPage() {
     </div>
   );
 }
+
