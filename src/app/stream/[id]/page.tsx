@@ -11,15 +11,15 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useFirebase, useDoc, useMemoFirebase } from "@/firebase";
-import { doc, collection, addDoc, serverTimestamp, query, orderBy, limit, where, updateDoc, onSnapshot } from "firebase/firestore";
+import { doc, collection, addDoc, serverTimestamp, query, orderBy, limit, where, updateDoc, onSnapshot, setDoc } from "firebase/firestore";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import LiveEarningTimer from "@/components/Stream/LiveEarningTimer";
 import { Badge } from "@/components/ui/badge";
 
 /**
- * Advanced Agent-Optimized Stream Page
- * Logic: One-Click Toggle, Private Request Flow, Real-time Sync.
+ * 🚀 World-Class Agent-Optimized Stream Page
+ * Fix: Removed "Host Node" labels, cleaned UI overlap, fixed True Toggle.
  */
 export default function StreamPage() {
   const { id } = useParams();
@@ -31,16 +31,14 @@ export default function StreamPage() {
   const [streamMinutes, setStreamMinutes] = useState(0);
   const [requestPopup, setRequestPopup] = useState<{ id: string, name: string } | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
-  
-  // User side states
   const [requestStatus, setRequestStatus] = useState<'idle' | 'pending' | 'approved' | 'rejected'>('idle');
   const [activeRequestId, setActiveRequestId] = useState<string | null>(null);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
   
-  const isHost = user?.uid === id || id === 'simulate_host' || id === 'host_node_active';
-  const effectiveId = (id === 'simulate_host' || id === 'host_node_active') ? (user?.uid || 'simulate_host') : id;
+  const isHost = user?.uid === id || id === 'simulate_host';
+  const effectiveId = (id === 'simulate_host') ? (user?.uid || 'simulate_host') : id;
 
   const hostRef = useMemoFirebase(() => {
     if (!firestore || !effectiveId) return null;
@@ -74,8 +72,9 @@ export default function StreamPage() {
         const docId = snapshot.docs[0].id;
         const requestTime = docData.timestamp?.toMillis() || Date.now();
         
+        // Show popup only if request is recent (last 15s)
         if (Date.now() - requestTime < 15000) {
-          setRequestPopup({ id: docId, name: docData.userName || 'Anonymous User' });
+          setRequestPopup({ id: docId, name: docData.userName || 'Anonymous' });
           setTimeout(() => setRequestPopup(null), 5000);
         }
       }
@@ -93,9 +92,9 @@ export default function StreamPage() {
         const status = docSnap.data().status;
         setRequestStatus(status);
         if (status === 'approved') {
-          toast({ title: "Request Accepted!", description: "Joining private session..." });
+          toast({ title: "Request Accepted!", description: "Private session active." });
         } else if (status === 'rejected') {
-          toast({ variant: "destructive", title: "Request Declined", description: "Host is busy right now." });
+          toast({ variant: "destructive", title: "Request Declined" });
           setActiveRequestId(null);
         }
       }
@@ -137,12 +136,15 @@ export default function StreamPage() {
     setIsUpdating(true);
     const nextMode = host?.streamType === 'public' ? 'private' : 'public';
     try {
-      await updateDoc(hostRef, { streamType: nextMode, updatedAt: serverTimestamp() });
+      await setDoc(hostRef, { 
+        streamType: nextMode, 
+        isLive: true,
+        updatedAt: serverTimestamp() 
+      }, { merge: true });
       toast({ title: `MODE: ${nextMode.toUpperCase()}` });
     } catch (e) {
-      toast({ variant: "destructive", title: "Sync failed" });
+      toast({ variant: "destructive", title: "Update failed" });
     } finally {
-      setIsUpdating(true);
       setTimeout(() => setIsUpdating(false), 500);
     }
   };
@@ -152,21 +154,17 @@ export default function StreamPage() {
       toast({ variant: "destructive", title: "Login required" });
       return;
     }
-
-    // 1. Wallet Check
     const minRate = 50;
     if ((userData?.coins || 0) < minRate) {
-      toast({ variant: "destructive", title: "Low Balance", description: "You need at least 50 coins for a private session." });
+      toast({ variant: "destructive", title: "Low Balance", description: "Min 50 coins required." });
       return;
     }
-
-    // 2. Send Request
     setRequestStatus('pending');
     try {
       const docRef = await addDoc(collection(firestore, 'streamRequests'), {
         hostId: effectiveId,
         userId: user.uid,
-        userName: user.displayName || 'Guest User',
+        userName: user.displayName || 'Anonymous User',
         status: 'pending',
         timestamp: serverTimestamp(),
         amount: minRate
@@ -202,14 +200,14 @@ export default function StreamPage() {
   }
 
   const isPrivateMode = host?.streamType === 'private';
+  const isUnlocked = requestStatus === 'approved' || isHost;
   const displayUsername = host?.username || 'Host';
   const displayImage = host?.previewImageUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${effectiveId}`;
-  const isUnlocked = requestStatus === 'approved' || isHost;
 
   return (
     <div className="relative h-screen w-full flex flex-col overflow-hidden bg-black mx-auto max-w-lg border-x border-white/10">
       
-      {/* BACKGROUND FEED */}
+      {/* BACKGROUND VIDEO/IMAGE */}
       <div className="absolute inset-0 z-0 bg-black">
         {isHost ? (
           <video ref={videoRef} autoPlay playsInline muted className={cn("w-full h-full object-cover scale-x-[-1] transition-all", (isPrivateMode || host?.manualBlur) && "blur-3xl opacity-60")} />
@@ -221,17 +219,16 @@ export default function StreamPage() {
               <div className="absolute inset-0 bg-black/40 backdrop-blur-xl flex flex-col items-center justify-center p-8 space-y-6 text-center">
                 <Lock className="size-16 text-primary animate-pulse" />
                 <div className="space-y-2">
-                  <h2 className="text-2xl font-black uppercase italic italic text-white">Private Session</h2>
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Host is in stealth mode. Request access to unlock.</p>
+                  <h2 className="text-2xl font-black uppercase italic text-white">Private Session</h2>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Host is in stealth mode. Request access.</p>
                 </div>
-                
                 {requestStatus === 'pending' ? (
                   <div className="flex flex-col items-center gap-4">
                     <Loader2 className="size-10 text-primary animate-spin" />
-                    <p className="text-xs font-black text-white uppercase animate-pulse">Waiting for Host to Accept...</p>
+                    <p className="text-xs font-black text-white uppercase animate-pulse">Waiting for Accept...</p>
                   </div>
                 ) : (
-                  <Button onClick={handleRequestPrivate} className="h-16 rounded-full bg-primary px-10 text-white font-black uppercase tracking-widest gap-2 shadow-2xl shadow-primary/40">
+                  <Button onClick={handleRequestPrivate} className="h-16 rounded-full bg-primary px-10 text-white font-black uppercase tracking-widest gap-2 shadow-2xl">
                     <Zap className="size-5 fill-current" /> Request Private (50 Coins)
                   </Button>
                 )}
@@ -242,7 +239,7 @@ export default function StreamPage() {
         <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/80" />
       </div>
 
-      {/* TOP CONTROLS */}
+      {/* TOP CONTROLS (MODE TOGGLE) */}
       <div className="absolute top-10 left-0 right-0 z-[60] flex justify-center px-6">
          <div className="flex gap-3 items-center">
             {isHost && (
@@ -278,16 +275,21 @@ export default function StreamPage() {
          </div>
       </div>
 
-      {isHost && <LiveEarningTimer minutes={streamMinutes} />}
+      {/* REVENUE BADGE (MOVED TO CORNER TO PREVENT FACE BLOCK) */}
+      {isHost && (
+        <div className="absolute top-24 right-6 z-50">
+          <LiveEarningTimer minutes={streamMinutes} />
+        </div>
+      )}
 
-      {/* PRIVATE REQUEST POPUP (HOST SIDE) */}
+      {/* PRIVATE REQUEST POPUP (CENTERED) */}
       {isHost && requestPopup && (
-        <div className="absolute top-1/2 left-6 right-6 -translate-y-1/2 z-[100] animate-in zoom-in fade-in duration-500">
-           <div className="romantic-gradient p-8 rounded-[3rem] shadow-[0_20px_60px_rgba(225,29,72,0.5)] flex flex-col items-center text-center space-y-6 border border-white/20">
+        <div className="absolute inset-0 flex items-center justify-center z-[100] px-6 pointer-events-none">
+           <div className="romantic-gradient p-8 rounded-[3rem] shadow-[0_20px_60px_rgba(225,29,72,0.5)] flex flex-col items-center text-center space-y-6 border border-white/20 pointer-events-auto animate-in zoom-in duration-300">
               <div className="size-20 rounded-[2rem] bg-white/20 flex items-center justify-center"><UserPlus className="size-10 text-white" /></div>
               <div className="space-y-1">
-                 <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/70">Private Invitation</p>
-                 <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">@{requestPopup.name} wants a Private Call</h3>
+                 <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/70">Incoming Private Request</p>
+                 <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">@{requestPopup.name} is waiting</h3>
               </div>
               <div className="flex gap-3 w-full">
                 <Button onClick={() => handleRequestAction(requestPopup.id, 'approved')} className="flex-1 h-14 rounded-2xl bg-white text-primary font-black uppercase text-[10px] border-none shadow-xl"><Check className="size-4 mr-2" /> Accept</Button>
@@ -298,11 +300,11 @@ export default function StreamPage() {
         </div>
       )}
 
-      {/* HEADER */}
-      <header className="relative z-10 flex items-center justify-between px-6 pt-24 pb-4">
+      {/* HEADER (CLEAN - NO EXTRA LABELS) */}
+      <header className="relative z-10 flex items-center justify-between px-6 mt-32 mb-4">
         <div className="flex items-center gap-4 glass-effect rounded-full p-1.5 pr-6 bg-black/40 backdrop-blur-xl border border-white/10">
           <div className="relative size-12 rounded-full border-2 border-primary overflow-hidden">
-            <Image src={displayImage} alt="User" fill className="object-cover" />
+            <Image src={displayImage} alt="Profile" fill className="object-cover" />
           </div>
           <h3 className="text-sm font-black text-white uppercase tracking-tighter italic">@{displayUsername}</h3>
         </div>
@@ -323,7 +325,7 @@ export default function StreamPage() {
               <p className="text-[11px] text-white font-medium leading-relaxed uppercase">
                 <span className="font-black mr-2 text-primary">System:</span>
                 <span className="opacity-80">
-                  {isPrivateMode ? "Secure Encryption Active. Only accepted guests can view clearly." : "Public Discovery Active. Signal is live to world marketplace."}
+                  {isPrivateMode ? "Encryption Active. Signal is secure." : "Public Discovery Active. Visible to marketplace."}
                 </span>
               </p>
             </div>
