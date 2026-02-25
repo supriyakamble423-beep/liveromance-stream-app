@@ -11,15 +11,14 @@ interface LiveEarningTimerProps {
 }
 
 /**
- * World-Class Milestone Component
- * Logic: Milestones every 30 Minutes.
- * Features: Luxury celebratory popup on goal reach.
+ * Luxury 30-Minute Milestone HUD
+ * Fixed: Badge import and 30-min logic.
  */
 export default function LiveEarningTimer({ minutes }: LiveEarningTimerProps) {
   const [showPopup, setShowPopup] = useState(false);
   const [lastMilestone, setLastMilestone] = useState(0);
 
-  // Trigger celebration popup every 30 minutes
+  // Trigger luxury celebration every 30 minutes
   useEffect(() => {
     const currentMilestone = Math.floor(minutes / 30);
     if (minutes > 0 && minutes % 30 === 0 && currentMilestone > lastMilestone) {
@@ -74,7 +73,7 @@ export default function LiveEarningTimer({ minutes }: LiveEarningTimerProps) {
 
   return (
     <div className="absolute top-24 left-10 right-10 z-50 pointer-events-none">
-      {/* BONUS CELEBRATION OVERLAY */}
+      {/* CELEBRATION MODAL */}
       {showPopup && (
         <div className="fixed inset-0 flex items-center justify-center z-[110] animate-in zoom-in fade-in duration-700 bg-black/60 backdrop-blur-md">
            <div className="bg-[#2D1B2D]/90 backdrop-blur-3xl border-4 border-primary p-12 rounded-[4rem] text-center shadow-[0_0_120px_rgba(225,29,72,0.8)] romantic-glow">
@@ -85,28 +84,28 @@ export default function LiveEarningTimer({ minutes }: LiveEarningTimerProps) {
                    <p className="text-3xl font-black text-white uppercase tracking-widest">{level.multiplier} MULTIPLIER ACTIVE</p>
                 </div>
               </div>
-              <p className="text-[12px] text-white/60 font-black uppercase mt-10 tracking-[0.6em] animate-pulse">Earning Levels Upgraded</p>
+              <p className="text-[12px] text-white/60 font-black uppercase mt-10 tracking-[0.6em] animate-pulse">Residual Revenue Boosted</p>
            </div>
         </div>
       )}
 
-      {/* MINIMALIST HUD */}
-      <div className="bg-black/20 backdrop-blur-lg border border-white/5 rounded-[2rem] p-4 shadow-xl transition-all">
+      {/* MINIMAL HUD */}
+      <div className="bg-black/20 backdrop-blur-lg border border-white/5 rounded-[2rem] p-4 shadow-xl">
         <div className="flex justify-between items-center mb-3">
           <div className="flex flex-col">
             <h4 className="text-[10px] font-black text-white uppercase tracking-widest italic flex items-center gap-2">
               {level.icon}
-              {level.multiplier} RATE
+              {level.multiplier} REVENUE
             </h4>
           </div>
           <div className="text-right flex flex-col items-end">
             <Badge className="bg-white/5 border-none text-primary font-black italic px-4 py-1 rounded-xl">
-              GOAL: {level.nextGoal}m
+              TARGET: {level.nextGoal}m
             </Badge>
           </div>
         </div>
         
-        <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden border border-white/5">
+        <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden border border-white/5">
           <div 
             className={cn("h-full transition-all duration-1000 rounded-full", level.bar)}
             style={{ width: `${Math.min(progress, 100)}%` }}

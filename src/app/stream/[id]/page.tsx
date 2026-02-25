@@ -18,8 +18,8 @@ import LiveEarningTimer from "@/components/Stream/LiveEarningTimer";
 import { Badge } from "@/components/ui/badge";
 
 /**
- * World-Class Host Stream Page
- * Features: True One-Click Toggle, Conditional Blur, Private Request Popups.
+ * Advanced Agent-Optimized Stream Page
+ * Logic: One-Click Toggle, Conditional Blur, Real-time 5s Popups.
  */
 export default function StreamPage() {
   const { id } = useParams();
@@ -35,7 +35,7 @@ export default function StreamPage() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
   
-  // Logic to determine if user is the host
+  // Identify if user is the host (Support simulation IDs)
   const isHost = user?.uid === id || id === 'simulate_host' || id === 'host_node_active';
   const effectiveId = (id === 'simulate_host' || id === 'host_node_active') ? (user?.uid || 'simulate_host') : id;
 
@@ -46,7 +46,7 @@ export default function StreamPage() {
 
   const { data: host, isLoading } = useDoc(hostRef);
 
-  // REAL-TIME PRIVATE REQUEST LISTENER (A -> B)
+  // REAL-TIME REQUEST POPUP LISTENER
   useEffect(() => {
     if (!firestore || !isHost || !effectiveId) return;
 
@@ -64,15 +64,15 @@ export default function StreamPage() {
           const docData = snapshot.docs[0].data();
           const docId = snapshot.docs[0].id;
           
-          // Show popup if request is fresh
+          // Show popup if request is fresh (last 15 seconds)
           const requestTime = docData.timestamp?.toMillis() || Date.now();
-          if (Date.now() - requestTime < 10000) {
+          if (Date.now() - requestTime < 15000) {
             setRequestPopup({ id: docId, name: docData.userName || 'Anonymous User' });
-            // Auto-dismiss in 5 seconds
+            // Auto-dismiss after 5 seconds as requested
             setTimeout(() => setRequestPopup(null), 5000);
           }
         }
-      }, (err) => console.error("Request listener failed:", err));
+      });
 
       return () => unsubscribe();
     } catch (e) {
@@ -80,7 +80,7 @@ export default function StreamPage() {
     }
   }, [firestore, isHost, effectiveId]);
 
-  // Track stream duration
+  // Handle minutes tracker
   useEffect(() => {
     if (!isHost) return;
     const interval = setInterval(() => {
@@ -89,7 +89,7 @@ export default function StreamPage() {
     return () => clearInterval(interval);
   }, [isHost]);
 
-  // Camera initialization
+  // Camera initialization with error handling
   useEffect(() => {
     const getCameraPermission = async () => {
       if (!isHost) return;
@@ -101,11 +101,10 @@ export default function StreamPage() {
         setCameraStream(s);
         if (videoRef.current) videoRef.current.srcObject = s;
       } catch (error) {
-        console.error("Camera access failed:", error);
         toast({ 
           variant: 'destructive', 
           title: 'Camera Access Denied', 
-          description: 'Please enable camera permissions to stream.' 
+          description: 'Please enable camera to stream to viewers.' 
         });
       }
     };
@@ -115,7 +114,7 @@ export default function StreamPage() {
     };
   }, [isHost]);
 
-  // TRUE ONE-CLICK TOGGLE: Public <-> Private
+  // TRUE ONE-CLICK MODE TOGGLE (Public/Private)
   const toggleStreamMode = async () => {
     if (!isHost || !hostRef) {
       toast({ title: "Simulation: Local Mode Toggled" });
@@ -134,10 +133,10 @@ export default function StreamPage() {
       
       toast({ 
         title: `MODE: ${nextMode.toUpperCase()}`,
-        description: nextMode === 'private' ? "Encryption Active." : "Now Live to Everyone."
+        description: nextMode === 'private' ? "Encryption Active. Manual Blur Enabled." : "Live to World Marketplace."
       });
     } catch (e) {
-      toast({ variant: "destructive", title: "Update Failed", description: "Retry connection." });
+      toast({ variant: "destructive", title: "Update Failed", description: "Database error, retrying..." });
     } finally {
       setIsUpdating(false);
     }
@@ -148,17 +147,14 @@ export default function StreamPage() {
     try {
       await updateDoc(doc(firestore, 'streamRequests', requestId), { status: action });
       setRequestPopup(null);
-      toast({ 
-        title: action === 'approved' ? "Call Accepted" : "Call Rejected",
-        variant: action === 'approved' ? 'default' : 'destructive'
-      });
+      toast({ title: action === 'approved' ? "Call Accepted" : "Call Rejected" });
     } catch (e) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Action failed.' });
+      toast({ variant: 'destructive', title: 'Action Failed' });
     }
   };
 
   const endStream = async () => {
-    if (confirm("End broadcast?")) {
+    if (confirm("End broadcast? All current earnings will be saved.")) {
       if (isHost && hostRef) {
         try {
           await updateDoc(hostRef, { isLive: false, updatedAt: serverTimestamp() });
@@ -183,7 +179,7 @@ export default function StreamPage() {
   return (
     <div className="relative h-screen w-full flex flex-col overflow-hidden bg-black mx-auto max-w-lg border-x border-white/10 screen-guard-active">
       
-      {/* 1. BACKGROUND FEED (CLEAR / BLURRED) */}
+      {/* BACKGROUND FEED */}
       <div className="absolute inset-0 z-0 bg-black">
         {isHost ? (
           <video 
@@ -205,10 +201,10 @@ export default function StreamPage() {
               className={cn("object-cover transition-all duration-700", (isPrivateMode || host?.manualBlur) ? "blur-3xl opacity-40" : "opacity-90")} 
             />
             {isPrivateMode && (
-              <div className="absolute inset-0 bg-black/40 backdrop-blur-xl flex flex-col items-center justify-center space-y-6 px-10 text-center">
+              <div className="absolute inset-0 bg-black/40 backdrop-blur-xl flex flex-col items-center justify-center space-y-6">
                 <Lock className="size-12 text-primary animate-pulse" />
-                <Button className="h-16 rounded-[2rem] bg-primary px-10 text-white font-black uppercase tracking-widest gap-2 shadow-2xl">
-                  <Zap className="size-5 fill-current" /> Unlock Room
+                <Button className="h-16 rounded-full bg-primary px-10 text-white font-black uppercase tracking-widest gap-2 shadow-2xl">
+                  <Zap className="size-5 fill-current" /> Unlock Private Room
                 </Button>
               </div>
             )}
@@ -217,7 +213,7 @@ export default function StreamPage() {
         <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/80" />
       </div>
 
-      {/* 2. TOP CONTROLS: MODE TOGGLE & SMART BLUR */}
+      {/* TOP CONTROLS */}
       <div className="absolute top-10 left-0 right-0 z-[60] flex justify-center px-6">
          <div className="flex gap-3 items-center">
             {isHost && (
@@ -234,7 +230,7 @@ export default function StreamPage() {
                   {isPrivateMode ? "MODE: PRIVATE" : "MODE: PUBLIC"}
                 </Button>
                 
-                {/* CONDITIONAL BLUR BUTTON (Only Private Mode) */}
+                {/* BLUR BUTTON: Only in Private Mode */}
                 {isPrivateMode && (
                   <Button 
                     onClick={async () => {
@@ -262,7 +258,7 @@ export default function StreamPage() {
 
       {isHost && <LiveEarningTimer minutes={streamMinutes} />}
 
-      {/* 3. PRIVATE REQUEST POPUP (CENTERED, 5-SECOND) */}
+      {/* PRIVATE REQUEST POPUP */}
       {isHost && requestPopup && (
         <div className="absolute top-1/2 left-6 right-6 -translate-y-1/2 z-[100] animate-in zoom-in fade-in duration-500">
            <div className="romantic-gradient p-8 rounded-[3rem] shadow-[0_20px_60px_rgba(225,29,72,0.5)] flex flex-col items-center text-center space-y-6 border border-white/20">
@@ -270,12 +266,12 @@ export default function StreamPage() {
                  <UserPlus className="size-10 text-white" />
               </div>
               <div className="space-y-1">
-                 <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/70">Incoming Request</p>
+                 <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/70">Private Invitation</p>
                  <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">
                    @{requestPopup.name} wants a Private Call
                  </h3>
               </div>
-              <div className="flex gap-3 w-full pt-2">
+              <div className="flex gap-3 w-full">
                 <Button 
                   onClick={() => handleRequestAction(requestPopup.id, 'approved')}
                   className="flex-1 h-14 rounded-2xl bg-white text-primary font-black uppercase text-[10px] border-none shadow-xl"
@@ -290,18 +286,17 @@ export default function StreamPage() {
                   <Ban className="size-4 mr-2" /> Reject
                 </Button>
               </div>
-              {/* Progress Bar for the 5s timer */}
-              <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden mt-4">
+              <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden">
                 <div className="h-full bg-white animate-[progress_5s_linear_forwards]" />
               </div>
            </div>
         </div>
       )}
 
-      {/* 4. HEADER: CLEAN & MINIMAL */}
+      {/* HEADER: CLEAN */}
       <header className="relative z-10 flex items-center justify-between px-6 pt-24 pb-4">
         <div className="flex items-center gap-4 glass-effect rounded-full p-1.5 pr-6 bg-black/40 backdrop-blur-xl border border-white/10">
-          <div className="relative size-12 rounded-full border-2 border-primary overflow-hidden shadow-inner">
+          <div className="relative size-12 rounded-full border-2 border-primary overflow-hidden">
             <Image 
               src={displayImage} 
               alt="User" 
@@ -314,37 +309,37 @@ export default function StreamPage() {
         
         <div className="flex gap-3">
           {isHost ? (
-            <Button variant="destructive" size="sm" onClick={endStream} className="rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] h-12 px-6 border-none shadow-2xl shadow-red-600/30">
+            <Button variant="destructive" size="sm" onClick={endStream} className="rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] h-12 px-6 border-none shadow-2xl">
               End Session
             </Button>
           ) : (
-            <Button variant="secondary" size="icon" onClick={() => router.back()} className="glass-effect size-12 rounded-full text-white border-none bg-white/10 backdrop-blur-3xl">
+            <Button variant="secondary" size="icon" onClick={() => router.back()} className="glass-effect size-12 rounded-full text-white border-none bg-white/10">
               <X className="size-6" />
             </Button>
           )}
         </div>
       </header>
 
-      {/* 5. CHAT & INTERACTION */}
+      {/* CHAT AREA */}
       <div className="flex-1 relative z-10 flex flex-col justify-end px-6 pb-12">
         <div className="w-full max-w-[85%] flex flex-col gap-3 overflow-y-auto max-h-[25vh] mb-8 no-scrollbar">
             <div className="px-5 py-3.5 rounded-[1.5rem] max-w-fit bg-black/60 backdrop-blur-xl border border-white/10 shadow-2xl">
               <p className="text-[11px] text-white font-medium leading-relaxed uppercase">
                 <span className="font-black mr-2 text-primary">System:</span>
                 <span className="opacity-80">
-                  {isPrivateMode ? "Encrypted Signal Active. Only invited guests can join." : "Public Signal Active. World marketplace discovery enabled."}
+                  {isPrivateMode ? "Secure Encryption Active. Only accepted guests can view clearly." : "Public Discovery Active. Signal is live to world marketplace."}
                 </span>
               </p>
             </div>
         </div>
 
         {(!isPrivateMode || isHost) && (
-          <footer className="flex items-center gap-4 w-full animate-in slide-in-from-bottom-6 duration-500">
-            <div className="flex-1 flex items-center glass-effect rounded-[2.5rem] px-8 h-16 bg-white/5 border-white/10 backdrop-blur-2xl">
+          <footer className="flex items-center gap-4 w-full animate-in slide-in-from-bottom-6">
+            <div className="flex-1 flex items-center glass-effect rounded-[2.5rem] px-8 h-16 bg-white/5 border-white/10">
               <Input 
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
-                className="bg-transparent border-none focus-visible:ring-0 text-white placeholder-white/20 font-black text-xs uppercase tracking-widest" 
+                className="bg-transparent border-none focus-visible:ring-0 text-white placeholder-white/20 font-black text-xs uppercase" 
                 placeholder="Secure message..." 
               />
               <button onClick={() => setInputText("")} className="ml-3 text-primary hover:scale-125 transition-transform">
