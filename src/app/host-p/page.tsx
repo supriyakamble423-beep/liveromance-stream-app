@@ -56,6 +56,17 @@ export default function HostProfileDashboard() {
   }, [hostProfile]);
 
   const startStreamProcess = () => {
+    // SECURITY: Enforce Face Verification before going live
+    if (!hostProfile?.verified && areServicesAvailable) {
+      toast({ 
+        variant: "destructive", 
+        title: "Identity Check Required", 
+        description: "Please complete Face Verification before you can go live." 
+      });
+      router.push('/host-f');
+      return;
+    }
+
     if (hostProfile?.isLive) {
       toggleLiveStatus();
     } else {
@@ -219,7 +230,7 @@ export default function HostProfileDashboard() {
                 <div className="size-12 bg-primary/20 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
                   <Camera className="size-7 text-primary" />
                 </div>
-                <span className="text-[11px] font-black uppercase tracking-widest italic">Image Upload</span>
+                <span className="text-[11px] font-black uppercase tracking-widest italic">Face Verification</span>
               </Button>
             </Link>
             <Button 
