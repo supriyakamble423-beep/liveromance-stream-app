@@ -84,7 +84,7 @@ export default function LiveEarningTimer({ minutes }: LiveEarningTimerProps) {
         </div>
       )}
 
-      {/* 📊 MINI HUD (No obstructive labels) */}
+      {/* 📊 MINI HUD (Minimalist to keep face clear) */}
       <div className="bg-[#2D1B2D]/30 backdrop-blur-xl border border-white/5 rounded-3xl p-4 shadow-xl transition-all">
         <div className="flex justify-between items-center mb-2">
           <div className="flex flex-col">

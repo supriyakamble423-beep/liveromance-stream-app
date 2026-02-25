@@ -31,12 +31,13 @@ export default function StreamPage() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
   
-  const isHost = user?.uid === id || id === 'simulate_host' || id === 'host_node';
+  // Logic to determine if the user is the host
+  const isHost = user?.uid === id || id === 'simulate_host' || id === 'host_node' || id === 'host_node_active';
 
   // Memoized Host Reference
   const hostRef = useMemoFirebase(() => {
     if (!firestore || !id) return null;
-    const hostId = (id === 'simulate_host' || id === 'host_node') ? (user?.uid || 'fake_host') : id;
+    const hostId = (id === 'simulate_host' || id === 'host_node' || id === 'host_node_active') ? (user?.uid || 'fake_host') : id;
     return doc(firestore, 'hosts', hostId as string);
   }, [firestore, id, user?.uid]);
 
@@ -45,7 +46,7 @@ export default function StreamPage() {
   // Monitor Private Call Requests
   const requestsQuery = useMemoFirebase(() => {
     if (!firestore || !isHost) return null;
-    const hostId = (id === 'simulate_host' || id === 'host_node') ? (user?.uid || 'fake_host') : id;
+    const hostId = (id === 'simulate_host' || id === 'host_node' || id === 'host_node_active') ? (user?.uid || 'fake_host') : id;
     return query(
       collection(firestore, 'streamRequests'),
       where('hostId', '==', hostId),
@@ -101,7 +102,10 @@ export default function StreamPage() {
 
   // True One-Click Mode Toggle (Firestore Update)
   const toggleStreamMode = async () => {
-    if (!isHost || !hostRef) return;
+    if (!isHost || !hostRef) {
+      toast({ title: "Simulation: Mode Toggled" });
+      return;
+    }
     const currentMode = host?.streamType || 'public';
     const nextMode = currentMode === 'public' ? 'private' : 'public';
 
@@ -279,7 +283,7 @@ export default function StreamPage() {
         </div>
       )}
 
-      {/* HEADER: Clean UI - No Host Node labels */}
+      {/* HEADER: Clean UI */}
       <header className="relative z-10 flex items-center justify-between px-6 pt-24 pb-4 mt-20">
         <div className="flex items-center gap-4 glass-effect rounded-full p-1.5 pr-6 bg-black/40 backdrop-blur-xl border border-white/10 shadow-lg">
           <div className="relative size-14 rounded-full border-2 border-primary overflow-hidden bg-slate-900 shadow-inner">
