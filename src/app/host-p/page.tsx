@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useFirebase, useDoc, useMemoFirebase } from "@/firebase";
@@ -46,7 +47,6 @@ export default function HostProfileDashboard() {
 
   const { data: hostProfile } = useDoc(hostRef);
 
-  // Sync form fields with current profile data
   useEffect(() => {
     if (hostProfile) {
       setEditName(hostProfile.username || "");
@@ -56,12 +56,12 @@ export default function HostProfileDashboard() {
   }, [hostProfile]);
 
   const startStreamProcess = () => {
-    // SECURITY: Enforce Face Verification before going live
+    // STRICT: Blocking Go Live if not verified
     if (!hostProfile?.verified && areServicesAvailable) {
       toast({ 
         variant: "destructive", 
-        title: "Identity Check Required", 
-        description: "Please complete Face Verification before you can go live." 
+        title: "Verification Required", 
+        description: "Please complete Face Verification to access live nodes." 
       });
       router.push('/host-f');
       return;
@@ -76,11 +76,8 @@ export default function HostProfileDashboard() {
 
   const toggleLiveStatus = async () => {
     if (!hostRef || !firestore || !userId) {
-       toast({ title: hostProfile?.isLive ? "Offline" : "Live Simulation Active" });
-       if (!hostProfile?.isLive) {
-         setShowRulebook(false);
-         router.push(`/stream/${userId}`);
-       }
+       toast({ title: "Signal Simulation Active" });
+       router.push(`/stream/${userId}`);
        return;
     }
     setIsTogglingLive(true);
@@ -90,27 +87,23 @@ export default function HostProfileDashboard() {
         userId,
         isLive: newStatus,
         updatedAt: serverTimestamp(),
-        streamStartTime: newStatus ? serverTimestamp() : null,
         username: editName || hostProfile?.username || user?.displayName || "New Host",
         previewImageUrl: hostProfile?.previewImageUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${userId}`,
         streamType: hostProfile?.streamType || 'public',
-        rating: hostProfile?.rating || 4.9,
-        verified: hostProfile?.verified || true,
-        reportsCount: 0 
+        verified: hostProfile?.verified || false
       }, { merge: true });
 
       setShowRulebook(false);
       toast({ 
-        title: newStatus ? "Broadcast Active" : "Stream Offline",
-        description: newStatus ? "Rules accepted. You are now live." : "Session data saved."
+        title: newStatus ? "Broadcast Started" : "Signal Cut",
+        description: newStatus ? "Identity matched. You are now live." : "Session data synced."
       });
 
       if (newStatus) {
         router.push(`/stream/${userId}`);
       }
     } catch (err) {
-      console.error(err);
-      toast({ variant: 'destructive', title: 'Error', description: 'Failed to toggle stream.' });
+      toast({ variant: 'destructive', title: 'Signal Error', description: 'Could not update host node.' });
     } finally {
       setIsTogglingLive(false);
     }
@@ -126,10 +119,9 @@ export default function HostProfileDashboard() {
         country: editCountry,
         updatedAt: serverTimestamp()
       }, { merge: true });
-      toast({ title: "Profile Updated", description: "Changes saved to the grid." });
+      toast({ title: "Details Saved", description: "Grid info updated successfully." });
     } catch (e) {
-      console.error(e);
-      toast({ variant: "destructive", title: "Update Failed", description: "Connection error." });
+      toast({ variant: "destructive", title: "Update Failed" });
     } finally {
       setIsUpdatingProfile(false);
     }
@@ -145,17 +137,17 @@ export default function HostProfileDashboard() {
           
           <div className="flex items-center gap-2">
             <Link href="/host-p/payout">
-              <Button variant="ghost" size="icon" className="rounded-full bg-white/5 border border-white/10 hover:bg-primary/20 size-11">
+              <Button variant="ghost" size="icon" className="rounded-full bg-white/5 border border-white/10 size-11">
                 <Wallet className="size-5 text-primary" />
               </Button>
             </Link>
             <Dialog>
               <DialogTrigger asChild>
-                <Button variant="ghost" size="icon" className="rounded-full bg-white/5 border border-white/10 hover:bg-primary/20 size-11">
+                <Button variant="ghost" size="icon" className="rounded-full bg-white/5 border border-white/10 size-11">
                   <Settings className="size-5 text-white/60" />
                 </Button>
               </DialogTrigger>
-              <DialogContent className="bg-[#2D1B2D] border-white/10 text-white rounded-[2.5rem] max-w-[90vw] mx-auto p-6">
+              <DialogContent className="bg-[#2D1B2D] border-white/10 text-white rounded-[2.5rem] p-6 max-w-[90vw] mx-auto border-none shadow-2xl">
                 <DialogHeader>
                   <DialogTitle className="text-xl font-black uppercase tracking-tighter italic text-white">Edit Profile</DialogTitle>
                 </DialogHeader>
@@ -163,19 +155,19 @@ export default function HostProfileDashboard() {
                   <div className="space-y-3">
                     <div className="space-y-1">
                       <p className="text-[9px] font-black uppercase text-primary ml-2">Display Name</p>
-                      <Input value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="Display Name" className="bg-white/5 border-white/10 rounded-xl h-12" />
+                      <Input value={editName} onChange={(e) => setEditName(e.target.value)} className="bg-white/5 border-white/10 rounded-xl h-12" />
                     </div>
                     <div className="space-y-1">
                       <p className="text-[9px] font-black uppercase text-primary ml-2">Bio</p>
-                      <Textarea value={editBio} onChange={(e) => setEditBio(e.target.value)} placeholder="Tell the world about you..." className="bg-white/5 border-white/10 rounded-xl min-h-[100px]" />
+                      <Textarea value={editBio} onChange={(e) => setEditBio(e.target.value)} className="bg-white/5 border-white/10 rounded-xl" />
                     </div>
                     <div className="space-y-1">
                       <p className="text-[9px] font-black uppercase text-primary ml-2">Country</p>
-                      <Input value={editCountry} onChange={(e) => setEditCountry(e.target.value)} placeholder="e.g. USA, India" className="bg-white/5 border-white/10 rounded-xl h-12" />
+                      <Input value={editCountry} onChange={(e) => setEditCountry(e.target.value)} className="bg-white/5 border-white/10 rounded-xl h-12" />
                     </div>
                   </div>
-                  <Button onClick={handleProfileUpdate} disabled={isUpdatingProfile} className="w-full romantic-gradient rounded-xl h-14 font-black uppercase text-white shadow-xl border-none">
-                    {isUpdatingProfile ? <Loader2 className="animate-spin mr-2" /> : <Save className="mr-2" />} Save Changes
+                  <Button onClick={handleProfileUpdate} disabled={isUpdatingProfile} className="w-full h-14 romantic-gradient rounded-xl font-black uppercase shadow-xl border-none text-white">
+                    {isUpdatingProfile ? <Loader2 className="animate-spin" /> : "Save Details"}
                   </Button>
                 </div>
               </DialogContent>
@@ -184,13 +176,13 @@ export default function HostProfileDashboard() {
         </div>
 
         <div className="flex items-center gap-5 mb-8">
-          <div className="relative size-24 rounded-[2.5rem] overflow-hidden border-4 border-primary shadow-[0_0_20px_rgba(225,29,72,0.3)] bg-[#3D263D]">
+          <div className="relative size-24 rounded-[2.5rem] overflow-hidden border-4 border-primary shadow-[0_0_20px_rgba(225,29,72,0.3)] bg-slate-900">
             <Image src={hostProfile?.previewImageUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${userId}`} alt="Profile" fill className="object-cover" />
           </div>
           <div className="flex-1 min-w-0">
-            <h2 className="text-2xl font-black tracking-tighter uppercase truncate text-white italic">@{hostProfile?.username || 'New Host'}</h2>
+            <h2 className="text-2xl font-black tracking-tighter uppercase truncate italic">@{hostProfile?.username || 'New Host'}</h2>
             <div className="flex items-center gap-2 mt-2">
-              <Badge className={cn("h-6 text-[9px] px-3 font-black tracking-widest border-none", hostProfile?.verified ? "bg-green-500 text-white" : "bg-white/10 text-slate-400")}>
+              <Badge className={cn("h-6 text-[9px] px-3 font-black border-none", hostProfile?.verified ? "bg-green-500 text-white" : "bg-white/10 text-slate-400")}>
                 {hostProfile?.verified ? "VERIFIED" : "UNVERIFIED"}
               </Badge>
               {hostProfile?.isLive && <Badge className="h-6 text-[9px] px-3 font-black bg-primary animate-pulse border-none">LIVE</Badge>}
@@ -198,90 +190,50 @@ export default function HostProfileDashboard() {
           </div>
         </div>
 
-        <section className="bg-white/5 p-6 rounded-[2.5rem] border border-white/10 backdrop-blur-xl mb-8 romantic-glow relative overflow-hidden">
-          <div className="flex justify-between items-center mb-4">
-            <div className="flex flex-col">
-              <span className="text-[9px] font-black uppercase tracking-[0.3em] text-primary">Earning Level</span>
-              <h3 className="text-lg font-black italic uppercase text-white flex items-center gap-2 mt-1">
-                <Sparkles className="size-5 text-amber-400 animate-pulse" /> 
-                {hostProfile?.isLive ? "1.5x Multiplier Active" : "1.0x Base Rate"}
-              </h3>
-            </div>
-            <div className="flex flex-col items-end">
-              <Badge className="bg-primary text-white border-none text-[10px] font-black h-8 px-5 romantic-glow">
-                {hostProfile?.isLive ? "1.5x" : "1.0x"}
-              </Badge>
-            </div>
-          </div>
-          <div className="w-full h-3 bg-white/5 rounded-full overflow-hidden border border-white/5 p-0.5">
-            <div 
-              className="h-full bg-primary rounded-full transition-all duration-1000 shadow-[0_0_15px_#E11D48]" 
-              style={{ width: hostProfile?.isLive ? '65%' : '10%' }}
-            />
-          </div>
-          <p className="text-[8px] font-black text-slate-500 uppercase mt-3 tracking-[0.2em] text-center">
-            Stream more to unlock <span className="text-white">2.0x premium rate</span>
-          </p>
-        </section>
-
-        <div className="grid grid-cols-2 gap-4 mt-6">
+        <div className="grid grid-cols-2 gap-4">
             <Link href="/host-f" className="flex-1">
-              <Button variant="outline" className="w-full h-28 rounded-[2rem] border-white/10 bg-white/5 text-white flex flex-col items-center justify-center gap-3 hover:bg-primary/20 transition-all border-none romantic-card-glow group">
+              <Button variant="outline" className="w-full h-28 rounded-[2rem] border-white/10 bg-white/5 text-white flex flex-col items-center justify-center gap-3 hover:bg-primary/20 transition-all border-none shadow-xl group">
                 <div className="size-12 bg-primary/20 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
                   <Camera className="size-7 text-primary" />
                 </div>
-                <span className="text-[11px] font-black uppercase tracking-widest italic">Face Verification</span>
+                <span className="text-[11px] font-black uppercase tracking-widest italic text-center">Face Verification</span>
               </Button>
             </Link>
-            <Button 
-              onClick={() => toast({ title: "Media Hub", description: "Video setup is active in Live mode." })} 
-              variant="outline" 
-              className="flex-1 h-28 rounded-[2rem] border-white/10 bg-white/5 text-white flex flex-col items-center justify-center gap-3 hover:bg-primary/20 transition-all border-none romantic-card-glow group"
-            >
+            <Button variant="outline" className="flex-1 h-28 rounded-[2rem] border-white/10 bg-white/5 text-white flex flex-col items-center justify-center gap-3 hover:bg-primary/20 transition-all border-none shadow-xl group">
               <div className="size-12 bg-secondary/20 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
                 <Video className="size-7 text-secondary" />
               </div>
-              <span className="text-[11px] font-black uppercase tracking-widest italic">Video Upload</span>
+              <span className="text-[11px] font-black uppercase tracking-widest italic text-center">Video Upload</span>
             </Button>
         </div>
       </header>
 
       <main className="px-8 space-y-8 pt-8">
-        <section className="space-y-4">
-          <Button 
-            onClick={startStreamProcess} 
-            disabled={isTogglingLive} 
-            className={cn(
-              "w-full h-24 rounded-[3.5rem] font-black text-2xl uppercase tracking-[0.1em] gap-4 shadow-2xl transition-all border-none text-white italic", 
-              hostProfile?.isLive ? "bg-primary" : "bg-green-600 shadow-green-600/20"
-            )}
-          >
-            {isTogglingLive ? <Loader2 className="size-8 animate-spin" /> : <Power className="size-10" />}
-            {hostProfile?.isLive ? "Disconnect" : "Go Live"}
-          </Button>
-
-          {hostProfile?.isLive && (
-            <Link href={`/stream/${userId}`} className="block">
-              <Button variant="outline" className="w-full h-14 rounded-2xl border-primary text-primary font-black uppercase tracking-widest gap-2 bg-primary/5 border-2">
-                <Radio className="size-5" /> Live Preview
-              </Button>
-            </Link>
+        <Button 
+          onClick={startStreamProcess} 
+          disabled={isTogglingLive} 
+          className={cn(
+            "w-full h-24 rounded-[3.5rem] font-black text-2xl uppercase tracking-widest gap-4 shadow-2xl transition-all border-none italic text-white", 
+            hostProfile?.isLive ? "bg-primary" : "bg-green-600 shadow-green-600/30"
           )}
-        </section>
+        >
+          {isTogglingLive ? <Loader2 className="size-8 animate-spin" /> : <Power className="size-10" />}
+          {hostProfile?.isLive ? "Disconnect" : "Go Live"}
+        </Button>
 
         <section className="grid grid-cols-2 gap-4">
-            <div className="bg-white/5 p-6 rounded-[2.5rem] border border-white/5 flex flex-col items-center text-center romantic-glow">
-                <p className="text-[9px] font-black text-primary uppercase mb-2 tracking-widest">Global Viewers</p>
+            <div className="bg-white/5 p-6 rounded-[2.5rem] border border-white/5 flex flex-col items-center text-center">
+                <p className="text-[9px] font-black text-primary uppercase mb-2 tracking-[0.2em]">Viewers</p>
                 <div className="flex items-center gap-2">
                   <Star className="size-4 text-amber-400 fill-current" />
-                  <span className="text-3xl font-black italic text-white tracking-tighter">{hostProfile?.viewers || 0}</span>
+                  <span className="text-3xl font-black italic tracking-tighter">{hostProfile?.viewers || 0}</span>
                 </div>
             </div>
-            <div className="bg-white/5 p-6 rounded-[2.5rem] border border-white/5 flex flex-col items-center text-center romantic-glow">
-                <p className="text-[9px] font-black text-primary uppercase mb-2 tracking-widest">Active Mins</p>
+            <div className="bg-white/5 p-6 rounded-[2.5rem] border border-white/5 flex flex-col items-center text-center">
+                <p className="text-[9px] font-black text-primary uppercase mb-2 tracking-[0.2em]">Earnings</p>
                 <div className="flex items-center gap-2">
                   <Clock className="size-4 text-secondary" />
-                  <span className="text-3xl font-black italic text-white tracking-tighter">{hostProfile?.totalStreamMinutes || 0}</span>
+                  <span className="text-3xl font-black italic tracking-tighter">{hostProfile?.earnings || 0}</span>
                 </div>
             </div>
         </section>
@@ -291,25 +243,22 @@ export default function HostProfileDashboard() {
 
       <BottomNav />
 
-      {/* Rulebook Dialog */}
+      {/* Acceptance Modal */}
       <Dialog open={showRulebook} onOpenChange={setShowRulebook}>
-        <DialogContent className="bg-[#2D1B2D] border-white/10 text-white rounded-[3rem] max-w-[90vw] mx-auto p-8">
+        <DialogContent className="bg-[#2D1B2D] border-white/10 text-white rounded-[3rem] p-8 max-w-[90vw] mx-auto border-none shadow-2xl">
           <DialogHeader className="items-center text-center">
             <div className="size-16 bg-primary/20 rounded-full flex items-center justify-center mb-4 romantic-glow">
               <ShieldCheck className="size-8 text-primary" />
             </div>
-            <DialogTitle className="text-2xl font-black uppercase italic tracking-tighter text-white">Streaming Rules</DialogTitle>
+            <DialogTitle className="text-2xl font-black uppercase italic tracking-tighter">Safety Rules</DialogTitle>
           </DialogHeader>
           <div className="space-y-6 pt-4">
-             <div className="bg-white/5 rounded-2xl p-5 text-[10px] space-y-4 border border-white/10 font-bold uppercase tracking-widest">
-               <p className="flex items-start gap-3 text-green-400"><CheckCircle2 className="size-4 shrink-0" /> Public Mode: Bra / Panty Allowed.</p>
-               <p className="flex items-start gap-3 text-red-500"><AlertCircle className="size-4 shrink-0" /> Public Mode: No Full Nudity.</p>
-               <p className="flex items-start gap-3 text-blue-400"><Sparkles className="size-4 shrink-0" /> Private Mode: Full Freedom.</p>
+             <div className="bg-white/5 rounded-2xl p-5 text-[10px] space-y-4 border border-white/10 font-bold uppercase tracking-widest text-slate-300">
+               <p className="flex items-start gap-3 text-green-400"><CheckCircle2 className="size-4" /> Public Mode: Lingerie Allowed.</p>
+               <p className="flex items-start gap-3 text-red-500"><AlertCircle className="size-4" /> Public Mode: No Full Nudity.</p>
+               <p className="flex items-start gap-3 text-blue-400"><Sparkles className="size-4" /> Private Mode: No Restrictions.</p>
              </div>
-             <p className="text-[8px] text-center text-slate-500 font-black uppercase italic leading-relaxed px-6">
-               Violating Public rules will result in a permanent ban.
-             </p>
-             <Button onClick={toggleLiveStatus} className="w-full h-16 rounded-2xl romantic-gradient font-black uppercase tracking-widest text-white shadow-xl border-none text-sm">Accept & Go Live</Button>
+             <Button onClick={toggleLiveStatus} className="w-full h-16 rounded-2xl romantic-gradient font-black uppercase tracking-widest shadow-xl border-none text-white">Accept & Go Live</Button>
           </div>
         </DialogContent>
       </Dialog>
