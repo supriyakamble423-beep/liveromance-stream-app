@@ -1,9 +1,3 @@
-'use server';
-/**
- * @fileOverview Referral Leaderboard page for the GlobalStream application.
- * Displays the top 10 hosts based on their referral counts.
- */
-
 'use client';
 
 import { useCollection, useFirebase, useMemoFirebase } from "@/firebase";
@@ -18,7 +12,6 @@ import Image from "next/image";
 export default function ReferralLeaderboard() {
   const { firestore } = useFirebase();
 
-  // Top 10 Referrers Query - Ordering by referralCount descending
   const leaderboardQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return query(
@@ -32,7 +25,6 @@ export default function ReferralLeaderboard() {
 
   return (
     <div className="min-h-screen bg-[#0F0101] text-white pb-32 max-w-lg mx-auto border-x border-white/10">
-      {/* --- Sticky Header --- */}
       <header className="sticky top-0 z-30 bg-black/80 backdrop-blur-md border-b border-white/5 px-6 py-4 flex items-center justify-between">
         <Link href="/lifetime">
           <Button variant="ghost" size="icon" className="rounded-full bg-white/5">
@@ -43,10 +35,9 @@ export default function ReferralLeaderboard() {
         <div className="size-10" />
       </header>
 
-      {/* --- Hero Section --- */}
       <section className="py-12 text-center space-y-4 px-6 bg-gradient-to-b from-primary/10 to-transparent">
         <div className="flex justify-center mb-2">
-          <div className="relative animate-bounce duration-[2000ms]">
+          <div className="relative animate-bounce duration-\[2000ms\]">
             <Crown className="size-16 text-yellow-400 fill-yellow-400 drop-shadow-[0_0_20px_rgba(250,204,21,0.6)]" />
           </div>
         </div>
@@ -60,7 +51,6 @@ export default function ReferralLeaderboard() {
         </div>
       </section>
 
-      {/* --- Leaderboard List --- */}
       <main className="px-4 space-y-4">
         {isLoading ? (
           <div className="flex flex-col items-center py-20 opacity-30 animate-pulse">
@@ -80,7 +70,6 @@ export default function ReferralLeaderboard() {
               style={{ animationDelay: `${index * 100}ms` }}
             >
               <div className="flex items-center gap-4">
-                {/* Rank Badge */}
                 <div className={cn(
                   "flex flex-col items-center justify-center size-12 rounded-2xl border font-black italic text-lg",
                   index === 0 ? "bg-yellow-400 text-black border-yellow-300" : 
@@ -91,7 +80,6 @@ export default function ReferralLeaderboard() {
                   {index === 0 ? <Medal className="size-6" /> : index + 1}
                 </div>
 
-                {/* Host Info */}
                 <div className="flex items-center gap-3">
                   <div className="relative size-12 rounded-2xl overflow-hidden border border-white/10 bg-slate-900">
                     <Image 
@@ -113,7 +101,6 @@ export default function ReferralLeaderboard() {
                 </div>
               </div>
 
-              {/* Earnings / Diamonds */}
               <div className="text-right">
                 <p className="text-xl font-black italic text-white flex items-center justify-end gap-1 tracking-tighter">
                   <Heart className="size-4 text-red-500 fill-current" />
@@ -130,7 +117,6 @@ export default function ReferralLeaderboard() {
         )}
       </main>
 
-      {/* --- Program CTA --- */}
       <section className="p-6 mt-8">
         <div className="romantic-gradient p-8 rounded-[3rem] text-white text-center space-y-4 shadow-2xl romantic-glow">
           <h3 className="text-xl font-black uppercase italic tracking-tighter leading-none">Join the Global Elite</h3>
