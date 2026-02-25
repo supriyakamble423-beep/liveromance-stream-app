@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useFirebase, useDoc, useMemoFirebase } from "@/firebase";
@@ -56,7 +55,6 @@ export default function HostProfileDashboard() {
   }, [hostProfile]);
 
   const startStreamProcess = () => {
-    // STRICT: Blocking Go Live if not verified
     if (!hostProfile?.verified && areServicesAvailable) {
       toast({ 
         variant: "destructive", 
@@ -243,7 +241,6 @@ export default function HostProfileDashboard() {
 
       <BottomNav />
 
-      {/* Acceptance Modal */}
       <Dialog open={showRulebook} onOpenChange={setShowRulebook}>
         <DialogContent className="bg-[#2D1B2D] border-white/10 text-white rounded-[3rem] p-8 max-w-[90vw] mx-auto border-none shadow-2xl">
           <DialogHeader className="items-center text-center">

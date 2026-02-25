@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, useRef, useMemo } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useState, useEffect, useRef, useMemo, use } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import {
   X, Eye, Heart, Send,
@@ -17,11 +17,11 @@ import LiveEarningTimer from "@/components/Stream/LiveEarningTimer";
 import { PrivateRequestPopup } from "@/components/Stream/PrivateRequestPopup";
 
 /**
- * World-Class Optimized Stream Page
- * Handles Live, Simulation, and Error states gracefully.
+ * World-Class Optimized Stream Page (Next.js 15 Compliant)
  */
-export default function StreamPage() {
-  const params = useParams();
+export default function StreamPage({ params }: { params: Promise<{ id: string }> }) {
+  const resolvedParams = use(params);
+  const id = resolvedParams?.id;
   const router = useRouter();
   const { firestore, user, areServicesAvailable, isUserLoading } = useFirebase();
   const { toast } = useToast();
@@ -32,13 +32,10 @@ export default function StreamPage() {
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  // Safely extract ID from params hook (Next.js 15 safe)
-  const id = params?.id as string;
   const isSimulation = id === 'simulate_host' || !id;
   const effectiveId = isSimulation ? (user?.uid || 'simulate_host') : id;
   const isHost = user?.uid === effectiveId || isSimulation;
 
-  // Memoize Firestore Reference
   const hostRef = useMemoFirebase(() => {
     if (!firestore || !effectiveId) return null;
     return doc(firestore, 'hosts', effectiveId);
@@ -46,7 +43,6 @@ export default function StreamPage() {
 
   const { data: dbHost, isLoading: isDbLoading } = useDoc(hostRef);
 
-  // Fallback Host Data for Simulation or if DB is slow
   const host = useMemo(() => {
     if (dbHost) return dbHost;
     if (isSimulation) {
@@ -63,14 +59,12 @@ export default function StreamPage() {
     return null;
   }, [dbHost, isSimulation, effectiveId, user]);
 
-  // Timer logic for Host
   useEffect(() => {
     if (!isHost) return;
     const interval = setInterval(() => setStreamMinutes((prev) => prev + 1), 60000);
     return () => clearInterval(interval);
   }, [isHost]);
 
-  // Camera initialization
   useEffect(() => {
     if (!isHost) return;
     const startCamera = async () => {
@@ -160,7 +154,6 @@ export default function StreamPage() {
 
   return (
     <div className="relative h-screen w-full flex flex-col overflow-hidden bg-black max-w-lg mx-auto border-x border-white/10 screen-guard-active">
-      {/* Background Feed */}
       <div className="absolute inset-0 z-0">
         {isHost ? (
           <video 
@@ -181,7 +174,6 @@ export default function StreamPage() {
         <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/80" />
       </div>
 
-      {/* Top Controls Overlay */}
       <div className="absolute top-12 left-0 right-0 z-50 flex flex-col items-center gap-4">
         <div className="flex items-center gap-3">
           <Button
@@ -211,7 +203,6 @@ export default function StreamPage() {
         </div>
       </div>
 
-      {/* Popups & Notifications */}
       {isHost && areServicesAvailable && <PrivateRequestPopup firestore={firestore} hostId={effectiveId} />}
 
       {isHost && (
@@ -220,7 +211,6 @@ export default function StreamPage() {
         </div>
       )}
 
-      {/* Header Profile - Instructions Cleaned */}
       <header className="relative z-10 flex items-center justify-between px-6 mt-44">
         <div className="flex items-center gap-3 bg-black/40 backdrop-blur-md rounded-full p-2 pr-6 border border-white/10 shadow-xl">
           <div className="relative size-10 rounded-full overflow-hidden border-2 border-primary">
@@ -237,7 +227,6 @@ export default function StreamPage() {
         </Button>
       </header>
 
-      {/* Main Content & Input Area */}
       <div className="flex-1 relative z-10 flex flex-col justify-end px-6 pb-12">
         <div className="bg-black/40 backdrop-blur-md rounded-2xl p-4 mb-4 border border-white/10 shadow-2xl">
           <p className="text-[10px] font-bold text-white/80 uppercase leading-relaxed italic">
@@ -256,7 +245,7 @@ export default function StreamPage() {
             />
             <button className="text-primary hover:text-white transition-colors"><Send className="size-5" /></button>
           </div>
-          <Button className="size-14 rounded-2xl bg-primary shadow-2xl shadow-primary/40 active:scale-95 transition-transform">
+          <Button className="size-14 rounded-2xl bg-primary shadow-2xl shadow-primary/40 active:scale-90 transition-transform">
             <Heart className="size-6 text-white fill-current" />
           </Button>
         </div>
