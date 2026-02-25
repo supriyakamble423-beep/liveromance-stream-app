@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useFirebase, useDoc, useMemoFirebase } from "@/firebase";
@@ -20,10 +19,10 @@ import {
 } from "@/components/ui/dialog";
 import Image from "next/image";
 import Link from "next/link";
-import { doc, serverTimestamp, updateDoc, setDoc } from "firebase/firestore";
+import { doc, serverTimestamp, setDoc } from "firebase/firestore";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import AdBanner from "@/components/Ads/AdBanner";
 
@@ -46,6 +45,15 @@ export default function HostProfileDashboard() {
   }, [firestore, userId]);
 
   const { data: hostProfile } = useDoc(hostRef);
+
+  // Sync form fields with current profile data
+  useEffect(() => {
+    if (hostProfile) {
+      setEditName(hostProfile.username || "");
+      setEditBio(hostProfile.bio || "");
+      setEditCountry(hostProfile.country || "");
+    }
+  }, [hostProfile]);
 
   const startStreamProcess = () => {
     if (hostProfile?.isLive) {
@@ -102,14 +110,15 @@ export default function HostProfileDashboard() {
     setIsUpdatingProfile(true);
     try {
       await setDoc(hostRef, {
-        username: editName || hostProfile?.username,
-        bio: editBio || hostProfile?.bio,
-        country: editCountry || hostProfile?.country,
+        username: editName,
+        bio: editBio,
+        country: editCountry,
         updatedAt: serverTimestamp()
       }, { merge: true });
-      toast({ title: "Profile Updated" });
+      toast({ title: "Profile Updated", description: "Changes saved to the grid." });
     } catch (e) {
-      toast({ variant: "destructive", title: "Error" });
+      console.error(e);
+      toast({ variant: "destructive", title: "Update Failed", description: "Connection error." });
     } finally {
       setIsUpdatingProfile(false);
     }
@@ -141,11 +150,20 @@ export default function HostProfileDashboard() {
                 </DialogHeader>
                 <div className="space-y-4 pt-4">
                   <div className="space-y-3">
-                    <Input value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="Display Name" className="bg-white/5 border-white/10 rounded-xl h-12" />
-                    <Textarea value={editBio} onChange={(e) => setEditBio(e.target.value)} placeholder="Bio" className="bg-white/5 border-white/10 rounded-xl min-h-[100px]" />
-                    <Input value={editCountry} onChange={(e) => setEditCountry(e.target.value)} placeholder="Country" className="bg-white/5 border-white/10 rounded-xl h-12" />
+                    <div className="space-y-1">
+                      <p className="text-[9px] font-black uppercase text-primary ml-2">Display Name</p>
+                      <Input value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="Display Name" className="bg-white/5 border-white/10 rounded-xl h-12" />
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-[9px] font-black uppercase text-primary ml-2">Bio</p>
+                      <Textarea value={editBio} onChange={(e) => setEditBio(e.target.value)} placeholder="Tell the world about you..." className="bg-white/5 border-white/10 rounded-xl min-h-[100px]" />
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-[9px] font-black uppercase text-primary ml-2">Country</p>
+                      <Input value={editCountry} onChange={(e) => setEditCountry(e.target.value)} placeholder="e.g. USA, India" className="bg-white/5 border-white/10 rounded-xl h-12" />
+                    </div>
                   </div>
-                  <Button onClick={handleProfileUpdate} disabled={isUpdatingProfile} className="w-full romantic-gradient rounded-xl h-12 font-black uppercase text-white shadow-xl border-none">
+                  <Button onClick={handleProfileUpdate} disabled={isUpdatingProfile} className="w-full romantic-gradient rounded-xl h-14 font-black uppercase text-white shadow-xl border-none">
                     {isUpdatingProfile ? <Loader2 className="animate-spin mr-2" /> : <Save className="mr-2" />} Save Changes
                   </Button>
                 </div>
@@ -169,7 +187,6 @@ export default function HostProfileDashboard() {
           </div>
         </div>
 
-        {/* Multiplier Status Card */}
         <section className="bg-white/5 p-6 rounded-[2.5rem] border border-white/10 backdrop-blur-xl mb-8 romantic-glow relative overflow-hidden">
           <div className="flex justify-between items-center mb-4">
             <div className="flex flex-col">
@@ -196,7 +213,6 @@ export default function HostProfileDashboard() {
           </p>
         </section>
 
-        {/* Main Action Buttons - Updated Labels */}
         <div className="grid grid-cols-2 gap-4 mt-6">
             <Link href="/host-f" className="flex-1">
               <Button variant="outline" className="w-full h-28 rounded-[2rem] border-white/10 bg-white/5 text-white flex flex-col items-center justify-center gap-3 hover:bg-primary/20 transition-all border-none romantic-card-glow group">

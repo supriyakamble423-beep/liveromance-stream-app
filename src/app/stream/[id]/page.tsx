@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useEffect, useRef } from "react";
@@ -27,8 +26,6 @@ export default function StreamPage() {
   const [streamMinutes, setStreamMinutes] = useState(0);
   const [requestPopup, setRequestPopup] = useState<{ id: string, name: string } | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
-  const [requestStatus, setRequestStatus] = useState<'idle' | 'pending' | 'approved' | 'rejected'>('idle');
-  const [activeRequestId, setActiveRequestId] = useState<string | null>(null);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
@@ -61,10 +58,11 @@ export default function StreamPage() {
         const docId = snapshot.docs[0].id;
         const requestTime = docData.timestamp?.toMillis() || Date.now();
         
-        // Popup timing check
+        // Popup timing check: only show if request is fresh (last 15s)
         if (Date.now() - requestTime < 15000) {
           setRequestPopup({ id: docId, name: docData.userName || 'Anonymous' });
-          setTimeout(() => setRequestPopup(null), 5000);
+          const timer = setTimeout(() => setRequestPopup(null), 5000);
+          return () => clearTimeout(timer);
         }
       }
     });
@@ -89,7 +87,10 @@ export default function StreamPage() {
         const s = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
         setCameraStream(s);
         if (videoRef.current) videoRef.current.srcObject = s;
-      } catch (err) { console.error(err); }
+      } catch (err) { 
+        console.error(err);
+        toast({ variant: "destructive", title: "Camera Error", description: "Enable camera for streaming." });
+      }
     };
     getCamera();
     return () => { cameraStream?.getTracks().forEach(t => t.stop()); };
@@ -105,7 +106,7 @@ export default function StreamPage() {
         isLive: true,
         updatedAt: serverTimestamp() 
       }, { merge: true });
-      toast({ title: `MODE: ${nextMode.toUpperCase()}` });
+      toast({ title: `MODE: ${nextMode.toUpperCase()}`, className: nextMode === 'private' ? "bg-red-600 text-white" : "bg-green-600 text-white" });
     } catch (e) {
       toast({ variant: "destructive", title: "Sync failed" });
     } finally {
@@ -116,8 +117,12 @@ export default function StreamPage() {
   const handleRequestAction = async (requestId: string, action: 'approved' | 'rejected') => {
     if (!firestore) return;
     try {
-      await updateDoc(doc(firestore, 'streamRequests', requestId), { status: action });
+      await updateDoc(doc(firestore, 'streamRequests', requestId), { 
+        status: action,
+        updatedAt: serverTimestamp()
+      });
       setRequestPopup(null);
+      toast({ title: action === 'approved' ? "Call Accepted" : "Request Rejected" });
     } catch (e) {
       toast({ variant: 'destructive', title: 'Action Failed' });
     }
@@ -126,14 +131,14 @@ export default function StreamPage() {
   const endStream = async () => {
     if (confirm("End broadcast?")) {
       if (isHost && hostRef) {
-        await updateDoc(hostRef, { isLive: false });
+        await updateDoc(hostRef, { isLive: false, streamType: 'public' });
       }
       router.push('/host-p');
     }
   };
 
   if (isLoading && areServicesAvailable) {
-    return <div className="h-screen bg-background flex items-center justify-center"><Loader2 className="size-12 animate-spin text-primary" /></div>;
+    return <div className="h-screen bg-black flex items-center justify-center"><Loader2 className="size-12 animate-spin text-primary" /></div>;
   }
 
   const isPrivateMode = host?.streamType === 'private';
@@ -155,7 +160,7 @@ export default function StreamPage() {
         <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/80" />
       </div>
 
-      {/* TOP CONTROLS (MODE TOGGLE) */}
+      {/* TOP CONTROLS (ONE-CLICK TOGGLE) */}
       <div className="absolute top-10 left-0 right-0 z-[60] flex justify-center px-6">
          <div className="flex gap-3 items-center">
             {isHost && (
@@ -191,14 +196,14 @@ export default function StreamPage() {
          </div>
       </div>
 
-      {/* REVENUE BADGE (TOP RIGHT) */}
+      {/* REVENUE BADGE (TOP RIGHT - NO FACE BLOCKING) */}
       {isHost && (
         <div className="absolute top-24 right-6 z-50">
           <LiveEarningTimer minutes={streamMinutes} />
         </div>
       )}
 
-      {/* PRIVATE REQUEST POPUP (CENTERED) */}
+      {/* PRIVATE REQUEST POPUP (CENTERED - 5 SECOND DISMISS) */}
       {isHost && requestPopup && (
         <div className="absolute inset-0 flex items-center justify-center z-[100] px-6 pointer-events-none">
            <div className="romantic-gradient p-8 rounded-[3rem] shadow-[0_20px_60px_rgba(225,29,72,0.5)] flex flex-col items-center text-center space-y-6 border border-white/20 pointer-events-auto animate-in zoom-in duration-300">
@@ -211,12 +216,14 @@ export default function StreamPage() {
                 <Button onClick={() => handleRequestAction(requestPopup.id, 'approved')} className="flex-1 h-14 rounded-2xl bg-white text-primary font-black uppercase text-[10px] border-none shadow-xl"><Check className="size-4 mr-2" /> Accept</Button>
                 <Button onClick={() => handleRequestAction(requestPopup.id, 'rejected')} variant="outline" className="flex-1 h-14 rounded-2xl border-white/20 bg-black/20 text-white font-black uppercase text-[10px]"><Ban className="size-4 mr-2" /> Reject</Button>
               </div>
-              <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden"><div className="h-full bg-white animate-[progress_5s_linear_forwards]" /></div>
+              <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden">
+                <div className="h-full bg-white animate-[progress_5s_linear_forwards]" />
+              </div>
            </div>
         </div>
       )}
 
-      {/* HEADER (CLEAN) */}
+      {/* CLEAN HEADER (NO EXTRA LABELS) */}
       <header className="relative z-10 flex items-center justify-between px-6 mt-32 mb-4">
         <div className="flex items-center gap-4 glass-effect rounded-full p-1.5 pr-6 bg-black/40 backdrop-blur-xl border border-white/10">
           <div className="relative size-12 rounded-full border-2 border-primary overflow-hidden">
@@ -256,7 +263,9 @@ export default function StreamPage() {
         </footer>
       </div>
       
-      <style jsx global>{` @keyframes progress { from { width: 100%; } to { width: 0%; } } `}</style>
+      <style jsx global>{` 
+        @keyframes progress { from { width: 100%; } to { width: 0%; } } 
+      `}</style>
     </div>
   );
 }
