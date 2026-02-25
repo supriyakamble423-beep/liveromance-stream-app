@@ -17,10 +17,6 @@ import { useToast } from "@/hooks/use-toast";
 import LiveEarningTimer from "@/components/Stream/LiveEarningTimer";
 import { Badge } from "@/components/ui/badge";
 
-/**
- * 🚀 World-Class Agent-Optimized Stream Page
- * Fix: Removed "Host Node" labels, cleaned UI overlap, fixed True Toggle.
- */
 export default function StreamPage() {
   const { id } = useParams();
   const router = useRouter();
@@ -47,14 +43,7 @@ export default function StreamPage() {
 
   const { data: host, isLoading } = useDoc(hostRef);
 
-  // Fetch User Profile for Coins
-  const userRef = useMemoFirebase(() => {
-    if (!firestore || !user?.uid) return null;
-    return doc(firestore, 'users', user.uid);
-  }, [firestore, user?.uid]);
-  const { data: userData } = useDoc(userRef);
-
-  // HOST: REAL-TIME REQUEST POPUP LISTENER
+  // REAL-TIME REQUEST POPUP LISTENER
   useEffect(() => {
     if (!firestore || !isHost || !effectiveId) return;
 
@@ -72,38 +61,18 @@ export default function StreamPage() {
         const docId = snapshot.docs[0].id;
         const requestTime = docData.timestamp?.toMillis() || Date.now();
         
-        // Show popup only if request is recent (last 15s)
+        // Popup timing check
         if (Date.now() - requestTime < 15000) {
           setRequestPopup({ id: docId, name: docData.userName || 'Anonymous' });
           setTimeout(() => setRequestPopup(null), 5000);
         }
       }
-    }, (err) => console.error("Popup error:", err));
+    });
 
     return () => unsubscribe();
   }, [firestore, isHost, effectiveId]);
 
-  // USER: LISTEN TO OWN REQUEST STATUS
-  useEffect(() => {
-    if (!firestore || !activeRequestId || isHost) return;
-
-    const unsubscribe = onSnapshot(doc(firestore, 'streamRequests', activeRequestId), (docSnap) => {
-      if (docSnap.exists()) {
-        const status = docSnap.data().status;
-        setRequestStatus(status);
-        if (status === 'approved') {
-          toast({ title: "Request Accepted!", description: "Private session active." });
-        } else if (status === 'rejected') {
-          toast({ variant: "destructive", title: "Request Declined" });
-          setActiveRequestId(null);
-        }
-      }
-    });
-
-    return () => unsubscribe();
-  }, [firestore, activeRequestId, isHost]);
-
-  // Handle minutes tracker
+  // Minutes tracker
   useEffect(() => {
     if (!isHost) return;
     const interval = setInterval(() => {
@@ -112,23 +81,18 @@ export default function StreamPage() {
     return () => clearInterval(interval);
   }, [isHost]);
 
-  // Camera for Host
+  // Camera permissions
   useEffect(() => {
     if (!isHost) return;
-    const getCameraPermission = async () => {
+    const getCamera = async () => {
       try {
-        const s = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "user" }, 
-          audio: true
-        });
+        const s = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
         setCameraStream(s);
         if (videoRef.current) videoRef.current.srcObject = s;
-      } catch (error) {
-        toast({ variant: 'destructive', title: 'Camera Access Denied' });
-      }
+      } catch (err) { console.error(err); }
     };
-    getCameraPermission();
-    return () => { cameraStream?.getTracks().forEach(track => track.stop()); };
+    getCamera();
+    return () => { cameraStream?.getTracks().forEach(t => t.stop()); };
   }, [isHost]);
 
   const toggleStreamMode = async () => {
@@ -143,36 +107,9 @@ export default function StreamPage() {
       }, { merge: true });
       toast({ title: `MODE: ${nextMode.toUpperCase()}` });
     } catch (e) {
-      toast({ variant: "destructive", title: "Update failed" });
+      toast({ variant: "destructive", title: "Sync failed" });
     } finally {
       setTimeout(() => setIsUpdating(false), 500);
-    }
-  };
-
-  const handleRequestPrivate = async () => {
-    if (!user || !firestore) {
-      toast({ variant: "destructive", title: "Login required" });
-      return;
-    }
-    const minRate = 50;
-    if ((userData?.coins || 0) < minRate) {
-      toast({ variant: "destructive", title: "Low Balance", description: "Min 50 coins required." });
-      return;
-    }
-    setRequestStatus('pending');
-    try {
-      const docRef = await addDoc(collection(firestore, 'streamRequests'), {
-        hostId: effectiveId,
-        userId: user.uid,
-        userName: user.displayName || 'Anonymous User',
-        status: 'pending',
-        timestamp: serverTimestamp(),
-        amount: minRate
-      });
-      setActiveRequestId(docRef.id);
-    } catch (e) {
-      toast({ variant: "destructive", title: "Request failed" });
-      setRequestStatus('idle');
     }
   };
 
@@ -200,7 +137,6 @@ export default function StreamPage() {
   }
 
   const isPrivateMode = host?.streamType === 'private';
-  const isUnlocked = requestStatus === 'approved' || isHost;
   const displayUsername = host?.username || 'Host';
   const displayImage = host?.previewImageUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${effectiveId}`;
 
@@ -213,27 +149,7 @@ export default function StreamPage() {
           <video ref={videoRef} autoPlay playsInline muted className={cn("w-full h-full object-cover scale-x-[-1] transition-all", (isPrivateMode || host?.manualBlur) && "blur-3xl opacity-60")} />
         ) : (
           <div className="relative w-full h-full">
-            <Image src={displayImage} alt="Feed" fill className={cn("object-cover transition-all", (isPrivateMode && !isUnlocked) || host?.manualBlur ? "blur-3xl opacity-40" : "opacity-90")} />
-            
-            {isPrivateMode && !isUnlocked && (
-              <div className="absolute inset-0 bg-black/40 backdrop-blur-xl flex flex-col items-center justify-center p-8 space-y-6 text-center">
-                <Lock className="size-16 text-primary animate-pulse" />
-                <div className="space-y-2">
-                  <h2 className="text-2xl font-black uppercase italic text-white">Private Session</h2>
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Host is in stealth mode. Request access.</p>
-                </div>
-                {requestStatus === 'pending' ? (
-                  <div className="flex flex-col items-center gap-4">
-                    <Loader2 className="size-10 text-primary animate-spin" />
-                    <p className="text-xs font-black text-white uppercase animate-pulse">Waiting for Accept...</p>
-                  </div>
-                ) : (
-                  <Button onClick={handleRequestPrivate} className="h-16 rounded-full bg-primary px-10 text-white font-black uppercase tracking-widest gap-2 shadow-2xl">
-                    <Zap className="size-5 fill-current" /> Request Private (50 Coins)
-                  </Button>
-                )}
-              </div>
-            )}
+            <Image src={displayImage} alt="Feed" fill className={cn("object-cover transition-all", isPrivateMode || host?.manualBlur ? "blur-3xl opacity-40" : "opacity-90")} />
           </div>
         )}
         <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/80" />
@@ -275,7 +191,7 @@ export default function StreamPage() {
          </div>
       </div>
 
-      {/* REVENUE BADGE (MOVED TO CORNER TO PREVENT FACE BLOCK) */}
+      {/* REVENUE BADGE (TOP RIGHT) */}
       {isHost && (
         <div className="absolute top-24 right-6 z-50">
           <LiveEarningTimer minutes={streamMinutes} />
@@ -300,7 +216,7 @@ export default function StreamPage() {
         </div>
       )}
 
-      {/* HEADER (CLEAN - NO EXTRA LABELS) */}
+      {/* HEADER (CLEAN) */}
       <header className="relative z-10 flex items-center justify-between px-6 mt-32 mb-4">
         <div className="flex items-center gap-4 glass-effect rounded-full p-1.5 pr-6 bg-black/40 backdrop-blur-xl border border-white/10">
           <div className="relative size-12 rounded-full border-2 border-primary overflow-hidden">
@@ -331,15 +247,13 @@ export default function StreamPage() {
             </div>
         </div>
 
-        {(!isPrivateMode || isUnlocked) && (
-          <footer className="flex items-center gap-4 w-full animate-in slide-in-from-bottom-6">
-            <div className="flex-1 flex items-center glass-effect rounded-[2.5rem] px-8 h-16 bg-white/5 border-white/10">
-              <Input value={inputText} onChange={(e) => setInputText(e.target.value)} className="bg-transparent border-none focus-visible:ring-0 text-white placeholder-white/20 font-black text-xs uppercase" placeholder="Secure message..." />
-              <button onClick={() => setInputText("")} className="ml-3 text-primary hover:scale-125 transition-transform"><Send className="size-7" /></button>
-            </div>
-            <Button className="size-16 rounded-full romantic-gradient border-none shadow-2xl flex items-center justify-center active:scale-90 transition-all"><Heart className="size-8 text-white fill-current" /></Button>
-          </footer>
-        )}
+        <footer className="flex items-center gap-4 w-full animate-in slide-in-from-bottom-6">
+          <div className="flex-1 flex items-center glass-effect rounded-[2.5rem] px-8 h-16 bg-white/5 border-white/10">
+            <Input value={inputText} onChange={(e) => setInputText(e.target.value)} className="bg-transparent border-none focus-visible:ring-0 text-white placeholder-white/20 font-black text-xs uppercase" placeholder="Secure message..." />
+            <button onClick={() => setInputText("")} className="ml-3 text-primary hover:scale-125 transition-transform"><Send className="size-7" /></button>
+          </div>
+          <Button className="size-16 rounded-full romantic-gradient border-none shadow-2xl flex items-center justify-center active:scale-90 transition-all"><Heart className="size-8 text-white fill-current" /></Button>
+        </footer>
       </div>
       
       <style jsx global>{` @keyframes progress { from { width: 100%; } to { width: 0%; } } `}</style>

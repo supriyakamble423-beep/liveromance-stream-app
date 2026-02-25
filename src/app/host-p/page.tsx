@@ -196,14 +196,14 @@ export default function HostProfileDashboard() {
           </p>
         </section>
 
-        {/* Main Action Buttons - Pic & Video */}
+        {/* Main Action Buttons - Updated Labels */}
         <div className="grid grid-cols-2 gap-4 mt-6">
             <Link href="/host-f" className="flex-1">
               <Button variant="outline" className="w-full h-28 rounded-[2rem] border-white/10 bg-white/5 text-white flex flex-col items-center justify-center gap-3 hover:bg-primary/20 transition-all border-none romantic-card-glow group">
                 <div className="size-12 bg-primary/20 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
                   <Camera className="size-7 text-primary" />
                 </div>
-                <span className="text-[11px] font-black uppercase tracking-widest italic">Identity Scan (Pic)</span>
+                <span className="text-[11px] font-black uppercase tracking-widest italic">Image Upload</span>
               </Button>
             </Link>
             <Button 
@@ -214,7 +214,7 @@ export default function HostProfileDashboard() {
               <div className="size-12 bg-secondary/20 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
                 <Video className="size-7 text-secondary" />
               </div>
-              <span className="text-[11px] font-black uppercase tracking-widest italic">Live Hub (Video)</span>
+              <span className="text-[11px] font-black uppercase tracking-widest italic">Video Upload</span>
             </Button>
         </div>
       </header>
