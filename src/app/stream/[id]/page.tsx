@@ -62,7 +62,8 @@ export default function StreamPage() {
   useEffect(() => {
     if (latestRequests && latestRequests.length > 0) {
       const req = latestRequests[0];
-      const isFresh = req.timestamp && (Date.now() - req.timestamp.toMillis() < 5000);
+      const reqTimestamp = req.timestamp?.toMillis() || Date.now();
+      const isFresh = (Date.now() - reqTimestamp < 5000);
       
       if (isFresh) {
         setRequestPopup({ id: req.id, name: req.userName || 'Unknown User' });
@@ -205,7 +206,7 @@ export default function StreamPage() {
         <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/80 pointer-events-none" />
       </div>
 
-      {/* TOP CONTROLS: True Mode Toggle & Blur Button (Conditional) */}
+      {/* TOP CONTROLS: True Mode Toggle & Blur Button */}
       <div className="absolute top-8 left-0 right-0 z-[60] flex justify-center px-6 pointer-events-none">
          <div className="flex gap-3 pointer-events-auto items-center">
             {isHost && (
@@ -342,13 +343,6 @@ export default function StreamPage() {
         )}
       </div>
       
-      {/* Decorative Scanline Overlay (Host Only) */}
-      {isHost && (
-        <div className="absolute inset-0 pointer-events-none z-20 overflow-hidden opacity-5">
-          <div className="absolute top-0 left-0 w-full h-1 bg-primary shadow-[0_0_15px_#E11D48] animate-scan" />
-        </div>
-      )}
-
       <style jsx global>{`
         @keyframes progress {
           from { width: 100%; }
