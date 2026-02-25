@@ -1,15 +1,21 @@
 'use client';
+
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
 /**
  * Stream Demo Redirect Page
- * Added 'use client' to prevent Internal Server Error during SSR.
+ * Client-only component to prevent SSR 'Internal Server Error' on redirection.
  */
 export default function StreamDemoRedirect() {
   const router = useRouter();
   useEffect(() => { 
     router.push('/global'); 
   }, [router]);
-  return null;
+
+  return (
+    <div className="min-h-screen bg-black flex items-center justify-center">
+      <div className="size-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
 }

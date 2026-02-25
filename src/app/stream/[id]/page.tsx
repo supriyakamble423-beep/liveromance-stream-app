@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import {
   X, Eye, Heart, Send,
-  Lock, Zap, ShieldOff, ShieldCheck, Loader2, Power
+  Lock, Zap, ShieldOff, ShieldCheck, Loader2, Power, AlertCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,13 +17,13 @@ import LiveEarningTimer from "@/components/Stream/LiveEarningTimer";
 import { PrivateRequestPopup } from "@/components/Stream/PrivateRequestPopup";
 
 /**
- * Optimized Stream Page
- * Manual Fixes: Clean Header (@username only), Instant Toggle, Conditional Blur.
+ * World-Class Optimized Stream Page
+ * Handles Live, Simulation, and Error states gracefully.
  */
 export default function StreamPage() {
   const params = useParams();
   const router = useRouter();
-  const { firestore, user, areServicesAvailable } = useFirebase();
+  const { firestore, user, areServicesAvailable, isUserLoading } = useFirebase();
   const { toast } = useToast();
 
   const [inputText, setInputText] = useState("");
@@ -32,23 +32,45 @@ export default function StreamPage() {
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
+  // Safely extract ID from params hook (Next.js 15 safe)
   const id = params?.id as string;
-  const isHost = user?.uid === id || id === 'simulate_host';
-  const effectiveId = (id === 'simulate_host') ? (user?.uid || 'simulate_host') : id;
+  const isSimulation = id === 'simulate_host' || !id;
+  const effectiveId = isSimulation ? (user?.uid || 'simulate_host') : id;
+  const isHost = user?.uid === effectiveId || isSimulation;
 
+  // Memoize Firestore Reference
   const hostRef = useMemoFirebase(() => {
     if (!firestore || !effectiveId) return null;
     return doc(firestore, 'hosts', effectiveId);
   }, [firestore, effectiveId]);
 
-  const { data: host, isLoading } = useDoc(hostRef);
+  const { data: dbHost, isLoading: isDbLoading } = useDoc(hostRef);
 
+  // Fallback Host Data for Simulation or if DB is slow
+  const host = useMemo(() => {
+    if (dbHost) return dbHost;
+    if (isSimulation) {
+      return {
+        id: effectiveId,
+        username: user?.displayName || 'Host_Simulated',
+        isLive: true,
+        streamType: 'public',
+        previewImageUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${effectiveId}`,
+        viewers: 1240,
+        manualBlur: false,
+      };
+    }
+    return null;
+  }, [dbHost, isSimulation, effectiveId, user]);
+
+  // Timer logic for Host
   useEffect(() => {
     if (!isHost) return;
     const interval = setInterval(() => setStreamMinutes((prev) => prev + 1), 60000);
     return () => clearInterval(interval);
   }, [isHost]);
 
+  // Camera initialization
   useEffect(() => {
     if (!isHost) return;
     const startCamera = async () => {
@@ -61,20 +83,27 @@ export default function StreamPage() {
       }
     };
     startCamera();
-    return () => cameraStream?.getTracks().forEach(t => t.stop());
+    return () => {
+      cameraStream?.getTracks().forEach(t => t.stop());
+    };
   }, [isHost]);
 
   const toggleMode = async () => {
-    if (!isHost || !hostRef) return;
+    if (!isHost || !hostRef || !firestore) {
+      toast({ title: "Simulation Mode Active" });
+      return;
+    }
+    
     setIsUpdating(true);
     const nextMode = host?.streamType === 'public' ? 'private' : 'public';
+    
     try {
       await setDoc(hostRef, { 
         streamType: nextMode, 
         isLive: true, 
         updatedAt: serverTimestamp() 
       }, { merge: true });
-      toast({ title: `Signal: ${nextMode.toUpperCase()}` });
+      toast({ title: `SIGNAL: ${nextMode.toUpperCase()}` });
     } catch (e) {
       toast({ variant: "destructive", title: "Sync Failed" });
     } finally {
@@ -83,17 +112,18 @@ export default function StreamPage() {
   };
 
   const toggleBlur = async () => {
-    if (!hostRef || !host) return;
+    if (!hostRef || !host || !firestore) return;
     try {
       await updateDoc(hostRef, { manualBlur: !host.manualBlur });
     } catch (e) {
-      toast({ variant: "destructive", title: "Blur Toggle Failed" });
+      toast({ variant: "destructive", title: "Mask Failed" });
     }
   };
 
   const endStream = async () => {
-    if (!confirm("Confirm Signal Cut?")) return;
-    if (isHost && hostRef) {
+    if (typeof window !== 'undefined' && !window.confirm("Confirm Signal Cut?")) return;
+    
+    if (isHost && hostRef && firestore) {
       try {
         await updateDoc(hostRef, { isLive: false, streamType: 'public' });
       } catch (e) {
@@ -104,22 +134,33 @@ export default function StreamPage() {
     router.push('/host-p');
   };
 
-  if (isLoading && areServicesAvailable) {
+  if ((isDbLoading || isUserLoading) && areServicesAvailable) {
     return (
-      <div className="h-screen bg-black flex flex-col items-center justify-center space-y-4">
-        <Loader2 className="size-12 animate-spin text-primary" />
-        <p className="text-[10px] font-black uppercase tracking-widest text-primary">Establishing Grid...</p>
+      <div className="h-screen bg-black flex flex-col items-center justify-center space-y-6">
+        <div className="size-12 border-4 border-primary border-t-transparent rounded-full animate-spin shadow-[0_0_20px_#E11D48]" />
+        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary animate-pulse">Establishing Grid...</p>
+      </div>
+    );
+  }
+
+  if (!host && !isSimulation) {
+    return (
+      <div className="h-screen bg-black flex flex-col items-center justify-center p-8 text-center space-y-4">
+        <AlertCircle className="size-12 text-primary" />
+        <h2 className="text-xl font-black uppercase italic text-white">Node Not Found</h2>
+        <Button onClick={() => router.push('/global')} className="bg-primary rounded-full px-8">Return Home</Button>
       </div>
     );
   }
 
   const isPrivate = host?.streamType === 'private';
-  const isBlur = isPrivate || host?.manualBlur;
+  const isBlur = host?.manualBlur || isPrivate;
   const username = host?.username || 'Host';
   const img = host?.previewImageUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${effectiveId}`;
 
   return (
     <div className="relative h-screen w-full flex flex-col overflow-hidden bg-black max-w-lg mx-auto border-x border-white/10 screen-guard-active">
+      {/* Background Feed */}
       <div className="absolute inset-0 z-0">
         {isHost ? (
           <video 
@@ -140,6 +181,7 @@ export default function StreamPage() {
         <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/80" />
       </div>
 
+      {/* Top Controls Overlay */}
       <div className="absolute top-12 left-0 right-0 z-50 flex flex-col items-center gap-4">
         <div className="flex items-center gap-3">
           <Button
@@ -169,7 +211,8 @@ export default function StreamPage() {
         </div>
       </div>
 
-      {isHost && <PrivateRequestPopup firestore={firestore} hostId={effectiveId} />}
+      {/* Popups & Notifications */}
+      {isHost && areServicesAvailable && <PrivateRequestPopup firestore={firestore} hostId={effectiveId} />}
 
       {isHost && (
         <div className="absolute top-28 right-6 z-50">
@@ -177,6 +220,7 @@ export default function StreamPage() {
         </div>
       )}
 
+      {/* Header Profile - Instructions Cleaned */}
       <header className="relative z-10 flex items-center justify-between px-6 mt-44">
         <div className="flex items-center gap-3 bg-black/40 backdrop-blur-md rounded-full p-2 pr-6 border border-white/10 shadow-xl">
           <div className="relative size-10 rounded-full overflow-hidden border-2 border-primary">
@@ -193,10 +237,12 @@ export default function StreamPage() {
         </Button>
       </header>
 
+      {/* Main Content & Input Area */}
       <div className="flex-1 relative z-10 flex flex-col justify-end px-6 pb-12">
         <div className="bg-black/40 backdrop-blur-md rounded-2xl p-4 mb-4 border border-white/10 shadow-2xl">
           <p className="text-[10px] font-bold text-white/80 uppercase leading-relaxed italic">
-            <span className="text-primary">SIGNAL:</span> {isPrivate ? "Private Encryption Active. Room Secured." : "Public Node Discovery Active."}
+            <span className="text-primary font-black tracking-widest mr-2">SIGNAL:</span> 
+            {isPrivate ? "Private Encryption Active. Room Secured." : "Public Node Discovery Active."}
           </p>
         </div>
 
@@ -206,11 +252,13 @@ export default function StreamPage() {
               value={inputText} 
               onChange={(e) => setInputText(e.target.value)} 
               className="bg-transparent border-none text-white text-xs font-bold placeholder-white/30 h-8" 
-              placeholder="Send romantic pulse..." 
+              placeholder="Send message..." 
             />
             <button className="text-primary hover:text-white transition-colors"><Send className="size-5" /></button>
           </div>
-          <Button className="size-14 rounded-2xl bg-primary shadow-2xl shadow-primary/40"><Heart className="size-6 text-white fill-current" /></Button>
+          <Button className="size-14 rounded-2xl bg-primary shadow-2xl shadow-primary/40 active:scale-95 transition-transform">
+            <Heart className="size-6 text-white fill-current" />
+          </Button>
         </div>
       </div>
     </div>
