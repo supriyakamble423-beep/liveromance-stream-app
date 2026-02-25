@@ -10,6 +10,11 @@ interface LiveEarningTimerProps {
   minutes: number;
 }
 
+/**
+ * World-Class Milestone Component
+ * Logic: Milestones every 30 Minutes.
+ * Features: Luxury celebratory popup on goal reach.
+ */
 export default function LiveEarningTimer({ minutes }: LiveEarningTimerProps) {
   const [showPopup, setShowPopup] = useState(false);
   const [lastMilestone, setLastMilestone] = useState(0);
@@ -111,4 +116,3 @@ export default function LiveEarningTimer({ minutes }: LiveEarningTimerProps) {
     </div>
   );
 }
-
