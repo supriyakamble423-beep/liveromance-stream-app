@@ -57,16 +57,15 @@ export default function StreamPage() {
 
   const { data: latestRequests } = useCollection(requestsQuery);
 
-  // Handle Request Popup Timer
+  // Handle Request Popup Timer (5 Seconds)
   useEffect(() => {
     if (latestRequests && latestRequests.length > 0) {
       const req = latestRequests[0];
-      // Only show if the request is fresh (last 10 seconds)
-      const isFresh = req.timestamp && (Date.now() - req.timestamp.toMillis() < 10000);
+      const isFresh = req.timestamp && (Date.now() - req.timestamp.toMillis() < 5000);
       
       if (isFresh) {
         setRequestPopup({ id: req.id, name: req.userName || 'Unknown User' });
-        const timer = setTimeout(() => setRequestPopup(null), 5000); // 5 second auto-hide
+        const timer = setTimeout(() => setRequestPopup(null), 5000);
         return () => clearTimeout(timer);
       }
     }
@@ -100,7 +99,7 @@ export default function StreamPage() {
     return () => cameraStream?.getTracks().forEach(track => track.stop());
   }, [isHost]);
 
-  // One-Click Mode Toggle
+  // True One-Click Mode Toggle (Firestore Update)
   const toggleStreamMode = async () => {
     if (!isHost || !hostRef) return;
     const currentMode = host?.streamType || 'public';
@@ -111,9 +110,9 @@ export default function StreamPage() {
         streamType: nextMode,
         updatedAt: serverTimestamp() 
       }, { merge: true });
-      toast({ title: `Signal switched to ${nextMode.toUpperCase()}` });
+      toast({ title: `SIGNAL: ${nextMode.toUpperCase()} ACTIVE` });
     } catch (e) {
-      toast({ variant: "destructive", title: "Sync Failed", description: "Could not update mode." });
+      toast({ variant: "destructive", title: "Sync Failed" });
     }
   };
 
@@ -179,7 +178,7 @@ export default function StreamPage() {
             autoPlay 
             playsInline 
             muted 
-            className={cn("w-full h-full object-cover scale-x-[-1]", hostPreviewBlur && "blur-2xl opacity-60")} 
+            className={cn("w-full h-full object-cover scale-x-[-1]", hostPreviewBlur && "blur-3xl opacity-60")} 
           />
         ) : (
           <div className="relative w-full h-full">
@@ -202,7 +201,7 @@ export default function StreamPage() {
         <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/80 pointer-events-none" />
       </div>
 
-      {/* TOP CONTROLS: True Mode Toggle & Blur */}
+      {/* TOP CONTROLS: True Mode Toggle & Blur Button (Conditional) */}
       <div className="absolute top-8 left-0 right-0 z-[60] flex justify-center px-6 pointer-events-none">
          <div className="flex gap-3 pointer-events-auto items-center">
             {isHost && (
@@ -218,7 +217,7 @@ export default function StreamPage() {
                   {isPrivate ? "MODE: PRIVATE" : "MODE: PUBLIC"}
                 </Button>
                 
-                {/* Blur button only visible in Private Mode */}
+                {/* Blur button ONLY visible in Private Mode */}
                 {isPrivate && (
                   <Button 
                     onClick={toggleManualBlur}
@@ -241,10 +240,10 @@ export default function StreamPage() {
          </div>
       </div>
 
-      {/* Bonus Earning Timer (30min popup logic) */}
+      {/* Bonus Earning Timer HUD */}
       {isHost && <LiveEarningTimer minutes={streamMinutes} />}
 
-      {/* PRIVATE REQUEST POPUP: 5 Second Auto-Hide */}
+      {/* PRIVATE REQUEST POPUP: 5-Second Automatic UI */}
       {isHost && requestPopup && (
         <div className="absolute top-1/2 left-6 right-6 -translate-y-1/2 z-[100] animate-in zoom-in fade-in duration-500">
            <div className="romantic-gradient p-8 rounded-[3rem] shadow-[0_20px_60px_rgba(225,29,72,0.5)] flex flex-col items-center text-center space-y-6 border border-white/20 romantic-glow">
@@ -252,8 +251,8 @@ export default function StreamPage() {
                  <UserPlus className="size-10 text-white" />
                  <div className="absolute inset-0 bg-white/10 animate-pulse" />
               </div>
-              <div>
-                 <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/70 mb-1">Private Call Request</p>
+              <div className="space-y-1">
+                 <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/70">Private Call Request</p>
                  <h3 className="text-xl font-black text-white italic uppercase tracking-tighter leading-tight">
                    @{requestPopup.name} wants a Private Call
                  </h3>
@@ -280,7 +279,7 @@ export default function StreamPage() {
         </div>
       )}
 
-      {/* HEADER: Minimalized - No Host Node labels */}
+      {/* HEADER: Clean UI - No Host Node labels */}
       <header className="relative z-10 flex items-center justify-between px-6 pt-24 pb-4 mt-20">
         <div className="flex items-center gap-4 glass-effect rounded-full p-1.5 pr-6 bg-black/40 backdrop-blur-xl border border-white/10 shadow-lg">
           <div className="relative size-14 rounded-full border-2 border-primary overflow-hidden bg-slate-900 shadow-inner">
@@ -313,7 +312,7 @@ export default function StreamPage() {
             <div className="px-5 py-3.5 rounded-[1.5rem] max-w-fit bg-black/60 backdrop-blur-xl border border-white/10 shadow-2xl">
               <p className="text-[11px] text-white font-medium leading-relaxed uppercase tracking-tight">
                 <span className="font-black mr-2 text-primary">Sentinel:</span>
-                <span className="opacity-80">{isPrivate ? "Encryption Active. High-Security Tunnel Established." : "Broadcast is Public. Enjoy Responsibly."}</span>
+                <span className="opacity-80">{isPrivate ? "Encryption Active. Private Mode Engaged." : "Broadcast is Public. Stay Safe."}</span>
               </p>
             </div>
           <div ref={chatEndRef} />
@@ -339,7 +338,7 @@ export default function StreamPage() {
         )}
       </div>
       
-      {/* Decorative Scanline Overlay */}
+      {/* Decorative Scanline Overlay (Host Only) */}
       {isHost && (
         <div className="absolute inset-0 pointer-events-none z-20 overflow-hidden opacity-5">
           <div className="absolute top-0 left-0 w-full h-1 bg-primary shadow-[0_0_15px_#E11D48] animate-scan" />
