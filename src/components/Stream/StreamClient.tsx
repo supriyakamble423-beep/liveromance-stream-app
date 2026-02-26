@@ -31,6 +31,7 @@ export function StreamClient({ id }: StreamClientProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
+  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
 
   const isHost = user?.uid === id || id === 'simulate_host';
   const effectiveId = isHost ? (user?.uid || 'simulate_host') : id;
@@ -72,17 +73,24 @@ export function StreamClient({ id }: StreamClientProps) {
           video: { facingMode: "user" }, 
           audio: true 
         });
+        setHasPermission(true);
         setCameraStream(s);
         if (videoRef.current) videoRef.current.srcObject = s;
       } catch (err) {
         console.error("Camera failed:", err);
+        setHasPermission(false);
+        toast({ 
+          variant: "destructive", 
+          title: "Permission Denied", 
+          description: "Bhai, Camera/Mic ke bina stream nahi ho payegi. Please enable permissions." 
+        });
       }
     }
     getCamera();
     return () => {
       if (cameraStream) cameraStream.getTracks().forEach(t => t.stop());
     };
-  }, [isHost, cameraStream]);
+  }, [isHost, cameraStream, toast]);
 
   const toggleMode = async () => {
     if (!isHost || !hostRef || isUpdating) return;

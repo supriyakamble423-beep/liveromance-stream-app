@@ -66,7 +66,6 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
     const unsubscribe = onAuthStateChanged(
       auth,
       async (firebaseUser) => {
-        // Auto-anonymous only if not already authenticated or trying to auth
         if (!firebaseUser && auth) {
           try {
             await signInAnonymously(auth);
@@ -77,14 +76,14 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
 
         if (firebaseUser && firestore) {
           const userRef = doc(firestore, 'users', firebaseUser.uid);
-          // Async profile creation (lazy)
           getDoc(userRef).then(async (userSnap) => {
             if (!userSnap.exists()) {
+              // WELCOME BONUS: 50 Diamonds for new users
               await setDoc(userRef, {
                 id: firebaseUser.uid,
                 username: firebaseUser.displayName || `User_${firebaseUser.uid.slice(0,5)}`,
                 email: firebaseUser.email || '',
-                diamonds: 0,
+                diamonds: 50, // Welcome Bonus
                 createdAt: serverTimestamp(),
                 updatedAt: serverTimestamp()
               }, { merge: true });
