@@ -164,14 +164,28 @@ export function StreamClient({ id }: StreamClientProps) {
 
       {/* TOP HEADER */}
       <div className="absolute top-0 left-0 right-0 p-6 pt-12 flex justify-between items-start z-50">
-        <div className="flex items-center gap-3 bg-black/20 backdrop-blur-md p-1 pr-4 rounded-full border border-white/10">
-          <div className="relative size-12 rounded-full border-2 border-primary overflow-hidden">
-             <Image src={displayHost.previewImageUrl || "/logo.png"} fill className="object-cover" alt="Host" />
+        <div className="flex items-center gap-3">
+          {/* REVENUE & TARGET BOX (Replaced Image Box) */}
+          <div className="bg-black/30 backdrop-blur-xl border border-white/10 rounded-3xl p-1.5 px-4 shadow-2xl flex flex-col items-start min-w-[120px]">
+             {isHost ? (
+               <LiveEarningTimer minutes={streamMinutes} minimal={true} />
+             ) : (
+               <div className="py-1">
+                 <h3 className="text-white text-xs font-bold tracking-tight italic">@{displayHost.username}</h3>
+                 <p className="text-white/60 text-[9px] flex items-center gap-1 mt-0.5">
+                   <Zap size={8} className="text-yellow-400" /> {displayHost.viewers || '1.2k'} Live
+                 </p>
+               </div>
+             )}
           </div>
-          <div>
-            <h3 className="text-white text-sm font-bold tracking-tight italic">@{displayHost.username}</h3>
-            <p className="text-white/60 text-[10px] flex items-center gap-1"><Zap size={10} className="text-yellow-400" /> {displayHost.viewers || '1.2k'} Live</p>
-          </div>
+          
+          {/* USERNAME (Only if Host to keep it clean) */}
+          {isHost && (
+            <div className="hidden sm:block">
+              <h3 className="text-white text-sm font-bold tracking-tight italic">@{displayHost.username}</h3>
+              <p className="text-white/60 text-[9px] flex items-center gap-1"><Zap size={10} className="text-yellow-400" /> {displayHost.viewers || '1.2k'} Live</p>
+            </div>
+          )}
         </div>
 
         <div className="flex flex-col gap-2 items-end">
@@ -205,13 +219,6 @@ export function StreamClient({ id }: StreamClientProps) {
              <h2 className="text-2xl font-black text-white italic uppercase">30 Min Target!</h2>
              <p className="text-white/90 font-bold text-sm">Bonus Diamonds Unlocked!</p>
           </div>
-        </div>
-      )}
-
-      {/* REVENUE TIMER (FACE BLOCKING FIXED) */}
-      {isHost && (
-        <div className="absolute top-28 right-6 z-50">
-          <LiveEarningTimer minutes={streamMinutes} />
         </div>
       )}
 

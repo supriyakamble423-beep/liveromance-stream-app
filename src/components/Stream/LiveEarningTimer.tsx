@@ -1,19 +1,19 @@
-
 'use client';
 
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { Sparkles, Trophy, Zap, Star } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 
 interface LiveEarningTimerProps {
   minutes: number;
+  minimal?: boolean;
 }
 
 /**
- * Luxury 30-Minute Milestone HUD (Minimized to prevent Face Blocking)
+ * Luxury 30-Minute Milestone HUD 
+ * Optimized for Header placement (Replaces Avatar)
  */
-export default function LiveEarningTimer({ minutes }: LiveEarningTimerProps) {
+export default function LiveEarningTimer({ minutes, minimal = false }: LiveEarningTimerProps) {
   const [showPopup, setShowPopup] = useState(false);
   const [lastMilestone, setLastMilestone] = useState(0);
 
@@ -37,6 +37,25 @@ export default function LiveEarningTimer({ minutes }: LiveEarningTimerProps) {
 
   const level = getLevelDetails();
 
+  if (minimal) {
+    return (
+      <div className="flex items-center gap-3">
+        <div className="flex flex-col items-start">
+          <span className="text-[7px] font-black text-primary uppercase tracking-[0.2em] leading-none mb-1">Revenue</span>
+          <div className="flex items-center gap-1">
+            {level.icon}
+            <span className={cn("text-[10px] font-black italic tracking-tighter", level.color)}>{level.multiplier}</span>
+          </div>
+        </div>
+        <div className="h-5 w-px bg-white/20" />
+        <div className="flex flex-col items-start">
+          <span className="text-[7px] font-black text-slate-500 uppercase tracking-[0.2em] leading-none mb-1">Target</span>
+          <span className="text-[10px] font-black text-white italic">{level.nextGoal}m</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="relative">
       {/* CELEBRATION MODAL (FULL SCREEN) */}
@@ -55,7 +74,7 @@ export default function LiveEarningTimer({ minutes }: LiveEarningTimerProps) {
         </div>
       )}
 
-      {/* MINIMAL BADGE (TOP RIGHT - NO FACE BLOCKING) */}
+      {/* DEFAULT BADGE */}
       <div className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-2xl p-2 px-4 shadow-2xl flex items-center gap-3">
         <div className="flex flex-col items-start">
           <span className="text-[8px] font-black text-primary uppercase tracking-widest leading-none mb-1">Revenue</span>
