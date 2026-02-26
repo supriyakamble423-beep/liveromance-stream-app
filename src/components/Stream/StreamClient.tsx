@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useRef } from "react";
@@ -67,7 +68,8 @@ export function StreamClient({ id }: StreamClientProps) {
 
   useEffect(() => {
     if (!isHost || cameraStream) return;
-    async function getCamera() {
+    
+    async function getPermissionsAndStart() {
       try {
         const s = await navigator.mediaDevices.getUserMedia({ 
           video: { facingMode: "user" }, 
@@ -77,7 +79,7 @@ export function StreamClient({ id }: StreamClientProps) {
         setCameraStream(s);
         if (videoRef.current) videoRef.current.srcObject = s;
       } catch (err) {
-        console.error("Camera failed:", err);
+        console.error("Permission error:", err);
         setHasPermission(false);
         toast({ 
           variant: "destructive", 
@@ -86,7 +88,9 @@ export function StreamClient({ id }: StreamClientProps) {
         });
       }
     }
-    getCamera();
+    
+    getPermissionsAndStart();
+
     return () => {
       if (cameraStream) cameraStream.getTracks().forEach(t => t.stop());
     };
@@ -197,7 +201,7 @@ export function StreamClient({ id }: StreamClientProps) {
         <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/90" />
       </div>
 
-      {/* TOP HEADER - REVENUE & TARGET BOX */}
+      {/* TOP HEADER */}
       <div className="absolute top-0 left-0 right-0 p-6 pt-12 flex justify-between items-start z-50">
         <div className="flex items-center gap-3">
           <div className="bg-black/30 backdrop-blur-xl border border-white/10 rounded-3xl p-1.5 px-4 shadow-2xl flex flex-col items-start min-w-[140px]">
@@ -249,10 +253,8 @@ export function StreamClient({ id }: StreamClientProps) {
         </div>
       </div>
 
-      {/* PRIVATE REQUEST POPUP */}
       {isHost && <PrivateRequestPopup firestore={firestore} hostId={effectiveId} />}
 
-      {/* MESSAGES SCROLL AREA */}
       <div 
         ref={scrollRef}
         className="absolute bottom-40 left-6 right-16 h-48 overflow-y-auto no-scrollbar space-y-2 z-40 pointer-events-none"
@@ -267,7 +269,6 @@ export function StreamClient({ id }: StreamClientProps) {
         ))}
       </div>
 
-      {/* SIDE ACTIONS */}
       <div className="absolute right-4 bottom-48 flex flex-col gap-4 z-40">
         {[Heart, Share2, MoreVertical].map((Icon, i) => (
           <button key={i} className="size-12 bg-white/10 backdrop-blur-xl rounded-full flex items-center justify-center text-white border border-white/10 shadow-2xl hover:scale-110 transition-transform">
@@ -276,7 +277,6 @@ export function StreamClient({ id }: StreamClientProps) {
         ))}
       </div>
 
-      {/* CHAT & CONTROLS */}
       <div className="absolute bottom-0 left-0 right-0 p-6 pb-10 z-40 space-y-4">
         <div className="flex flex-col gap-2 w-40">
            <div className="flex items-center justify-between bg-black/40 backdrop-blur-md border border-white/10 p-2 rounded-xl">
@@ -309,7 +309,6 @@ export function StreamClient({ id }: StreamClientProps) {
         </div>
       </div>
 
-      {/* GIFT DRAWER */}
       <div className={cn(
         "absolute bottom-0 left-0 right-0 bg-slate-900/95 backdrop-blur-3xl rounded-t-[40px] border-t border-white/10 z-[150] transition-transform duration-500 ease-out p-8 pt-4",
         isGiftOpen ? "translate-y-0" : "translate-y-full"

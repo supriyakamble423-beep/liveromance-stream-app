@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useFirebase, useDoc, useMemoFirebase } from "@/firebase";
@@ -183,7 +184,7 @@ export default function HostProfileDashboard() {
               <DialogTrigger asChild><Button variant="ghost" size="icon" className="rounded-full bg-white/5 border border-white/10 size-11"><Settings className="size-5 text-white/60" /></Button></DialogTrigger>
               <DialogContent className="bg-[#2D1B2D] border-white/10 text-white rounded-[2.5rem] p-8 max-w-[90vw] mx-auto shadow-2xl overflow-y-auto max-h-[90vh]">
                 <DialogHeader className="items-center mb-6">
-                  <div className="relative h-20 w-full mb-4 drop-shadow-[0_0_15px_rgba(225,29,72,0.5)]">
+                  <div className="relative h-20 w-full mb-4 drop-shadow-[0_0_20px_rgba(255,255,255,0.3)]">
                     <Image 
                       src="/logo.png?v=2" 
                       alt="Logo" 
@@ -206,7 +207,11 @@ export default function HostProfileDashboard() {
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      <Button onClick={handleGoogleLogin} disabled={isAuthLoading} className="w-full h-14 bg-white text-black hover:bg-slate-100 rounded-2xl font-black uppercase tracking-widest gap-3 shadow-[0_10px_30px_rgba(255,255,255,0.1)] border-none ring-2 ring-primary/20">
+                      <Button 
+                        onClick={handleGoogleLogin} 
+                        disabled={isAuthLoading} 
+                        className="w-full h-14 bg-white text-black hover:bg-slate-100 rounded-2xl font-black uppercase tracking-widest gap-3 shadow-[0_10px_30px_rgba(255,255,255,0.2)] border-none ring-2 ring-primary/40 transition-all active:scale-95"
+                      >
                         {isAuthLoading ? <Loader2 className="animate-spin" /> : <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="size-5" />}
                         Google Login
                       </Button>

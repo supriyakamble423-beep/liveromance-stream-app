@@ -1,3 +1,4 @@
+
 'use client';
 import {
   Auth,
@@ -28,6 +29,7 @@ export function initiateEmailSignIn(authInstance: Auth, email: string, password:
 /** Initiate Google sign-in with popup (returns Promise). */
 export function initiateGoogleSignIn(authInstance: Auth): Promise<UserCredential> {
   const provider = new GoogleAuthProvider();
+  provider.setCustomParameters({ prompt: 'select_account' });
   return signInWithPopup(authInstance, provider);
 }
 
