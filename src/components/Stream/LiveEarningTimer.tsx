@@ -74,6 +74,9 @@ export default function LiveEarningTimer({ minutes, hostId, minimal = false }: L
 
   return (
     <>
+      <div className="bg-black/50 backdrop-blur-md rounded-full px-4 py-2 text-[10px] uppercase font-black tracking-widest text-white border border-white/5">
+        Target: {minutes} min / {level.nextGoal}m
+      </div>
       {showPopup && (
         <div className="fixed inset-0 flex items-center justify-center z-[200] bg-black/80 backdrop-blur-md p-6">
            <div className="bg-gradient-to-br from-[#2D1B2D] to-black border-4 border-yellow-500/50 p-10 rounded-[3.5rem] text-center shadow-[0_0_100px_rgba(234,179,8,0.4)] animate-in zoom-in duration-500">
