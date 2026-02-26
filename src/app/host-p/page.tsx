@@ -31,8 +31,10 @@ export default function HostProfileDashboard() {
   const { toast } = useToast();
   const router = useRouter();
   const userId = user?.uid || 'simulate_host';
+  
   const [isTogglingLive, setIsTogglingLive] = useState(false);
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
+  const [isAuthLoading, setIsAuthLoading] = useState(false);
   
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -113,26 +115,61 @@ export default function HostProfileDashboard() {
 
   const handleLogout = async () => {
     if (!auth) return;
-    await signOut(auth);
-    toast({ title: "Signed Out" });
+    try {
+      await signOut(auth);
+      toast({ title: "Signed Out" });
+    } catch (e) {
+      toast({ variant: "destructive", title: "Error", description: "Failed to sign out." });
+    }
   };
 
   const handleLogin = () => {
-    if (!auth || !email || !password) return;
-    initiateEmailSignIn(auth, email, password);
-    toast({ title: "Accessing Grid..." });
+    if (!auth || !email || !password) {
+      toast({ variant: "destructive", title: "Missing Fields", description: "Please enter email and password." });
+      return;
+    }
+    setIsAuthLoading(true);
+    initiateEmailSignIn(auth, email, password)
+      .then(() => {
+        toast({ title: "Accessing Grid...", description: "Login successful." });
+        setEmail("");
+        setPassword("");
+      })
+      .catch((err: any) => {
+        toast({ variant: "destructive", title: "Login Failed", description: err.message });
+      })
+      .finally(() => setIsAuthLoading(false));
   };
 
   const handleSignup = () => {
-    if (!auth || !email || !password) return;
-    initiateEmailSignUp(auth, email, password);
-    toast({ title: "Creating Account..." });
+    if (!auth || !email || !password) {
+      toast({ variant: "destructive", title: "Missing Fields", description: "Please enter email and password." });
+      return;
+    }
+    setIsAuthLoading(true);
+    initiateEmailSignUp(auth, email, password)
+      .then(() => {
+        toast({ title: "Account Created!", description: "Welcome to Global Love." });
+        setEmail("");
+        setPassword("");
+      })
+      .catch((err: any) => {
+        toast({ variant: "destructive", title: "Signup Failed", description: err.message });
+      })
+      .finally(() => setIsAuthLoading(false));
   };
 
   const handleGoogleLogin = () => {
     if (!auth) return;
-    initiateGoogleSignIn(auth);
-    toast({ title: "Connecting Google..." });
+    setIsAuthLoading(true);
+    initiateGoogleSignIn(auth)
+      .then(() => {
+        toast({ title: "Google Connected", description: "Login successful." });
+      })
+      .catch((err: any) => {
+        toast({ variant: "destructive", title: "Google Auth Failed", description: err.message });
+      })
+      .finally(() => setIsAuthLoading(false));
   };
 
   return (
@@ -169,8 +206,8 @@ export default function HostProfileDashboard() {
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      <Button onClick={handleGoogleLogin} className="w-full h-14 bg-white text-black hover:bg-slate-100 rounded-2xl font-black uppercase tracking-widest gap-3 shadow-xl">
-                        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="size-5" />
+                      <Button onClick={handleGoogleLogin} disabled={isAuthLoading} className="w-full h-14 bg-white text-black hover:bg-slate-100 rounded-2xl font-black uppercase tracking-widest gap-3 shadow-xl">
+                        {isAuthLoading ? <Loader2 className="animate-spin" /> : <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="size-5" />}
                         Google Login
                       </Button>
                       
@@ -184,8 +221,12 @@ export default function HostProfileDashboard() {
                         <Input type="email" placeholder="Email Address" value={email} onChange={(e) => setEmail(e.target.value)} className="bg-black/40 border-white/10 h-12 rounded-xl" />
                         <Input type="password" placeholder="Secure Password" value={password} onChange={(e) => setPassword(e.target.value)} className="bg-black/40 border-white/10 h-12 rounded-xl" />
                         <div className="grid grid-cols-2 gap-3">
-                          <Button onClick={handleLogin} variant="outline" className="h-12 rounded-xl font-black uppercase border-white/10">Login</Button>
-                          <Button onClick={handleSignup} className="h-12 rounded-xl font-black uppercase bg-primary">Signup</Button>
+                          <Button onClick={handleLogin} disabled={isAuthLoading} variant="outline" className="h-12 rounded-xl font-black uppercase border-white/10">
+                            {isAuthLoading ? <Loader2 className="animate-spin" /> : "Login"}
+                          </Button>
+                          <Button onClick={handleSignup} disabled={isAuthLoading} className="h-12 rounded-xl font-black uppercase bg-primary">
+                            {isAuthLoading ? <Loader2 className="animate-spin" /> : "Signup"}
+                          </Button>
                         </div>
                       </div>
                     </div>

@@ -58,52 +58,48 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
   });
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setUserAuthState(prev => ({ ...prev, isUserLoading: false }));
-    }, 2000);
-
     if (!auth) {
       setUserAuthState(prev => ({ ...prev, isUserLoading: false }));
-      clearTimeout(timer);
       return;
     }
 
     const unsubscribe = onAuthStateChanged(
       auth,
       async (firebaseUser) => {
+        // Auto-anonymous only if not already authenticated or trying to auth
         if (!firebaseUser && auth) {
-          signInAnonymously(auth).catch(e => console.error("Auto-auth failed:", e));
-        }
-
-        // Logic: Create user document if it doesn't exist
-        if (firebaseUser && firestore) {
-          const userRef = doc(firestore, 'users', firebaseUser.uid);
-          const userSnap = await getDoc(userRef);
-          if (!userSnap.exists()) {
-            await setDoc(userRef, {
-              id: firebaseUser.uid,
-              username: firebaseUser.displayName || `User_${firebaseUser.uid.slice(0,5)}`,
-              email: firebaseUser.email || '',
-              diamonds: 0,
-              createdAt: serverTimestamp(),
-              updatedAt: serverTimestamp()
-            }, { merge: true });
+          try {
+            await signInAnonymously(auth);
+          } catch (e) {
+            console.error("Auto-auth failed:", e);
           }
         }
 
+        if (firebaseUser && firestore) {
+          const userRef = doc(firestore, 'users', firebaseUser.uid);
+          // Async profile creation (lazy)
+          getDoc(userRef).then(async (userSnap) => {
+            if (!userSnap.exists()) {
+              await setDoc(userRef, {
+                id: firebaseUser.uid,
+                username: firebaseUser.displayName || `User_${firebaseUser.uid.slice(0,5)}`,
+                email: firebaseUser.email || '',
+                diamonds: 0,
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp()
+              }, { merge: true });
+            }
+          }).catch(e => console.warn("Profile check failed", e));
+        }
+
         setUserAuthState({ user: firebaseUser, isUserLoading: false, userError: null });
-        clearTimeout(timer);
       },
       (error) => {
         setUserAuthState({ user: null, isUserLoading: false, userError: error });
-        clearTimeout(timer);
       }
     );
     
-    return () => {
-      unsubscribe();
-      clearTimeout(timer);
-    };
+    return () => unsubscribe();
   }, [auth, firestore]);
 
   const contextValue = useMemo((): FirebaseContextState => {

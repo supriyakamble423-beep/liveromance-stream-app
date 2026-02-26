@@ -7,35 +7,32 @@ import {
   GoogleAuthProvider,
   FacebookAuthProvider,
   signInWithPopup,
+  UserCredential,
 } from 'firebase/auth';
 
-/** Initiate anonymous sign-in (non-blocking). */
-export function initiateAnonymousSignIn(authInstance: Auth): void {
-  signInAnonymously(authInstance);
+/** Initiate anonymous sign-in (returns Promise). */
+export function initiateAnonymousSignIn(authInstance: Auth): Promise<UserCredential> {
+  return signInAnonymously(authInstance);
 }
 
-/** Initiate email/password sign-up (non-blocking). */
-export function initiateEmailSignUp(authInstance: Auth, email: string, password: string): void {
-  createUserWithEmailAndPassword(authInstance, email, password);
+/** Initiate email/password sign-up (returns Promise). */
+export function initiateEmailSignUp(authInstance: Auth, email: string, password: string): Promise<UserCredential> {
+  return createUserWithEmailAndPassword(authInstance, email, password);
 }
 
-/** Initiate email/password sign-in (non-blocking). */
-export function initiateEmailSignIn(authInstance: Auth, email: string, password: string): void {
-  signInWithEmailAndPassword(authInstance, email, password);
+/** Initiate email/password sign-in (returns Promise). */
+export function initiateEmailSignIn(authInstance: Auth, email: string, password: string): Promise<UserCredential> {
+  return signInWithEmailAndPassword(authInstance, email, password);
 }
 
-/** Initiate Google sign-in with popup. */
-export function initiateGoogleSignIn(authInstance: Auth): void {
+/** Initiate Google sign-in with popup (returns Promise). */
+export function initiateGoogleSignIn(authInstance: Auth): Promise<UserCredential> {
   const provider = new GoogleAuthProvider();
-  signInWithPopup(authInstance, provider).catch(err => {
-    console.error("Google Auth Error:", err);
-  });
+  return signInWithPopup(authInstance, provider);
 }
 
-/** Initiate Facebook sign-in with popup. */
-export function initiateFacebookSignIn(authInstance: Auth): void {
+/** Initiate Facebook sign-in with popup (returns Promise). */
+export function initiateFacebookSignIn(authInstance: Auth): Promise<UserCredential> {
   const provider = new FacebookAuthProvider();
-  signInWithPopup(authInstance, provider).catch(err => {
-    console.error("Facebook Auth Error:", err);
-  });
+  return signInWithPopup(authInstance, provider);
 }
