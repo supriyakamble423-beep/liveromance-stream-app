@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Zap, PlayCircle, Sparkles, ChevronLeft, Loader2, Heart } from "lucide-react";
+import { Zap, PlayCircle, Sparkles, ChevronLeft, Loader2, Heart, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useFirebase, useDoc, useMemoFirebase } from "@/firebase";
 import { doc, updateDoc, increment, serverTimestamp } from "firebase/firestore";
@@ -9,9 +9,10 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 import { BottomNav } from "@/components/BottomNav";
+import { initiateAnonymousSignIn } from "@/firebase/non-blocking-login";
 
 export default function RewardWallet() {
-  const { firestore, user } = useFirebase();
+  const { firestore, user, auth, areServicesAvailable } = useFirebase();
   const { toast } = useToast();
   const [isWatching, setIsWatching] = useState(false);
 
@@ -23,19 +24,36 @@ export default function RewardWallet() {
   const { data: userData, isLoading } = useDoc(userRef);
 
   const handleWatchAd = async () => {
-    if (!user) {
-      toast({ variant: "destructive", title: "Sign in required" });
+    // If no user, initiate anonymous sign-in immediately
+    if (!user && auth) {
+      initiateAnonymousSignIn(auth);
+      toast({ title: "Connecting to Grid...", description: "Re-establishing secure session." });
       return;
     }
+
+    if (!areServicesAvailable) {
+      toast({ variant: "destructive", title: "Signal Lost", description: "Firebase connection required for rewards." });
+      return;
+    }
+
     setIsWatching(true);
+    // Simulate high revenue ad bridge
     window.open('https://www.highrevenuegate.com/example-link', '_blank');
+    
     try {
       if (userRef) {
-        await updateDoc(userRef, { coins: increment(5), updatedAt: serverTimestamp() });
-        toast({ title: "🎉 Reward Received!", className: "romantic-glow bg-primary text-white border-none" });
+        await updateDoc(userRef, { 
+          coins: increment(5), 
+          updatedAt: serverTimestamp() 
+        });
+        toast({ 
+          title: "🎉 Reward Received!", 
+          description: "5 Diamonds added to your vault.",
+          className: "romantic-glow bg-primary text-white border-none" 
+        });
       }
     } catch (e) {
-      toast({ variant: "destructive", title: "Sync failed" });
+      toast({ variant: "destructive", title: "Sync failed", description: "Node verification error." });
     } finally {
       setIsWatching(false);
     }
@@ -89,7 +107,7 @@ export default function RewardWallet() {
             className="w-full h-16 rounded-[2rem] romantic-gradient font-black uppercase tracking-[0.2em] text-xs shadow-2xl hover:scale-105 transition-all border-none text-white"
           >
             {isWatching ? <Loader2 className="animate-spin mr-2" /> : <PlayCircle className="size-5 mr-2" />}
-            Watch & Earn
+            {user ? "Watch & Earn" : "Connect & Earn"}
           </Button>
         </section>
 

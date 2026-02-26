@@ -4,7 +4,7 @@ import { useFirebase, useDoc, useMemoFirebase } from "@/firebase";
 import { BottomNav } from "@/components/BottomNav";
 import { 
   Settings, Radio, Power, ChevronRight, Save, Clock, 
-  Sparkles, Star, Camera, Video, ShieldCheck, Wallet, Loader2, CheckCircle2, AlertCircle
+  Sparkles, Star, Camera, Video, ShieldCheck, Wallet, Loader2, CheckCircle2, AlertCircle, LogOut, UserPlus, LogIn
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -25,9 +25,11 @@ import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import AdBanner from "@/components/Ads/AdBanner";
+import { initiateEmailSignIn, initiateEmailSignUp } from "@/firebase/non-blocking-login";
+import { signOut } from "firebase/auth";
 
 export default function HostProfileDashboard() {
-  const { firestore, user, areServicesAvailable, isUserLoading } = useFirebase();
+  const { firestore, user, auth, areServicesAvailable, isUserLoading } = useFirebase();
   const { toast } = useToast();
   const router = useRouter();
   const userId = user?.uid || 'simulate_host';
@@ -35,6 +37,10 @@ export default function HostProfileDashboard() {
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
   const [showRulebook, setShowRulebook] = useState(false);
   
+  // Auth Form State
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
   const [editName, setEditName] = useState("");
   const [editBio, setEditBio] = useState("");
   const [editCountry, setEditCountry] = useState("");
@@ -125,6 +131,30 @@ export default function HostProfileDashboard() {
     }
   };
 
+  const handleLogout = async () => {
+    if (!auth) return;
+    await signOut(auth);
+    toast({ title: "Signed Out", description: "Node disconnected successfully." });
+  };
+
+  const handleLogin = () => {
+    if (!auth || !email || !password) {
+      toast({ variant: "destructive", title: "Missing Fields", description: "Enter email and password." });
+      return;
+    }
+    initiateEmailSignIn(auth, email, password);
+    toast({ title: "Accessing Grid...", description: "Verifying credentials." });
+  };
+
+  const handleSignup = () => {
+    if (!auth || !email || !password) {
+      toast({ variant: "destructive", title: "Missing Fields", description: "Enter email and password." });
+      return;
+    }
+    initiateEmailSignUp(auth, email, password);
+    toast({ title: "Creating Account...", description: "Registering new node." });
+  };
+
   return (
     <div className="min-h-screen bg-background text-white pb-32 max-w-lg mx-auto border-x border-white/5 mesh-gradient">
       <header className="p-8 pt-10 bg-gradient-to-b from-primary/15 to-transparent rounded-b-[3.5rem]">
@@ -145,28 +175,77 @@ export default function HostProfileDashboard() {
                   <Settings className="size-5 text-white/60" />
                 </Button>
               </DialogTrigger>
-              <DialogContent className="bg-[#2D1B2D] border-white/10 text-white rounded-[2.5rem] p-6 max-w-[90vw] mx-auto border-none shadow-2xl">
+              <DialogContent className="bg-[#2D1B2D] border-white/10 text-white rounded-[2.5rem] p-6 max-w-[90vw] mx-auto border-none shadow-2xl max-h-[80vh] overflow-y-auto no-scrollbar">
                 <DialogHeader>
-                  <DialogTitle className="text-xl font-black uppercase tracking-tighter italic text-white">Edit Profile</DialogTitle>
+                  <DialogTitle className="text-xl font-black uppercase tracking-tighter italic text-white">Grid Settings</DialogTitle>
                 </DialogHeader>
-                <div className="space-y-4 pt-4">
-                  <div className="space-y-3">
-                    <div className="space-y-1">
-                      <p className="text-[9px] font-black uppercase text-primary ml-2">Display Name</p>
-                      <Input value={editName} onChange={(e) => setEditName(e.target.value)} className="bg-white/5 border-white/10 rounded-xl h-12" />
+                
+                <div className="space-y-8 pt-4">
+                  {/* Profile Edit Section */}
+                  <div className="space-y-4">
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/60 border-b border-white/5 pb-2">Profile Intel</p>
+                    <div className="space-y-3">
+                      <div className="space-y-1">
+                        <p className="text-[9px] font-black uppercase text-slate-500 ml-2">Display Name</p>
+                        <Input value={editName} onChange={(e) => setEditName(e.target.value)} className="bg-white/5 border-white/10 rounded-xl h-12" />
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-[9px] font-black uppercase text-slate-500 ml-2">Bio</p>
+                        <Textarea value={editBio} onChange={(e) => setEditBio(e.target.value)} className="bg-white/5 border-white/10 rounded-xl" />
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-[9px] font-black uppercase text-slate-500 ml-2">Country</p>
+                        <Input value={editCountry} onChange={(e) => setEditCountry(e.target.value)} className="bg-white/5 border-white/10 rounded-xl h-12" />
+                      </div>
                     </div>
-                    <div className="space-y-1">
-                      <p className="text-[9px] font-black uppercase text-primary ml-2">Bio</p>
-                      <Textarea value={editBio} onChange={(e) => setEditBio(e.target.value)} className="bg-white/5 border-white/10 rounded-xl" />
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-[9px] font-black uppercase text-primary ml-2">Country</p>
-                      <Input value={editCountry} onChange={(e) => setEditCountry(e.target.value)} className="bg-white/5 border-white/10 rounded-xl h-12" />
-                    </div>
+                    <Button onClick={handleProfileUpdate} disabled={isUpdatingProfile} className="w-full h-14 romantic-gradient rounded-xl font-black uppercase shadow-xl border-none text-white">
+                      {isUpdatingProfile ? <Loader2 className="animate-spin" /> : "Sync Changes"}
+                    </Button>
                   </div>
-                  <Button onClick={handleProfileUpdate} disabled={isUpdatingProfile} className="w-full h-14 romantic-gradient rounded-xl font-black uppercase shadow-xl border-none text-white">
-                    {isUpdatingProfile ? <Loader2 className="animate-spin" /> : "Save Details"}
-                  </Button>
+
+                  {/* Auth Section */}
+                  <div className="space-y-4">
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/60 border-b border-white/5 pb-2">Node Access</p>
+                    {user && !user.isAnonymous ? (
+                      <div className="space-y-4">
+                        <div className="bg-white/5 p-4 rounded-2xl border border-white/10">
+                          <p className="text-[10px] font-black text-slate-400 uppercase">Signed in as</p>
+                          <p className="text-sm font-bold text-white truncate">{user.email}</p>
+                        </div>
+                        <Button onClick={handleLogout} variant="destructive" className="w-full h-12 rounded-xl font-black uppercase gap-2">
+                          <LogOut className="size-4" /> Sever Connection
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        <div className="space-y-3">
+                          <Input 
+                            type="email" 
+                            placeholder="Email" 
+                            value={email} 
+                            onChange={(e) => setEmail(e.target.value)} 
+                            className="bg-white/5 border-white/10 rounded-xl h-12" 
+                          />
+                          <Input 
+                            type="password" 
+                            placeholder="Password" 
+                            value={password} 
+                            onChange={(e) => setPassword(e.target.value)} 
+                            className="bg-white/5 border-white/10 rounded-xl h-12" 
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <Button onClick={handleLogin} variant="outline" className="h-12 rounded-xl font-black uppercase border-white/10 text-white gap-2">
+                            <LogIn className="size-4" /> Login
+                          </Button>
+                          <Button onClick={handleSignup} className="h-12 rounded-xl font-black uppercase bg-primary hover:bg-primary/90 text-white gap-2">
+                            <UserPlus className="size-4" /> Signup
+                          </Button>
+                        </div>
+                        <p className="text-[8px] text-center text-slate-500 font-bold uppercase tracking-widest">Permanent account secures your lifetime earnings.</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </DialogContent>
             </Dialog>
