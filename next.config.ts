@@ -1,13 +1,12 @@
-import type {NextConfig} from 'next';
+import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  typescript: {
-    ignoreBuildErrors: true,
-  },
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
+  // Static export enable करो (Firebase Hosting के लिए जरूरी)
+  output: 'export',
+
+  // Images remote patterns (तुम्हारे पहले से सही हैं)
   images: {
+    unoptimized: true, // static export में जरूरी – optimized images skip
     remotePatterns: [
       {
         protocol: 'https',
@@ -41,9 +40,20 @@ const nextConfig: NextConfig = {
       }
     ],
   },
-  // Optimization for production
+
+  // Build optimizations
+  typescript: {
+    ignoreBuildErrors: true, // production में errors skip (test में हटा सकते हो)
+  },
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+
   poweredByHeader: false,
   reactStrictMode: true,
+
+  // SPA routing fix (Firebase Hosting के लिए)
+  trailingSlash: true,
 };
 
 export default nextConfig;

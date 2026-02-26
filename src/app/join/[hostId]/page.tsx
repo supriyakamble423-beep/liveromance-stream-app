@@ -1,20 +1,27 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useEffect, useState, use } from 'react';
+import { useRouter } from 'next/navigation';
 import { Download, Loader2, Heart, Smartphone, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+
+/**
+ * generateStaticParams is required for dynamic routes when using 'output: export'
+ */
+export function generateStaticParams() {
+  return [{ hostId: 'simulate_host' }];
+}
 
 /**
  * Smart Join Page (A -> B Marketing)
  * Handles deep linking to the app or falling back to APK download.
  */
-export default function JoinRedirectPage() {
-  const params = useParams();
+export default function JoinRedirectPage({ params }: { params: Promise<{ hostId: string }> }) {
+  const resolvedParams = use(params);
   const router = useRouter();
   const [status, setStatus] = useState<'detecting' | 'redirecting' | 'fallback'>('detecting');
   
-  const hostId = params.hostId as string;
+  const hostId = resolvedParams.hostId;
   const apkUrl = "https://liveromance-stream-app.vercel.app/app-release.apk"; 
   const appScheme = `liveromance://profile/${hostId}`;
 
