@@ -2,30 +2,50 @@
 
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
-import { Sparkles, Trophy, Zap, Star } from "lucide-react";
+import { Sparkles, Trophy, Zap, Star, Gift } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useFirebase } from "@/firebase";
+import { doc, updateDoc, serverTimestamp, increment } from "firebase/firestore";
+import { useToast } from "@/hooks/use-toast";
 
 interface LiveEarningTimerProps {
   minutes: number;
+  hostId: string;
   minimal?: boolean;
 }
 
 /**
  * Luxury 30-Minute Milestone HUD 
- * Optimized for Header placement (Replaces Avatar)
+ * Tracks stream duration and triggers celebration popups.
  */
-export default function LiveEarningTimer({ minutes, minimal = false }: LiveEarningTimerProps) {
+export default function LiveEarningTimer({ minutes, hostId, minimal = false }: LiveEarningTimerProps) {
   const [showPopup, setShowPopup] = useState(false);
   const [lastMilestone, setLastMilestone] = useState(0);
+  const { firestore } = useFirebase();
+  const { toast } = useToast();
 
   useEffect(() => {
     const currentMilestone = Math.floor(minutes / 30);
     if (minutes > 0 && minutes % 30 === 0 && currentMilestone > lastMilestone) {
       setShowPopup(true);
       setLastMilestone(currentMilestone);
-      const timer = setTimeout(() => setShowPopup(false), 5000);
-      return () => clearTimeout(timer);
     }
   }, [minutes, lastMilestone]);
+
+  const claimBonus = async () => {
+    if (!firestore || !hostId) return;
+    try {
+      const hostRef = doc(firestore, 'hosts', hostId);
+      await updateDoc(hostRef, {
+        earnings: increment(500), // Bonus 500 Diamonds
+        updatedAt: serverTimestamp()
+      });
+      setShowPopup(false);
+      toast({ title: "Bonus Claimed!", description: "500 Diamonds added to your vault." });
+    } catch (e) {
+      toast({ variant: "destructive", title: "Claim Failed" });
+    }
+  };
 
   const getLevelDetails = () => {
     if (minutes >= 120) return { multiplier: "3.0x", color: "text-yellow-400", nextGoal: 150, icon: <Trophy className="size-3" /> };
@@ -57,24 +77,30 @@ export default function LiveEarningTimer({ minutes, minimal = false }: LiveEarni
   }
 
   return (
-    <div className="relative">
-      {/* CELEBRATION MODAL (FULL SCREEN) */}
+    <>
       {showPopup && (
-        <div className="fixed inset-0 flex items-center justify-center z-[110] animate-in zoom-in fade-in duration-700 bg-black/60 backdrop-blur-md">
-           <div className="bg-[#2D1B2D]/90 backdrop-blur-3xl border-4 border-primary p-12 rounded-[4rem] text-center shadow-[0_0_120px_rgba(225,29,72,0.8)] romantic-glow">
-              <Trophy className="size-24 text-yellow-400 mx-auto mb-6 animate-bounce" />
-              <div className="space-y-4">
-                <h2 className="text-5xl font-black italic uppercase tracking-tighter text-white leading-none">GOAL REACHED!</h2>
-                <div className="bg-primary px-8 py-3 rounded-2xl inline-block shadow-2xl">
-                   <p className="text-3xl font-black text-white uppercase tracking-widest">{level.multiplier} REVENUE UNLOCKED</p>
-                </div>
+        <div className="fixed inset-0 flex items-center justify-center z-[200] bg-black/80 backdrop-blur-md p-6">
+           <div className="bg-gradient-to-br from-[#2D1B2D] to-black border-4 border-yellow-500/50 p-10 rounded-[3.5rem] text-center shadow-[0_0_100px_rgba(234,179,8,0.4)] animate-in zoom-in duration-500">
+              <Trophy className="size-20 text-yellow-400 mx-auto mb-6 animate-bounce" />
+              <h2 className="text-4xl font-black italic uppercase tracking-tighter text-white leading-none mb-2">30 MIN BONUS!</h2>
+              <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-8">Milestone Reached Successfully</p>
+              
+              <div className="bg-yellow-500/10 border border-yellow-500/20 p-4 rounded-2xl mb-8">
+                <p className="text-2xl font-black text-yellow-400 tracking-tight">+500 DIAMONDS</p>
               </div>
-              <p className="text-[12px] text-white/60 font-black uppercase mt-10 tracking-[0.6em] animate-pulse">Stay Live to earn more</p>
+
+              <div className="flex flex-col gap-3">
+                <Button onClick={claimBonus} className="w-full h-16 bg-yellow-500 hover:bg-yellow-600 text-black font-black uppercase tracking-widest rounded-2xl shadow-xl">
+                  Claim Reward
+                </Button>
+                <Button variant="ghost" onClick={() => setShowPopup(false)} className="text-white/40 font-bold uppercase text-[10px] tracking-widest">
+                  Later
+                </Button>
+              </div>
            </div>
         </div>
       )}
 
-      {/* DEFAULT BADGE */}
       <div className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-2xl p-2 px-4 shadow-2xl flex items-center gap-3">
         <div className="flex flex-col items-start">
           <span className="text-[8px] font-black text-primary uppercase tracking-widest leading-none mb-1">Revenue</span>
@@ -89,6 +115,6 @@ export default function LiveEarningTimer({ minutes, minimal = false }: LiveEarni
           <span className="text-[10px] font-black text-white italic">{level.nextGoal}m</span>
         </div>
       </div>
-    </div>
+    </>
   );
 }

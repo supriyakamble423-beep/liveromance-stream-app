@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { 
   X, Heart, Send, Lock, Zap, UserPlus, Star, Mail, Music, 
-  Share2, MoreVertical, Loader2, Power, ShieldOff, ShieldCheck 
+  Share2, MoreVertical, Loader2, Power, ShieldOff, ShieldCheck, Eye 
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,9 +25,7 @@ export function StreamClient({ id }: StreamClientProps) {
   const { firestore, user, areServicesAvailable, isUserLoading } = useFirebase();
   const { toast } = useToast();
 
-  // States
   const [isGiftOpen, setIsGiftOpen] = useState(false);
-  const [bonusTargetReached, setBonusTargetReached] = useState(false);
   const [streamMinutes, setStreamMinutes] = useState(0);
   const [inputText, setInputText] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
@@ -35,7 +33,6 @@ export function StreamClient({ id }: StreamClientProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
 
-  // Safety logic for Host Identification
   const isHost = user?.uid === id || id === 'simulate_host';
   const effectiveId = isHost ? (user?.uid || 'simulate_host') : id;
 
@@ -46,7 +43,6 @@ export function StreamClient({ id }: StreamClientProps) {
 
   const { data: host, isLoading: isHostLoading } = useDoc(hostRef);
 
-  // Real-time Messages Logic
   const messagesQuery = useMemoFirebase(() => {
     if (!firestore || !effectiveId) return null;
     return query(
@@ -58,30 +54,17 @@ export function StreamClient({ id }: StreamClientProps) {
 
   const { data: messages } = useCollection(messagesQuery);
 
-  // Auto-scroll to bottom on new message
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages]);
 
-  // 1. Logic: Bonus Target Pop-up (Every 30 mins)
-  useEffect(() => {
-    const currentMilestone = Math.floor(streamMinutes / 30);
-    if (streamMinutes > 0 && streamMinutes % 30 === 0) {
-      setBonusTargetReached(true);
-      const timer = setTimeout(() => setBonusTargetReached(false), 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [streamMinutes]);
-
-  // 2. Logic: Minute Tracker
   useEffect(() => {
     const interval = setInterval(() => setStreamMinutes(p => p + 1), 60000);
     return () => clearInterval(interval);
   }, []);
 
-  // CAMERA LOGIC
   useEffect(() => {
     if (!isHost || cameraStream) return;
     async function getCamera() {
@@ -98,9 +81,7 @@ export function StreamClient({ id }: StreamClientProps) {
     }
     getCamera();
     return () => {
-      if (cameraStream) {
-        cameraStream.getTracks().forEach(t => t.stop());
-      }
+      if (cameraStream) cameraStream.getTracks().forEach(t => t.stop());
     };
   }, [isHost, cameraStream]);
 
@@ -125,6 +106,15 @@ export function StreamClient({ id }: StreamClientProps) {
     }
   };
 
+  const toggleBlur = async () => {
+    if (!hostRef || !host) return;
+    try {
+      await updateDoc(hostRef, { manualBlur: !host.manualBlur });
+    } catch (e) {
+      toast({ variant: "destructive", title: "Blur Toggle Failed" });
+    }
+  };
+
   const sendMessage = async () => {
     if (!inputText.trim() || !firestore || !effectiveId || !user) return;
     const text = inputText;
@@ -137,12 +127,12 @@ export function StreamClient({ id }: StreamClientProps) {
         timestamp: serverTimestamp()
       });
     } catch (e) {
-      console.error("Message send failed:", e);
+      console.error("Message failed", e);
     }
   };
 
   const endStream = async () => {
-    if (!confirm("Are you sure you want to cut the signal?")) return;
+    if (!confirm("Cut the signal?")) return;
     try {
       if (isHost && hostRef) {
         await updateDoc(hostRef, { isLive: false, updatedAt: serverTimestamp() });
@@ -154,7 +144,7 @@ export function StreamClient({ id }: StreamClientProps) {
     }
   };
 
-  if (isUserLoading || isHostLoading || (!host && areServicesAvailable && id !== 'simulate_host')) {
+  if (isUserLoading || isHostLoading) {
     return (
       <div className="min-h-screen bg-black flex flex-col items-center justify-center space-y-4">
         <Loader2 className="size-10 text-primary animate-spin" />
@@ -200,43 +190,47 @@ export function StreamClient({ id }: StreamClientProps) {
         <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/90" />
       </div>
 
-      {/* TOP HEADER */}
+      {/* TOP HEADER - REVENUE & TARGET BOX */}
       <div className="absolute top-0 left-0 right-0 p-6 pt-12 flex justify-between items-start z-50">
         <div className="flex items-center gap-3">
-          <div className="bg-black/30 backdrop-blur-xl border border-white/10 rounded-3xl p-1.5 px-4 shadow-2xl flex flex-col items-start min-w-[120px]">
+          <div className="bg-black/30 backdrop-blur-xl border border-white/10 rounded-3xl p-1.5 px-4 shadow-2xl flex flex-col items-start min-w-[140px]">
              {isHost ? (
-               <LiveEarningTimer minutes={streamMinutes} minimal={true} />
+               <LiveEarningTimer minutes={streamMinutes} hostId={effectiveId} minimal={true} />
              ) : (
                <div className="py-1">
                  <h3 className="text-white text-xs font-bold tracking-tight italic">@{displayHost.username}</h3>
                  <p className="text-white/60 text-[9px] flex items-center gap-1 mt-0.5">
-                   <Zap size={8} className="text-yellow-400" /> {displayHost.viewers || '0'} Live
+                   <Eye size={10} className="text-primary" /> {displayHost.viewers || '0'} Watching
                  </p>
                </div>
              )}
           </div>
-          
-          {isHost && (
-            <div className="hidden sm:block">
-              <h3 className="text-white text-sm font-bold tracking-tight italic">@{displayHost.username}</h3>
-              <p className="text-white/60 text-[9px] flex items-center gap-1"><Zap size={10} className="text-yellow-400" /> {displayHost.viewers || '0'} Live</p>
-            </div>
-          )}
         </div>
 
         <div className="flex flex-col gap-2 items-end">
           {isHost && (
-            <button 
-              onClick={toggleMode}
-              disabled={isUpdating}
-              className={cn(
-                "flex items-center gap-2 px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all shadow-xl",
-                isPrivate ? "bg-red-600 text-white" : "bg-green-500 text-white"
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={toggleMode}
+                disabled={isUpdating}
+                className={cn(
+                  "flex items-center gap-2 px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all shadow-xl",
+                  isPrivate ? "bg-red-600 text-white" : "bg-green-500 text-white"
+                )}
+              >
+                {isUpdating ? <Loader2 size={12} className="animate-spin" /> : isPrivate ? <Lock size={12} /> : <Zap size={12} />}
+                {isPrivate ? "PRIVATE" : "PUBLIC"}
+              </button>
+              
+              {isPrivate && (
+                <button 
+                  onClick={toggleBlur}
+                  className="p-2 bg-white/10 backdrop-blur-md rounded-full text-white border border-white/10"
+                >
+                  <ShieldOff size={20} />
+                </button>
               )}
-            >
-              {isUpdating ? <Loader2 size={12} className="animate-spin" /> : isPrivate ? <Lock size={12} /> : <Zap size={12} />}
-              {isPrivate ? "MODE: PRIVATE" : "MODE: PUBLIC"}
-            </button>
+            </div>
           )}
           <div className="flex gap-2">
             {isHost && (
@@ -246,17 +240,6 @@ export function StreamClient({ id }: StreamClientProps) {
           </div>
         </div>
       </div>
-
-      {/* BONUS TARGET POPUP (30 MINS) */}
-      {bonusTargetReached && (
-        <div className="absolute inset-0 flex items-center justify-center z-[100] animate-in zoom-in duration-300 pointer-events-none">
-          <div className="bg-gradient-to-br from-yellow-400 to-orange-600 p-8 rounded-[3rem] text-center shadow-[0_0_50px_rgba(251,191,36,0.5)] romantic-glow">
-             <div className="text-5xl mb-4">🏆</div>
-             <h2 className="text-2xl font-black text-white italic uppercase">30 Min Target!</h2>
-             <p className="text-white/90 font-bold text-sm">Bonus Diamonds Unlocked!</p>
-          </div>
-        </div>
-      )}
 
       {/* PRIVATE REQUEST POPUP */}
       {isHost && <PrivateRequestPopup firestore={firestore} hostId={effectiveId} />}
@@ -287,8 +270,6 @@ export function StreamClient({ id }: StreamClientProps) {
 
       {/* CHAT & CONTROLS */}
       <div className="absolute bottom-0 left-0 right-0 p-6 pb-10 z-40 space-y-4">
-        
-        {/* Tip Badges */}
         <div className="flex flex-col gap-2 w-40">
            <div className="flex items-center justify-between bg-black/40 backdrop-blur-md border border-white/10 p-2 rounded-xl">
               <div className="flex items-center gap-2 text-white text-[10px] font-bold uppercase"><Mail size={12} className="text-primary"/> DM</div>
@@ -300,7 +281,6 @@ export function StreamClient({ id }: StreamClientProps) {
            </div>
         </div>
 
-        {/* Input & Gift */}
         <div className="flex items-center gap-3">
           <div className="flex-1 bg-white/10 backdrop-blur-2xl border border-white/10 h-14 rounded-full flex items-center px-6">
             <input 
