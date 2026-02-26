@@ -5,10 +5,9 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { 
   X, Heart, Send, Lock, Zap, UserPlus, Star, Mail, Music, 
-  Share2, MoreVertical, Loader2, Power, ShieldOff, ShieldCheck, Eye 
+  Share2, MoreVertical, Loader2, Power, ShieldOff, Eye 
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { useFirebase, useDoc, useMemoFirebase, useCollection } from "@/firebase";
 import { doc, updateDoc, serverTimestamp, collection, query, orderBy, limit, addDoc } from "firebase/firestore";
 import { cn } from "@/lib/utils";
@@ -194,14 +193,15 @@ export function StreamClient({ id }: StreamClientProps) {
       <div className="absolute top-0 left-0 right-0 p-6 pt-12 flex justify-between items-start z-50">
         <div className="flex items-center gap-3">
           <div className="bg-black/30 backdrop-blur-xl border border-white/10 rounded-3xl p-1.5 px-4 shadow-2xl flex flex-col items-start min-w-[140px]">
-             {isHost ? (
-               <LiveEarningTimer minutes={streamMinutes} hostId={effectiveId} minimal={true} />
-             ) : (
-               <div className="py-1">
-                 <h3 className="text-white text-xs font-bold tracking-tight italic">@{displayHost.username}</h3>
-                 <p className="text-white/60 text-[9px] flex items-center gap-1 mt-0.5">
-                   <Eye size={10} className="text-primary" /> {displayHost.viewers || '0'} Watching
-                 </p>
+             <div className="py-1">
+               <h3 className="text-white text-xs font-bold tracking-tight italic">@{displayHost.username}</h3>
+               <p className="text-white/60 text-[9px] flex items-center gap-1 mt-0.5">
+                 <Eye size={10} className="text-primary" /> {displayHost.viewers || '0'} Watching
+               </p>
+             </div>
+             {isHost && (
+               <div className="mt-1 w-full pt-1 border-t border-white/5">
+                 <LiveEarningTimer minutes={streamMinutes} hostId={effectiveId} minimal={true} />
                </div>
              )}
           </div>

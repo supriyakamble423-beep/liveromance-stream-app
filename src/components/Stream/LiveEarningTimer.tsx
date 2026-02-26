@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
-import { Sparkles, Trophy, Zap, Star, Gift } from "lucide-react";
+import { Sparkles, Trophy, Zap, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useFirebase } from "@/firebase";
 import { doc, updateDoc, serverTimestamp, increment } from "firebase/firestore";
@@ -14,10 +14,6 @@ interface LiveEarningTimerProps {
   minimal?: boolean;
 }
 
-/**
- * Luxury 30-Minute Milestone HUD 
- * Tracks stream duration and triggers celebration popups.
- */
 export default function LiveEarningTimer({ minutes, hostId, minimal = false }: LiveEarningTimerProps) {
   const [showPopup, setShowPopup] = useState(false);
   const [lastMilestone, setLastMilestone] = useState(0);
@@ -37,7 +33,7 @@ export default function LiveEarningTimer({ minutes, hostId, minimal = false }: L
     try {
       const hostRef = doc(firestore, 'hosts', hostId);
       await updateDoc(hostRef, {
-        earnings: increment(500), // Bonus 500 Diamonds
+        earnings: increment(500),
         updatedAt: serverTimestamp()
       });
       setShowPopup(false);
@@ -100,21 +96,6 @@ export default function LiveEarningTimer({ minutes, hostId, minimal = false }: L
            </div>
         </div>
       )}
-
-      <div className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-2xl p-2 px-4 shadow-2xl flex items-center gap-3">
-        <div className="flex flex-col items-start">
-          <span className="text-[8px] font-black text-primary uppercase tracking-widest leading-none mb-1">Revenue</span>
-          <div className="flex items-center gap-1.5">
-            {level.icon}
-            <span className={cn("text-xs font-black italic tracking-tighter", level.color)}>{level.multiplier}</span>
-          </div>
-        </div>
-        <div className="h-6 w-px bg-white/10" />
-        <div className="flex flex-col items-end">
-          <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest leading-none mb-1">Target</span>
-          <span className="text-[10px] font-black text-white italic">{level.nextGoal}m</span>
-        </div>
-      </div>
     </>
   );
 }
