@@ -9,8 +9,8 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useFirebase, useDoc, useMemoFirebase } from "@/firebase";
-import { doc, updateDoc, serverTimestamp } from "firebase/firestore";
+import { useFirebase, useDoc, useMemoFirebase, useCollection } from "@/firebase";
+import { doc, updateDoc, serverTimestamp, collection, query, orderBy, limit, addDoc } from "firebase/firestore";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import LiveEarningTimer from "@/components/Stream/LiveEarningTimer";
@@ -32,6 +32,7 @@ export function StreamClient({ id }: StreamClientProps) {
   const [inputText, setInputText] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
 
   // Safety logic for Host Identification
@@ -45,8 +46,28 @@ export function StreamClient({ id }: StreamClientProps) {
 
   const { data: host, isLoading: isHostLoading } = useDoc(hostRef);
 
+  // Real-time Messages Logic
+  const messagesQuery = useMemoFirebase(() => {
+    if (!firestore || !effectiveId) return null;
+    return query(
+      collection(firestore, 'streams', effectiveId, 'messages'),
+      orderBy('timestamp', 'asc'),
+      limit(50)
+    );
+  }, [firestore, effectiveId]);
+
+  const { data: messages } = useCollection(messagesQuery);
+
+  // Auto-scroll to bottom on new message
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages]);
+
   // 1. Logic: Bonus Target Pop-up (Every 30 mins)
   useEffect(() => {
+    const currentMilestone = Math.floor(streamMinutes / 30);
     if (streamMinutes > 0 && streamMinutes % 30 === 0) {
       setBonusTargetReached(true);
       const timer = setTimeout(() => setBonusTargetReached(false), 5000);
@@ -104,6 +125,22 @@ export function StreamClient({ id }: StreamClientProps) {
     }
   };
 
+  const sendMessage = async () => {
+    if (!inputText.trim() || !firestore || !effectiveId || !user) return;
+    const text = inputText;
+    setInputText("");
+    try {
+      await addDoc(collection(firestore, 'streams', effectiveId, 'messages'), {
+        userId: user.uid,
+        username: user.displayName || 'User',
+        text,
+        timestamp: serverTimestamp()
+      });
+    } catch (e) {
+      console.error("Message send failed:", e);
+    }
+  };
+
   const endStream = async () => {
     if (!confirm("Are you sure you want to cut the signal?")) return;
     try {
@@ -130,6 +167,7 @@ export function StreamClient({ id }: StreamClientProps) {
     username: id === 'simulate_host' ? 'Simulate_Host' : 'Anonymous',
     streamType: 'public',
     manualBlur: false,
+    viewers: 1200,
     previewImageUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${id}`
   };
 
@@ -165,7 +203,6 @@ export function StreamClient({ id }: StreamClientProps) {
       {/* TOP HEADER */}
       <div className="absolute top-0 left-0 right-0 p-6 pt-12 flex justify-between items-start z-50">
         <div className="flex items-center gap-3">
-          {/* REVENUE & TARGET BOX (Replaced Image Box) */}
           <div className="bg-black/30 backdrop-blur-xl border border-white/10 rounded-3xl p-1.5 px-4 shadow-2xl flex flex-col items-start min-w-[120px]">
              {isHost ? (
                <LiveEarningTimer minutes={streamMinutes} minimal={true} />
@@ -173,17 +210,16 @@ export function StreamClient({ id }: StreamClientProps) {
                <div className="py-1">
                  <h3 className="text-white text-xs font-bold tracking-tight italic">@{displayHost.username}</h3>
                  <p className="text-white/60 text-[9px] flex items-center gap-1 mt-0.5">
-                   <Zap size={8} className="text-yellow-400" /> {displayHost.viewers || '1.2k'} Live
+                   <Zap size={8} className="text-yellow-400" /> {displayHost.viewers || '0'} Live
                  </p>
                </div>
              )}
           </div>
           
-          {/* USERNAME (Only if Host to keep it clean) */}
           {isHost && (
             <div className="hidden sm:block">
               <h3 className="text-white text-sm font-bold tracking-tight italic">@{displayHost.username}</h3>
-              <p className="text-white/60 text-[9px] flex items-center gap-1"><Zap size={10} className="text-yellow-400" /> {displayHost.viewers || '1.2k'} Live</p>
+              <p className="text-white/60 text-[9px] flex items-center gap-1"><Zap size={10} className="text-yellow-400" /> {displayHost.viewers || '0'} Live</p>
             </div>
           )}
         </div>
@@ -225,6 +261,21 @@ export function StreamClient({ id }: StreamClientProps) {
       {/* PRIVATE REQUEST POPUP */}
       {isHost && <PrivateRequestPopup firestore={firestore} hostId={effectiveId} />}
 
+      {/* MESSAGES SCROLL AREA */}
+      <div 
+        ref={scrollRef}
+        className="absolute bottom-40 left-6 right-16 h-48 overflow-y-auto no-scrollbar space-y-2 z-40 pointer-events-none"
+      >
+        {messages?.map((msg) => (
+          <div key={msg.id} className="animate-in slide-in-from-left-2 fade-in duration-300 pointer-events-auto">
+            <div className="bg-black/40 backdrop-blur-md border border-white/5 rounded-2xl px-3 py-1.5 w-fit max-w-full">
+              <p className="text-[10px] font-black text-primary uppercase inline-block mr-2 italic">{msg.username}:</p>
+              <p className="text-[10px] font-medium text-white inline leading-tight">{msg.text}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+
       {/* SIDE ACTIONS */}
       <div className="absolute right-4 bottom-48 flex flex-col gap-4 z-40">
         {[Heart, Share2, MoreVertical].map((Icon, i) => (
@@ -255,10 +306,11 @@ export function StreamClient({ id }: StreamClientProps) {
             <input 
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
               className="bg-transparent border-none focus:ring-0 text-white text-sm w-full placeholder:text-white/30" 
               placeholder="Say something..." 
             />
-            <button className="text-primary"><Send size={20}/></button>
+            <button onClick={sendMessage} className="text-primary"><Send size={20}/></button>
           </div>
           <button 
             onClick={() => setIsGiftOpen(true)}
