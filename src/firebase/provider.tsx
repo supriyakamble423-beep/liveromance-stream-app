@@ -1,9 +1,8 @@
-
 'use client';
 
 import React, { DependencyList, createContext, useContext, ReactNode, useMemo, useState, useEffect } from 'react';
 import { FirebaseApp } from 'firebase/app';
-import { Firestore } from 'firebase/firestore';
+import { Firestore, doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { Auth, User, onAuthStateChanged, signInAnonymously } from 'firebase/auth';
 import { FirebaseStorage } from 'firebase/storage';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener'
@@ -43,18 +42,8 @@ export interface FirebaseServicesAndUser {
   userError: Error | null;
 }
 
-export interface UserHookResult {
-  user: User | null;
-  isUserLoading: boolean;
-  userError: Error | null;
-}
-
 export const FirebaseContext = createContext<FirebaseContextState | undefined>(undefined);
 
-/**
- * FirebaseProvider: Core context provider for the entire app.
- * Optimized to prevent "Configuration Required" hangs.
- */
 export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
   children,
   firebaseApp,
@@ -69,7 +58,6 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
   });
 
   useEffect(() => {
-    // Safety timeout: Ensure loading screen disappears after 2 seconds no matter what
     const timer = setTimeout(() => {
       setUserAuthState(prev => ({ ...prev, isUserLoading: false }));
     }, 2000);
@@ -82,10 +70,27 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
 
     const unsubscribe = onAuthStateChanged(
       auth,
-      (firebaseUser) => {
+      async (firebaseUser) => {
         if (!firebaseUser && auth) {
           signInAnonymously(auth).catch(e => console.error("Auto-auth failed:", e));
         }
+
+        // Logic: Create user document if it doesn't exist
+        if (firebaseUser && firestore) {
+          const userRef = doc(firestore, 'users', firebaseUser.uid);
+          const userSnap = await getDoc(userRef);
+          if (!userSnap.exists()) {
+            await setDoc(userRef, {
+              id: firebaseUser.uid,
+              username: firebaseUser.displayName || `User_${firebaseUser.uid.slice(0,5)}`,
+              email: firebaseUser.email || '',
+              diamonds: 0,
+              createdAt: serverTimestamp(),
+              updatedAt: serverTimestamp()
+            }, { merge: true });
+          }
+        }
+
         setUserAuthState({ user: firebaseUser, isUserLoading: false, userError: null });
         clearTimeout(timer);
       },
@@ -99,7 +104,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
       unsubscribe();
       clearTimeout(timer);
     };
-  }, [auth]);
+  }, [auth, firestore]);
 
   const contextValue = useMemo((): FirebaseContextState => {
     const servicesAvailable = !!(firebaseApp && firestore && auth);
@@ -150,7 +155,7 @@ export function useMemoFirebase<T>(factory: () => T, deps: DependencyList): T | 
   return memoized;
 }
 
-export const useUser = (): UserHookResult => {
+export const useUser = () => {
   const { user, isUserLoading, userError } = useFirebase();
   return { user, isUserLoading, userError };
 };

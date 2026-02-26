@@ -3,7 +3,7 @@
 import { useFirebase, useDoc, useMemoFirebase } from "@/firebase";
 import { BottomNav } from "@/components/BottomNav";
 import { 
-  Settings, Power, ChevronRight, Wallet, Loader2, Camera, Video, LogOut, UserPlus, LogIn, ShieldCheck
+  Settings, Power, ChevronRight, Wallet, Loader2, Camera, Video, LogOut, UserPlus, LogIn, ShieldCheck, Mail
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -23,7 +23,7 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { initiateEmailSignIn, initiateEmailSignUp } from "@/firebase/non-blocking-login";
+import { initiateEmailSignIn, initiateEmailSignUp, initiateGoogleSignIn } from "@/firebase/non-blocking-login";
 import { signOut } from "firebase/auth";
 
 export default function HostProfileDashboard() {
@@ -129,6 +129,12 @@ export default function HostProfileDashboard() {
     toast({ title: "Creating Account..." });
   };
 
+  const handleGoogleLogin = () => {
+    if (!auth) return;
+    initiateGoogleSignIn(auth);
+    toast({ title: "Connecting Google..." });
+  };
+
   return (
     <div className="min-h-screen bg-background text-white pb-32 max-w-lg mx-auto border-x border-white/5 mesh-gradient">
       <header className="p-8 pt-10 bg-gradient-to-b from-primary/15 to-transparent rounded-b-[3.5rem]">
@@ -138,29 +144,60 @@ export default function HostProfileDashboard() {
             <Link href="/host-p/payout"><Button variant="ghost" size="icon" className="rounded-full bg-white/5 border border-white/10 size-11"><Wallet className="size-5 text-primary" /></Button></Link>
             <Dialog>
               <DialogTrigger asChild><Button variant="ghost" size="icon" className="rounded-full bg-white/5 border border-white/10 size-11"><Settings className="size-5 text-white/60" /></Button></DialogTrigger>
-              <DialogContent className="bg-[#2D1B2D] border-white/10 text-white rounded-[2.5rem] p-6 max-w-[90vw] mx-auto shadow-2xl">
-                <DialogHeader><DialogTitle className="text-xl font-black uppercase italic">Grid Settings</DialogTitle></DialogHeader>
-                <div className="space-y-6 pt-4">
-                  <div className="space-y-3">
-                    <Input value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="Display Name" className="bg-white/5 border-white/10 rounded-xl" />
-                    <Textarea value={editBio} onChange={(e) => setEditBio(e.target.value)} placeholder="Bio" className="bg-white/5 border-white/10 rounded-xl" />
-                    <Button onClick={handleProfileUpdate} disabled={isUpdatingProfile} className="w-full h-12 romantic-gradient rounded-xl font-black uppercase">Save Details</Button>
+              <DialogContent className="bg-[#2D1B2D] border-white/10 text-white rounded-[2.5rem] p-8 max-w-[90vw] mx-auto shadow-2xl overflow-y-auto max-h-[90vh]">
+                <DialogHeader className="items-center mb-6">
+                  <div className="relative h-20 w-full mb-4">
+                    <Image 
+                      src="/logo.png?v=2" 
+                      alt="Logo" 
+                      fill 
+                      className="object-contain logo-glow" 
+                      onError={(e) => { (e.target as any).src = "https://placehold.co/400x120/E11D48/white?text=GLOBAL+LOVE" }}
+                    />
                   </div>
-                  <div className="h-px bg-white/5" />
-                  <div className="space-y-3">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-primary/60">Node Access</p>
-                    {user && !user.isAnonymous ? (
-                      <Button onClick={handleLogout} variant="destructive" className="w-full rounded-xl gap-2 font-black uppercase"><LogOut className="size-4" /> Sign Out</Button>
-                    ) : (
-                      <>
-                        <Input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} className="bg-white/5 border-white/10 h-12 rounded-xl" />
-                        <Input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} className="bg-white/5 border-white/10 h-12 rounded-xl" />
+                  <DialogTitle className="text-xl font-black uppercase italic tracking-widest text-primary">Grid Access</DialogTitle>
+                </DialogHeader>
+                
+                <div className="space-y-6">
+                  {user && !user.isAnonymous ? (
+                    <div className="space-y-4">
+                      <div className="p-4 bg-white/5 rounded-2xl border border-white/10">
+                        <p className="text-[10px] font-black uppercase text-slate-500 mb-1">Active Identity</p>
+                        <p className="text-sm font-bold truncate">{user.email || user.displayName}</p>
+                      </div>
+                      <Button onClick={handleLogout} variant="destructive" className="w-full h-12 rounded-xl gap-2 font-black uppercase"><LogOut className="size-4" /> Sever Connection</Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <Button onClick={handleGoogleLogin} className="w-full h-14 bg-white text-black hover:bg-slate-100 rounded-2xl font-black uppercase tracking-widest gap-3 shadow-xl">
+                        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="size-5" />
+                        Google Login
+                      </Button>
+                      
+                      <div className="flex items-center gap-4 py-2">
+                        <div className="h-px flex-1 bg-white/10" />
+                        <span className="text-[10px] font-black text-slate-500 uppercase">OR</span>
+                        <div className="h-px flex-1 bg-white/10" />
+                      </div>
+
+                      <div className="space-y-3">
+                        <Input type="email" placeholder="Email Address" value={email} onChange={(e) => setEmail(e.target.value)} className="bg-black/40 border-white/10 h-12 rounded-xl" />
+                        <Input type="password" placeholder="Secure Password" value={password} onChange={(e) => setPassword(e.target.value)} className="bg-black/40 border-white/10 h-12 rounded-xl" />
                         <div className="grid grid-cols-2 gap-3">
                           <Button onClick={handleLogin} variant="outline" className="h-12 rounded-xl font-black uppercase border-white/10">Login</Button>
                           <Button onClick={handleSignup} className="h-12 rounded-xl font-black uppercase bg-primary">Signup</Button>
                         </div>
-                      </>
-                    )}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="h-px bg-white/5" />
+                  
+                  <div className="space-y-3">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-primary/60">Profile Configuration</p>
+                    <Input value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="Display Name" className="bg-white/5 border-white/10 h-12 rounded-xl" />
+                    <Textarea value={editBio} onChange={(e) => setEditBio(e.target.value)} placeholder="Bio / Status" className="bg-white/5 border-white/10 rounded-xl" />
+                    <Button onClick={handleProfileUpdate} disabled={isUpdatingProfile} className="w-full h-12 romantic-gradient rounded-xl font-black uppercase shadow-lg">Update Profile</Button>
                   </div>
                 </div>
               </DialogContent>
