@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect } from 'react';
@@ -20,7 +21,7 @@ export default function RootRedirect() {
         <div className="relative size-48 animate-pulse logo-glow flex items-center justify-center">
           <div className="absolute inset-0 bg-white/10 rounded-full blur-[40px] animate-pulse" />
           <Image 
-            src="/logo.png" 
+            src="/logo.png?v=2" 
             alt="Global Love" 
             width={240}
             height={240}

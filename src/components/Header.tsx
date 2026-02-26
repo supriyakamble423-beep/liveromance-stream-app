@@ -19,7 +19,7 @@ export function Header() {
         <Link href="/global" className="flex items-center">
           <div className="relative h-12 w-40">
             <Image 
-              src="/logo.png" 
+              src="/logo.png?v=2" 
               alt="Global Love" 
               fill 
               className="object-contain object-left logo-glow"

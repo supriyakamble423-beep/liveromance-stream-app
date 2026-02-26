@@ -102,7 +102,7 @@ export default function GlobalMarketplace() {
       <div className="min-h-screen bg-[#2D1B2D] flex flex-col items-center justify-center space-y-8 mesh-gradient">
         <div className="relative size-32 animate-pulse logo-glow">
           <Image 
-            src="/logo.png" 
+            src="/logo.png?v=2" 
             alt="Loading..." 
             fill 
             className="object-contain" 
