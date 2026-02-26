@@ -1,12 +1,9 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  // Static export enable करो (Firebase Hosting के लिए जरूरी)
-  output: 'export',
-
-  // Images remote patterns (तुम्हारे पहले से सही हैं)
+  // Images remote patterns (Updated for dynamic environment)
   images: {
-    unoptimized: true, // static export में जरूरी – optimized images skip
+    unoptimized: true, // Keeping unoptimized to avoid extra Vercel image costs, change if needed
     remotePatterns: [
       {
         protocol: 'https',
@@ -43,7 +40,7 @@ const nextConfig: NextConfig = {
 
   // Build optimizations
   typescript: {
-    ignoreBuildErrors: true, // production में errors skip (test में हटा सकते हो)
+    ignoreBuildErrors: true, 
   },
   eslint: {
     ignoreDuringBuilds: true,
@@ -52,7 +49,7 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
 
-  // SPA routing fix (Firebase Hosting के लिए)
+  // SPA routing fix
   trailingSlash: true,
 };
 
