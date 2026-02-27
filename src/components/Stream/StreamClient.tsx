@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useRef } from "react";
@@ -46,7 +47,7 @@ export function StreamClient({ id }: StreamClientProps) {
 
   const { data: host, isLoading: isHostLoading } = useDoc(hostRef);
 
-  // Real-time Chat Messages (Using collection from User's Final snippet)
+  // Real-time Chat Messages
   useEffect(() => {
     if (!firestore) return;
     const q = query(
@@ -61,7 +62,7 @@ export function StreamClient({ id }: StreamClientProps) {
     return () => unsubscribe();
   }, [firestore]);
 
-  // Camera + Permissions Logic (Step 2 Fix)
+  // Camera + Permissions Logic
   useEffect(() => {
     if (!isHost || cameraStream) return;
     const requestPermissions = async () => {
@@ -76,7 +77,7 @@ export function StreamClient({ id }: StreamClientProps) {
         toast({ 
           variant: "destructive", 
           title: "Permission Denied", 
-          description: "Bhai, Camera/Mic ke bina stream nahi ho payegi" 
+          description: "Bhai, Camera/Mic allow karo streaming ke liye!" 
         });
       }
     };
@@ -86,7 +87,7 @@ export function StreamClient({ id }: StreamClientProps) {
     };
   }, [isHost, cameraStream, toast]);
 
-  // Stream Timer + 30 Min Bonus Popup (Step 1 Fix)
+  // Stream Timer
   useEffect(() => {
     if (!isHost) return;
     const interval = setInterval(() => {
@@ -189,14 +190,14 @@ export function StreamClient({ id }: StreamClientProps) {
         <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/90" />
       </div>
 
-      {/* Header - Clean with Revenue Tracker */}
+      {/* Header */}
       <div className="absolute top-0 left-0 right-0 p-6 pt-12 flex justify-between items-start z-50">
         <div className="flex items-center gap-3">
           <div className="bg-black/30 backdrop-blur-xl border border-white/10 rounded-3xl p-1.5 px-4 shadow-2xl flex flex-col items-start min-w-[140px]">
              <div className="py-1">
                <h3 className="text-white text-xs font-bold tracking-tight italic">@{username}</h3>
                <p className="text-white/60 text-[9px] flex items-center gap-1 mt-0.5">
-                 <Eye size={10} className="text-primary" /> 1200 Watching
+                 <Eye size={10} className="text-primary" /> {host?.viewers || '1200'} Watching
                </p>
              </div>
              {isHost && (
@@ -232,7 +233,7 @@ export function StreamClient({ id }: StreamClientProps) {
         </div>
       </div>
 
-      {/* Centered Bonus Milestone Popup (Step 3 Fix) */}
+      {/* Centered Bonus Milestone Popup */}
       {bonusPopup && (
         <div className="fixed inset-0 flex items-center justify-center z-[200] bg-black/80 backdrop-blur-md p-6">
            <div className="bg-gradient-to-br from-[#2D1B2D] to-black border-4 border-yellow-500/50 p-10 rounded-[3.5rem] text-center shadow-[0_0_100px_rgba(234,179,8,0.4)] animate-in zoom-in duration-500">

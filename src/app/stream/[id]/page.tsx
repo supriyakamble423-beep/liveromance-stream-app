@@ -1,18 +1,16 @@
+
+'use client';
+
 import { StreamClient } from "@/components/Stream/StreamClient";
+import { useParams } from "next/navigation";
 
 /**
- * Server Component for Stream Page
- * Handles generateStaticParams and Next.js 15 Async Params requirements.
- * Renders the Client-side StreamClient component.
+ * Dynamic Stream Page
+ * Logic is moved to StreamClient to prevent hydration and ReferenceErrors.
  */
-
-export function generateStaticParams() {
-  return [{ id: 'simulate_host' }];
-}
-
-export default async function StreamPage({ params }: { params: Promise<{ id: string }> }) {
-  const resolvedParams = await params;
-  const id = resolvedParams.id;
+export default function StreamHostPage() {
+  const params = useParams();
+  const id = params?.id as string || 'simulate_host';
 
   return <StreamClient id={id} />;
 }
