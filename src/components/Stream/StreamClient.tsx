@@ -46,11 +46,11 @@ export function StreamClient({ id }: StreamClientProps) {
 
   const { data: host, isLoading: isHostLoading } = useDoc(hostRef);
 
-  // Real-time Chat Messages
+  // Real-time Chat Messages (Using collection from User's Final snippet)
   useEffect(() => {
-    if (!firestore || !effectiveId) return;
+    if (!firestore) return;
     const q = query(
-      collection(firestore, 'streams', effectiveId as string, 'messages'), 
+      collection(firestore, 'streamMessages'), 
       orderBy('timestamp', 'desc'), 
       limit(20)
     );
@@ -59,9 +59,9 @@ export function StreamClient({ id }: StreamClientProps) {
       setMessages(msgs.reverse());
     });
     return () => unsubscribe();
-  }, [firestore, effectiveId]);
+  }, [firestore]);
 
-  // Camera + Permissions Logic (Mobile Ready)
+  // Camera + Permissions Logic (Step 2 Fix)
   useEffect(() => {
     if (!isHost || cameraStream) return;
     const requestPermissions = async () => {
@@ -76,7 +76,7 @@ export function StreamClient({ id }: StreamClientProps) {
         toast({ 
           variant: "destructive", 
           title: "Permission Denied", 
-          description: "Bhai, Camera & Mic allow karo streaming ke liye!" 
+          description: "Bhai, Camera/Mic ke bina stream nahi ho payegi" 
         });
       }
     };
@@ -86,7 +86,7 @@ export function StreamClient({ id }: StreamClientProps) {
     };
   }, [isHost, cameraStream, toast]);
 
-  // Stream Timer + 30 Min Bonus Popup
+  // Stream Timer + 30 Min Bonus Popup (Step 1 Fix)
   useEffect(() => {
     if (!isHost) return;
     const interval = setInterval(() => {
@@ -133,15 +133,6 @@ export function StreamClient({ id }: StreamClientProps) {
     }
   };
 
-  const toggleBlur = async () => {
-    if (!hostRef || !host) return;
-    try {
-      await updateDoc(hostRef, { manualBlur: !host.manualBlur });
-    } catch {
-      toast({ variant: "destructive", title: "Blur Failed" });
-    }
-  };
-
   const endStream = async () => {
     if (!confirm("End stream?")) return;
     try {
@@ -156,11 +147,11 @@ export function StreamClient({ id }: StreamClientProps) {
   };
 
   const sendMessage = async () => {
-    if (!inputText.trim() || !firestore || !effectiveId || !user) return;
+    if (!inputText.trim() || !firestore || !user) return;
     try {
-      await addDoc(collection(firestore, 'streams', effectiveId as string, 'messages'), {
+      await addDoc(collection(firestore, 'streamMessages'), {
         text: inputText,
-        username: user?.displayName || user?.email?.split('@')[0] || 'User',
+        user: user?.displayName || user?.email?.split('@')[0] || 'User',
         userId: user.uid,
         timestamp: serverTimestamp()
       });
@@ -181,7 +172,8 @@ export function StreamClient({ id }: StreamClientProps) {
 
   const isPrivate = host?.streamType === 'private';
   const isBlur = isPrivate || host?.manualBlur;
-  const username = host?.username || 'Host';
+  const username = host?.username || 'Simulate Host';
+  const img = host?.previewImageUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${effectiveId}`;
 
   return (
     <div className="relative h-[100dvh] w-full max-w-[430px] mx-auto bg-black overflow-hidden font-sans border-x border-white/10">
@@ -204,7 +196,7 @@ export function StreamClient({ id }: StreamClientProps) {
              <div className="py-1">
                <h3 className="text-white text-xs font-bold tracking-tight italic">@{username}</h3>
                <p className="text-white/60 text-[9px] flex items-center gap-1 mt-0.5">
-                 <Eye size={10} className="text-primary" /> {host?.viewers || '1.2k'} Watching
+                 <Eye size={10} className="text-primary" /> 1200 Watching
                </p>
              </div>
              {isHost && (
@@ -229,14 +221,6 @@ export function StreamClient({ id }: StreamClientProps) {
                 {isUpdating ? <Loader2 size={12} className="animate-spin mr-2" /> : isPrivate ? <Lock size={12} className="mr-2" /> : <Zap size={12} className="mr-2" />}
                 {isPrivate ? "PRIVATE" : "PUBLIC"}
               </Button>
-              {isPrivate && (
-                <button 
-                  onClick={toggleBlur}
-                  className="p-2 bg-white/10 backdrop-blur-md rounded-full text-white border border-white/10"
-                >
-                  <ShieldOff size={20} />
-                </button>
-              )}
             </div>
           )}
           <div className="flex gap-2">
@@ -248,7 +232,7 @@ export function StreamClient({ id }: StreamClientProps) {
         </div>
       </div>
 
-      {/* Bonus Milestone Popup (Centered) */}
+      {/* Centered Bonus Milestone Popup (Step 3 Fix) */}
       {bonusPopup && (
         <div className="fixed inset-0 flex items-center justify-center z-[200] bg-black/80 backdrop-blur-md p-6">
            <div className="bg-gradient-to-br from-[#2D1B2D] to-black border-4 border-yellow-500/50 p-10 rounded-[3.5rem] text-center shadow-[0_0_100px_rgba(234,179,8,0.4)] animate-in zoom-in duration-500">
@@ -277,7 +261,7 @@ export function StreamClient({ id }: StreamClientProps) {
         {messages.map(msg => (
           <div key={msg.id} className="animate-in slide-in-from-left-2 fade-in duration-300 pointer-events-auto">
             <div className="bg-black/40 backdrop-blur-md border border-white/5 rounded-2xl px-3 py-1.5 w-fit max-w-full">
-              <p className="text-[10px] font-black text-primary uppercase inline-block mr-2 italic">{msg.username}:</p>
+              <p className="text-[10px] font-black text-primary uppercase inline-block mr-2 italic">{msg.user}:</p>
               <p className="text-[10px] font-medium text-white inline">{msg.text}</p>
             </div>
           </div>

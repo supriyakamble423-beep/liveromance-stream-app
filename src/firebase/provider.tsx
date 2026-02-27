@@ -68,12 +68,12 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
           const userRef = doc(firestore, 'users', firebaseUser.uid);
           getDoc(userRef).then(async (userSnap) => {
             if (!userSnap.exists()) {
-              // WELCOME BONUS: 50 Diamonds for new users
+              // WELCOME BONUS: 50 Diamonds for new users (Step 1 Fix)
               await setDoc(userRef, {
                 id: firebaseUser.uid,
                 username: firebaseUser.displayName || `User_${firebaseUser.uid.slice(0,5)}`,
                 email: firebaseUser.email || '',
-                diamonds: 50, // Welcome Bonus credit
+                diamonds: 50, // Default 50 free diamonds for signup
                 createdAt: serverTimestamp(),
                 updatedAt: serverTimestamp()
               }, { merge: true });
