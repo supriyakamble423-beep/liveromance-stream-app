@@ -1,14 +1,14 @@
-
 'use client';
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { 
-  X, Heart, Send, Lock, Zap, ShieldOff, ShieldCheck, 
-  Eye, Gift, Music, Share2, MoreVertical, Loader2, Power, Activity, Trophy, Sparkles
+  X, Heart, Send, Lock, Zap, ShieldCheck, 
+  Eye, Gift, Music, Share2, MoreVertical, Loader2, Power, Activity, Trophy 
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useFirebase, useDoc, useMemoFirebase } from "@/firebase";
 import { 
   doc, updateDoc, serverTimestamp, collection, 
@@ -33,7 +33,7 @@ export function StreamClient({ id }: StreamClientProps) {
   const [giftDrawerOpen, setGiftDrawerOpen] = useState(false);
   const [streamMinutes, setStreamMinutes] = useState(0);
   const [bonusPopup, setBonusPopup] = useState(false);
-  
+
   const videoRef = useRef<HTMLVideoElement>(null);
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
 
@@ -62,7 +62,7 @@ export function StreamClient({ id }: StreamClientProps) {
     return () => unsubscribe();
   }, [firestore]);
 
-  // Camera + Permissions Logic
+  // Camera + Runtime Permissions
   useEffect(() => {
     if (!isHost || cameraStream) return;
     const requestPermissions = async () => {
@@ -87,7 +87,7 @@ export function StreamClient({ id }: StreamClientProps) {
     };
   }, [isHost, cameraStream, toast]);
 
-  // Stream Timer
+  // Stream Timer + Bonus Popup
   useEffect(() => {
     if (!isHost) return;
     const interval = setInterval(() => {
@@ -202,7 +202,7 @@ export function StreamClient({ id }: StreamClientProps) {
              </div>
              {isHost && (
                <div className="mt-1 w-full pt-1 border-t border-white/5">
-                 <LiveEarningTimer minutes={streamMinutes} hostId={effectiveId as string} minimal={true} />
+                 <LiveEarningTimer minutes={streamMinutes} hostId={effectiveId} minimal />
                </div>
              )}
           </div>
