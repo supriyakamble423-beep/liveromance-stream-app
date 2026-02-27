@@ -5,13 +5,13 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { 
   X, Heart, Send, Lock, Zap, ShieldOff, ShieldCheck, 
-  Eye, Gift, Music, Share2, MoreVertical, Loader2, Power, Activity
+  Eye, Gift, Music, Share2, MoreVertical, Loader2, Power, Activity, Trophy, Sparkles
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useFirebase, useDoc, useMemoFirebase, useCollection } from "@/firebase";
+import { useFirebase, useDoc, useMemoFirebase } from "@/firebase";
 import { 
   doc, updateDoc, serverTimestamp, collection, 
-  query, orderBy, limit, addDoc, onSnapshot 
+  query, orderBy, limit, addDoc, onSnapshot, increment 
 } from "firebase/firestore";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -31,6 +31,8 @@ export function StreamClient({ id }: StreamClientProps) {
   const [isUpdating, setIsUpdating] = useState(false);
   const [giftDrawerOpen, setGiftDrawerOpen] = useState(false);
   const [streamMinutes, setStreamMinutes] = useState(0);
+  const [bonusPopup, setBonusPopup] = useState(false);
+  
   const videoRef = useRef<HTMLVideoElement>(null);
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
 
@@ -59,7 +61,7 @@ export function StreamClient({ id }: StreamClientProps) {
     return () => unsubscribe();
   }, [firestore, effectiveId]);
 
-  // Camera + Permissions
+  // Camera + Permissions Logic (Mobile Ready)
   useEffect(() => {
     if (!isHost || cameraStream) return;
     const requestPermissions = async () => {
@@ -84,14 +86,35 @@ export function StreamClient({ id }: StreamClientProps) {
     };
   }, [isHost, cameraStream, toast]);
 
-  // Stream Timer
+  // Stream Timer + 30 Min Bonus Popup
   useEffect(() => {
     if (!isHost) return;
     const interval = setInterval(() => {
-      setStreamMinutes(prev => prev + 1);
+      setStreamMinutes(prev => {
+        const nextMin = prev + 1;
+        if (nextMin > 0 && nextMin % 30 === 0) {
+          setBonusPopup(true);
+        }
+        return nextMin;
+      });
     }, 60000);
     return () => clearInterval(interval);
   }, [isHost]);
+
+  const claimBonus = async () => {
+    if (!firestore || !effectiveId) return;
+    try {
+      const hRef = doc(firestore, 'hosts', effectiveId as string);
+      await updateDoc(hRef, {
+        earnings: increment(500),
+        updatedAt: serverTimestamp()
+      });
+      setBonusPopup(false);
+      toast({ title: "Bonus Claimed!", description: "500 Diamonds added to your vault." });
+    } catch (e) {
+      toast({ variant: "destructive", title: "Claim Failed" });
+    }
+  };
 
   const toggleMode = async () => {
     if (!isHost || !hostRef || isUpdating) return;
@@ -159,7 +182,6 @@ export function StreamClient({ id }: StreamClientProps) {
   const isPrivate = host?.streamType === 'private';
   const isBlur = isPrivate || host?.manualBlur;
   const username = host?.username || 'Host';
-  const img = host?.previewImageUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${effectiveId}`;
 
   return (
     <div className="relative h-[100dvh] w-full max-w-[430px] mx-auto bg-black overflow-hidden font-sans border-x border-white/10">
@@ -175,7 +197,7 @@ export function StreamClient({ id }: StreamClientProps) {
         <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/90" />
       </div>
 
-      {/* Header */}
+      {/* Header - Clean with Revenue Tracker */}
       <div className="absolute top-0 left-0 right-0 p-6 pt-12 flex justify-between items-start z-50">
         <div className="flex items-center gap-3">
           <div className="bg-black/30 backdrop-blur-xl border border-white/10 rounded-3xl p-1.5 px-4 shadow-2xl flex flex-col items-start min-w-[140px]">
@@ -225,6 +247,30 @@ export function StreamClient({ id }: StreamClientProps) {
           </div>
         </div>
       </div>
+
+      {/* Bonus Milestone Popup (Centered) */}
+      {bonusPopup && (
+        <div className="fixed inset-0 flex items-center justify-center z-[200] bg-black/80 backdrop-blur-md p-6">
+           <div className="bg-gradient-to-br from-[#2D1B2D] to-black border-4 border-yellow-500/50 p-10 rounded-[3.5rem] text-center shadow-[0_0_100px_rgba(234,179,8,0.4)] animate-in zoom-in duration-500">
+              <Trophy className="size-20 text-yellow-400 mx-auto mb-6 animate-bounce" />
+              <h2 className="text-4xl font-black italic uppercase tracking-tighter text-white leading-none mb-2">30 MIN BONUS!</h2>
+              <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-8">Milestone Reached Successfully</p>
+              
+              <div className="bg-yellow-500/10 border border-yellow-500/20 p-4 rounded-2xl mb-8">
+                <p className="text-2xl font-black text-yellow-400 tracking-tight">+500 DIAMONDS</p>
+              </div>
+
+              <div className="flex flex-col gap-3">
+                <Button onClick={claimBonus} className="w-full h-16 bg-yellow-500 hover:bg-yellow-600 text-black font-black uppercase tracking-widest rounded-2xl shadow-xl">
+                  Claim Reward
+                </Button>
+                <Button variant="ghost" onClick={() => setBonusPopup(false)} className="text-white/40 font-bold uppercase text-[10px] tracking-widest">
+                  Later
+                </Button>
+              </div>
+           </div>
+        </div>
+      )}
 
       {/* Real-time Messages */}
       <div className="absolute bottom-40 left-6 right-16 h-48 overflow-y-auto no-scrollbar space-y-2 z-40 pointer-events-none">
@@ -300,11 +346,6 @@ export function StreamClient({ id }: StreamClientProps) {
           ))}
         </div>
         <Button onClick={() => setGiftDrawerOpen(false)} className="w-full h-16 bg-primary rounded-2xl font-black text-white italic uppercase shadow-2xl border-none">Send Now</Button>
-      </div>
-
-      {/* Milestone Tracker (Tucked away) */}
-      <div className="absolute top-24 left-1/2 -translate-x-1/2 z-40">
-        <LiveEarningTimer minutes={streamMinutes} hostId={effectiveId as string} />
       </div>
     </div>
   );

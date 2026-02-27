@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { DependencyList, createContext, useContext, ReactNode, useMemo, useState, useEffect } from 'react';
@@ -74,7 +73,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
                 id: firebaseUser.uid,
                 username: firebaseUser.displayName || `User_${firebaseUser.uid.slice(0,5)}`,
                 email: firebaseUser.email || '',
-                diamonds: 50, // Welcome Bonus
+                diamonds: 50, // Welcome Bonus credit
                 createdAt: serverTimestamp(),
                 updatedAt: serverTimestamp()
               }, { merge: true });
