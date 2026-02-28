@@ -4,22 +4,23 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { 
-  X, Heart, Send, Lock, Zap, ShieldCheck, 
+  X, Heart, Send, Lock, Zap, ShieldAlert, 
   Eye, Gift, Music, Share2, MoreVertical, Loader2, Power, Mail, Trophy 
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useFirebase, useDoc } from "@/firebase";
+import { useFirebase, useDoc, useMemoFirebase } from "@/firebase";
 import { 
   doc, updateDoc, serverTimestamp, collection, 
   addDoc, onSnapshot, query, orderBy, limit, increment 
 } from "firebase/firestore";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import LiveEarningTimer from "@/components/Stream/LiveEarningTimer";
 
 export default function StreamClient({ id }: { id: string }) {
   const router = useRouter();
-  const { firestore, user } = useFirebase();
+  const { firestore, user, areServicesAvailable } = useFirebase();
   const { toast } = useToast();
 
   const [inputText, setInputText] = useState("");
@@ -33,7 +34,12 @@ export default function StreamClient({ id }: { id: string }) {
   const isHost = user?.uid === id || id === 'simulate_host';
   
   const effectiveId = id === 'simulate_host' ? (user?.uid || 'simulate_host') : id;
-  const hostRef = doc(firestore!, 'hosts', effectiveId);
+  
+  const hostRef = useMemoFirebase(() => {
+    if (!firestore || !effectiveId) return null;
+    return doc(firestore, 'hosts', effectiveId);
+  }, [firestore, effectiveId]);
+
   const { data: host } = useDoc(hostRef);
 
   // Camera Permission & Stream
@@ -42,19 +48,22 @@ export default function StreamClient({ id }: { id: string }) {
     
     let currentStream: MediaStream | null = null;
 
-    navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-      .then(s => {
+    const startCamera = async () => {
+      try {
+        const s = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
         currentStream = s;
         setStream(s);
         if (videoRef.current) videoRef.current.srcObject = s;
-      })
-      .catch(() => {
+      } catch (err) {
         toast({ 
           variant: "destructive", 
           title: "Permission Denied", 
           description: "Bhai, Camera/Mic ke bina stream nahi ho payegi" 
         });
-      });
+      }
+    };
+
+    startCamera();
 
     return () => {
       if (currentStream) {
@@ -63,7 +72,7 @@ export default function StreamClient({ id }: { id: string }) {
     };
   }, [isHost, toast]);
 
-  // Timer + Bonus Popup (FIXED LOGIC)
+  // Timer + Bonus Popup
   useEffect(() => {
     if (!isHost) return;
     const intervalId = setInterval(() => {
@@ -80,14 +89,18 @@ export default function StreamClient({ id }: { id: string }) {
 
   // Live Messages
   useEffect(() => {
-    if (!firestore) return;
+    if (!firestore || !areServicesAvailable) return;
+    
+    // Using 'streamMessages' to match the database structure
     const q = query(collection(firestore, 'streamMessages'), orderBy('timestamp', 'desc'), limit(50));
     const unsub = onSnapshot(q, snap => {
       const msgs = snap.docs.map(d => ({ ...d.data(), id: d.id }));
       setMessages(msgs.reverse() as any);
+    }, (err) => {
+      console.error("Chat listener error:", err);
     });
     return unsub;
-  }, [firestore]);
+  }, [firestore, areServicesAvailable]);
 
   const sendMsg = async () => {
     if (!inputText.trim() || !firestore) return;
@@ -144,6 +157,14 @@ export default function StreamClient({ id }: { id: string }) {
 
   const isPrivate = host?.streamType === 'private';
 
+  if (!areServicesAvailable) {
+    return (
+      <div className="h-screen bg-black flex items-center justify-center">
+        <Loader2 className="animate-spin text-primary size-10" />
+      </div>
+    );
+  }
+
   return (
     <div className="relative h-screen w-full bg-black overflow-hidden max-w-[430px] mx-auto border-x border-white/10">
       {/* Video */}
@@ -181,16 +202,18 @@ export default function StreamClient({ id }: { id: string }) {
         </div>
 
         <div className="flex gap-2">
-          <Button 
-            onClick={togglePrivate} 
-            className={cn(
-              "rounded-full px-5 h-10 text-[10px] font-black uppercase tracking-widest shadow-xl border-none",
-              isPrivate ? "bg-red-600" : "bg-green-600"
-            )}
-          >
-            {isPrivate ? <Lock size={14} className="mr-1" /> : <Zap size={14} className="mr-1" />} 
-            {isPrivate ? "Private" : "Public"}
-          </Button>
+          {isHost && (
+            <Button 
+              onClick={togglePrivate} 
+              className={cn(
+                "rounded-full px-5 h-10 text-[10px] font-black uppercase tracking-widest shadow-xl border-none",
+                isPrivate ? "bg-red-600" : "bg-green-600"
+              )}
+            >
+              {isPrivate ? <Lock size={14} className="mr-1" /> : <Zap size={14} className="mr-1" />} 
+              {isPrivate ? "Private" : "Public"}
+            </Button>
+          )}
           <Button 
             variant="destructive" 
             size="icon" 
@@ -200,6 +223,11 @@ export default function StreamClient({ id }: { id: string }) {
             <Power size={18} />
           </Button>
         </div>
+      </div>
+
+      {/* Revenue & Target Display */}
+      <div className="absolute top-24 right-4 z-50">
+        <LiveEarningTimer minutes={minutes} hostId={effectiveId} minimal />
       </div>
 
       {/* Side Buttons */}
