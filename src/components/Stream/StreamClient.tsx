@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { 
-  X, Heart, Send, Lock, Zap, ShieldOff, ShieldCheck, 
+  X, Heart, Send, Lock, Zap, ShieldCheck, 
   Eye, Gift, Music, Share2, MoreVertical, Loader2, Power, Mail, Trophy 
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -32,7 +32,6 @@ export default function StreamClient({ id }: { id: string }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const isHost = user?.uid === id || id === 'simulate_host';
   
-  // Dynamic host reference
   const effectiveId = id === 'simulate_host' ? (user?.uid || 'simulate_host') : id;
   const hostRef = doc(firestore!, 'hosts', effectiveId);
   const { data: host } = useDoc(hostRef);
