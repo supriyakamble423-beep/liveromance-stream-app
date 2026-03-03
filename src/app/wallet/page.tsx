@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Zap, PlayCircle, Sparkles, ChevronLeft, Loader2, Wallet } from "lucide-react";
+import { Zap, PlayCircle, Sparkles, ChevronLeft, Loader2, Wallet, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useFirebase } from "@/firebase";
 import { doc, onSnapshot, updateDoc, increment, serverTimestamp } from "firebase/firestore";
@@ -24,8 +24,6 @@ export default function RewardWallet() {
     }
 
     const userRef = doc(firestore, 'users', user.uid);
-    
-    // REAL-TIME SYNC: Balance updates instantly
     const unsubscribe = onSnapshot(userRef, (snap) => {
       if (snap.exists()) {
         setBalance(snap.data()?.diamonds || 0);
@@ -49,19 +47,28 @@ export default function RewardWallet() {
     if (!areServicesAvailable || !user) return;
 
     setIsWatching(true);
-    // Simulate Ad experience
-    window.open('https://www.highrevenuegate.com/direct-link', '_blank');
     
+    // SAFE AD LOADER (Simulation Link)
+    const adUrl = "https://www.highrevenuegate.com/direct-link";
+    const adWindow = window.open(adUrl, '_blank');
+    
+    if (!adWindow || adWindow.closed) {
+      toast({ variant: "destructive", title: "Popup Blocked", description: "Allow popups to earn diamonds." });
+      setIsWatching(false);
+      return;
+    }
+
+    // Reward after 5 seconds of simulated ad view
     setTimeout(async () => {
       try {
         const userRef = doc(firestore!, 'users', user.uid);
         await updateDoc(userRef, { 
           diamonds: increment(5), 
-          updatedAt: serverTimestamp() 
+          lastAdWatched: serverTimestamp() 
         });
         toast({ 
           title: "🎉 +5 Diamonds!", 
-          description: "Balance updated instantly.",
+          description: "Reward added to your vault.",
           className: "romantic-glow bg-primary text-white"
         });
       } catch (e) {
@@ -69,7 +76,7 @@ export default function RewardWallet() {
       } finally {
         setIsWatching(false);
       }
-    }, 3000);
+    }, 5000);
   };
 
   return (
@@ -97,6 +104,10 @@ export default function RewardWallet() {
               </span>
               <Sparkles className="size-8 text-yellow-300 animate-pulse" />
             </div>
+            <div className="mt-4 flex items-center gap-2 bg-white/20 w-fit px-4 py-1.5 rounded-full backdrop-blur-md border border-white/10">
+               <TrendingUp className="size-3 text-white" />
+               <span className="text-[10px] font-black uppercase tracking-widest">Value: ₹{(balance * 0.02).toFixed(2)}</span>
+            </div>
           </div>
         </div>
 
@@ -112,8 +123,7 @@ export default function RewardWallet() {
             disabled={isWatching} 
             className="w-full h-16 rounded-[2rem] romantic-gradient font-black uppercase tracking-widest text-white shadow-xl active:scale-95 transition-all"
           >
-            {isWatching ? <Loader2 className="animate-spin mr-2" /> : <PlayCircle className="size-5 mr-2" />}
-            Claim Reward
+            {isWatching ? <><Loader2 className="animate-spin mr-2" /> Syncing...</> : <><PlayCircle className="size-5 mr-2" /> Claim Reward</>}
           </Button>
         </section>
       </main>

@@ -30,7 +30,8 @@ export default function StreamClient({ id }: { id: string }) {
   const [bonusShow, setBonusShow] = useState(false);
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
-  const [loadTimeout, setLoadTimeout] = useState(false);
+  const [isLive, setIsLive] = useState(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const isHost = user?.uid === id || id === 'simulate_host';
@@ -41,42 +42,40 @@ export default function StreamClient({ id }: { id: string }) {
     return doc(firestore, 'hosts', effectiveId);
   }, [firestore, effectiveId]);
 
-  const { data: host, isLoading: isHostLoading } = useDoc(hostRef);
+  const { data: host } = useDoc(hostRef);
 
-  // Loading Timeout Guard
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (isHostLoading || !areServicesAvailable) setLoadTimeout(true);
-    }, 8000);
-    return () => clearTimeout(timer);
-  }, [isHostLoading, areServicesAvailable]);
+  const startBroadcast = async () => {
+    if (!areServicesAvailable) return;
 
-  // STRICT PERMISSIONS: Camera & Mic request
-  useEffect(() => {
-    if (!isHost) return;
-    
-    const startCamera = async () => {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ 
-          video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } }, 
-          audio: true 
-        });
-        setCameraStream(stream);
-        if (videoRef.current) videoRef.current.srcObject = stream;
-      } catch (err) {
-        toast({ 
-          variant: "destructive", 
-          title: "Permission Denied", 
-          description: "Bhai, Camera/Mic ke bina stream nahi ho payegi" 
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: "user", width: { ideal: 1280 } }, 
+        audio: true 
+      });
+      setCameraStream(stream);
+      if (videoRef.current) videoRef.current.srcObject = stream;
+
+      if (firestore && isHost && hostRef) {
+        await updateDoc(hostRef, {
+          isLive: true,
+          updatedAt: serverTimestamp()
         });
       }
-    };
 
-    startCamera();
-    return () => cameraStream?.getTracks().forEach(t => t.stop());
-  }, [isHost]);
+      setIsLive(true);
+      setCameraError(null);
+      toast({ title: "Signal Active", description: "You are now broadcasting live!" });
+    } catch (err: any) {
+      console.error("Camera Error:", err);
+      setCameraError(err.message || "Permission denied");
+      toast({ 
+        variant: "destructive", 
+        title: "Permission Required", 
+        description: "Bhai, Camera/Mic ke bina stream nahi ho payegi. Settings mein allow karo." 
+      });
+    }
+  };
 
-  // REAL-TIME MESSAGES
   useEffect(() => {
     if (!firestore) return;
     const q = query(collection(firestore, 'streamMessages'), orderBy('timestamp', 'desc'), limit(50));
@@ -87,9 +86,8 @@ export default function StreamClient({ id }: { id: string }) {
     return () => unsubscribe();
   }, [firestore]);
 
-  // BONUS LOGIC: Every 30 mins
   useEffect(() => {
-    if (!isHost) return;
+    if (!isLive) return;
     const intervalId = setInterval(() => {
       setMinutes(prev => {
         const next = prev + 1;
@@ -98,7 +96,7 @@ export default function StreamClient({ id }: { id: string }) {
       });
     }, 60000);
     return () => clearInterval(intervalId);
-  }, [isHost]);
+  }, [isLive]);
 
   const sendMsg = async () => {
     if (!inputText.trim() || !firestore || !user) return;
@@ -116,25 +114,15 @@ export default function StreamClient({ id }: { id: string }) {
     }
   };
 
-  const toggleMode = async () => {
-    if (!hostRef || !host) return;
-    setIsUpdating(true);
-    const nextMode = host.streamType === 'private' ? 'public' : 'private';
-    try {
-      await updateDoc(hostRef, { streamType: nextMode, updatedAt: serverTimestamp() });
-      toast({ title: `Mode: ${nextMode.toUpperCase()}` });
-    } finally { setIsUpdating(false); }
-  };
-
-  if (loadTimeout && !host) {
+  if (cameraError) {
     return (
       <div className="h-screen bg-black flex flex-col items-center justify-center p-8 text-center space-y-6">
         <ShieldOff className="size-16 text-primary animate-pulse" />
-        <h2 className="text-2xl font-black uppercase italic">Connection Dropped</h2>
+        <h2 className="text-2xl font-black uppercase italic">Camera Access Required</h2>
         <p className="text-xs text-slate-500 font-bold uppercase tracking-widest leading-relaxed">
-          The stream signal is weak or the host is offline.
+          Stream signal requires camera and microphone permissions to broadcast to the grid.
         </p>
-        <Button onClick={() => router.push('/global')} className="w-full h-14 rounded-2xl bg-primary font-black uppercase">Return to Marketplace</Button>
+        <Button onClick={startBroadcast} className="w-full h-14 rounded-2xl bg-primary font-black uppercase">Grant Access</Button>
       </div>
     );
   }
@@ -143,6 +131,18 @@ export default function StreamClient({ id }: { id: string }) {
     <div className="relative h-screen w-full bg-black overflow-hidden max-w-lg mx-auto border-x border-white/10">
       <video ref={videoRef} autoPlay muted playsInline className={cn("absolute inset-0 w-full h-full object-cover scale-x-[-1] transition-all duration-700", (host?.streamType === 'private' || host?.manualBlur) && "blur-2xl opacity-60")} />
       <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/80 pointer-events-none" />
+
+      {!isLive && (
+        <div className="absolute inset-0 flex items-center justify-center z-[60] bg-black/60 backdrop-blur-sm">
+          <Button 
+            onClick={startBroadcast} 
+            disabled={!areServicesAvailable}
+            className="h-20 px-12 rounded-[2rem] bg-red-600 hover:bg-red-700 text-white font-black text-xl uppercase italic shadow-[0_0_50px_rgba(220,38,38,0.5)] transition-all active:scale-95"
+          >
+            {areServicesAvailable ? "🔴 GO LIVE" : "Syncing..."}
+          </Button>
+        </div>
+      )}
 
       <div className="absolute top-10 left-4 right-4 z-50 flex justify-between items-start">
         <div className="flex items-center gap-3 bg-black/40 backdrop-blur-md px-4 py-2 rounded-full border border-white/10 shadow-2xl">
@@ -158,15 +158,7 @@ export default function StreamClient({ id }: { id: string }) {
           </div>
         </div>
 
-        <div className="flex gap-2">
-          {isHost && (
-            <Button onClick={toggleMode} disabled={isUpdating} className={cn("rounded-full px-5 h-10 text-[10px] font-black uppercase tracking-widest shadow-xl transition-all", host?.streamType === 'private' ? "bg-red-600" : "bg-green-600")}>
-              {isUpdating ? <Loader2 className="animate-spin size-4" /> : host?.streamType === 'private' ? <Lock size={14} className="mr-1" /> : <Zap size={14} className="mr-1" />} 
-              {host?.streamType === 'private' ? "Private" : "Public"}
-            </Button>
-          )}
-          <Button variant="destructive" size="icon" className="rounded-full h-10 w-10" onClick={() => router.push('/host-p')}><Power size={18} /></Button>
-        </div>
+        <Button variant="destructive" size="icon" className="rounded-full h-10 w-10" onClick={() => router.push('/host-p')}><X size={18} /></Button>
       </div>
 
       <div className="absolute top-24 right-4 z-50">
