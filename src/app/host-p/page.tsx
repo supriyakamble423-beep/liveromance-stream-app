@@ -1,14 +1,14 @@
+
 'use client';
 
 import { useFirebase, useDoc, useMemoFirebase } from "@/firebase";
 import { BottomNav } from "@/components/BottomNav";
 import { 
-  Settings, Power, ChevronRight, Wallet, Loader2, Camera, Video, LogOut, UserPlus, LogIn, ShieldCheck, Mail
+  Settings, Power, ChevronRight, Wallet, Loader2, Camera, Video, LogOut, ShieldCheck, Mail
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { 
   Dialog, 
   DialogContent, 
@@ -23,8 +23,9 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { initiateEmailSignIn, initiateEmailSignUp, initiateGoogleSignIn } from "@/firebase/non-blocking-login";
+import { initiateGoogleSignIn } from "@/firebase/non-blocking-login";
 import { signOut } from "firebase/auth";
+import { ShareKit } from "@/components/ShareKit";
 
 export default function HostProfileDashboard() {
   const { firestore, user, auth, areServicesAvailable } = useFirebase();
@@ -36,10 +37,7 @@ export default function HostProfileDashboard() {
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
   const [isAuthLoading, setIsAuthLoading] = useState(false);
   
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [editName, setEditName] = useState("");
-  const [editBio, setEditBio] = useState("");
 
   const hostRef = useMemoFirebase(() => {
     if (!firestore || !userId) return null;
@@ -51,7 +49,6 @@ export default function HostProfileDashboard() {
   useEffect(() => {
     if (hostProfile) {
       setEditName(hostProfile.username || "");
-      setEditBio(hostProfile.bio || "");
     }
   }, [hostProfile]);
 
@@ -174,11 +171,13 @@ export default function HostProfileDashboard() {
         </div>
       </header>
 
-      <main className="px-8 space-y-8 pt-8">
+      <main className="px-8 space-y-10 pt-8">
         <Button onClick={toggleLiveStatus} disabled={isTogglingLive} className={cn("w-full h-24 rounded-[3.5rem] font-black text-2xl uppercase italic text-white shadow-2xl transition-all active:scale-95", hostProfile?.isLive ? "bg-primary shadow-primary/40" : "bg-green-600 shadow-green-600/40")}>
           {isTogglingLive ? <Loader2 className="size-8 animate-spin" /> : <Power className="size-10" />}
           {hostProfile?.isLive ? "Cut Signal" : "Broadcast"}
         </Button>
+
+        {user && <ShareKit hostId={user.uid} username={hostProfile?.username || "HOST"} />}
       </main>
       <BottomNav />
     </div>

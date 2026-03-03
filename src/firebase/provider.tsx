@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { DependencyList, createContext, useContext, ReactNode, useMemo, useState, useEffect } from 'react';
@@ -75,6 +76,8 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
                 username: firebaseUser.displayName || `User_${firebaseUser.uid.slice(0,5)}`,
                 email: firebaseUser.email || '',
                 diamonds: 50, 
+                referralCode: `REF_${firebaseUser.uid.slice(0, 6).toUpperCase()}`,
+                apkDownloaded: false,
                 createdAt: serverTimestamp(),
                 updatedAt: serverTimestamp()
               }, { merge: true });
