@@ -66,19 +66,22 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
 
         if (firebaseUser && firestore) {
           const userRef = doc(firestore, 'users', firebaseUser.uid);
-          getDoc(userRef).then(async (userSnap) => {
+          try {
+            const userSnap = await getDoc(userRef);
             if (!userSnap.exists()) {
-              // WELCOME BONUS: 50 Diamonds for new users (Step 1 Fix)
+              // WELCOME BONUS: 50 Diamonds for new users
               await setDoc(userRef, {
                 id: firebaseUser.uid,
                 username: firebaseUser.displayName || `User_${firebaseUser.uid.slice(0,5)}`,
                 email: firebaseUser.email || '',
-                diamonds: 50, // Default 50 free diamonds for signup
+                diamonds: 50, 
                 createdAt: serverTimestamp(),
                 updatedAt: serverTimestamp()
               }, { merge: true });
             }
-          }).catch(e => console.warn("Profile check failed", e));
+          } catch (e) {
+            console.warn("Profile sync check failed:", e);
+          }
         }
 
         setUserAuthState({ user: firebaseUser, isUserLoading: false, userError: null });
