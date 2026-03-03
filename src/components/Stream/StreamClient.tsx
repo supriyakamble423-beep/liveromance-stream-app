@@ -35,6 +35,7 @@ export default function StreamClient({ id }: { id: string }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const isHost = user?.uid === id || id === 'simulate_host';
   
+  // Use user UID for simulation if necessary
   const effectiveId = id === 'simulate_host' ? (user?.uid || 'simulate_host') : id;
   
   const hostRef = useMemoFirebase(() => {
@@ -44,16 +45,16 @@ export default function StreamClient({ id }: { id: string }) {
 
   const { data: host, isLoading: isHostLoading } = useDoc(hostRef);
 
-  // Loading Timeout Safety
+  // Safety Timeout for Firebase Connection
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (isHostLoading || !areServicesAvailable) {
+      if (!host && (isHostLoading || !areServicesAvailable)) {
         setLoadTimeout(true);
-        console.error("Stream loading timeout - checking Firebase connection...");
+        console.warn("Stream loading timeout - displaying fallback UI.");
       }
     }, 10000);
     return () => clearTimeout(timer);
-  }, [isHostLoading, areServicesAvailable]);
+  }, [isHostLoading, areServicesAvailable, host]);
 
   // Camera Permission & Stream
   useEffect(() => {
@@ -140,17 +141,13 @@ export default function StreamClient({ id }: { id: string }) {
     }
   };
 
-  const endStream = async () => {
+  const endStream = () => {
     if (!confirm("End stream?")) return;
-    try {
-      if (isHost && hostRef) {
-        await updateDoc(hostRef, { isLive: false, updatedAt: serverTimestamp() });
-      }
-      stream?.getTracks().forEach(t => t.stop());
-      router.push('/host-p');
-    } catch (e) {
-      router.push('/host-p');
+    if (isHost && hostRef && areServicesAvailable) {
+      updateDoc(hostRef, { isLive: false, updatedAt: serverTimestamp() }).catch(() => {});
     }
+    stream?.getTracks().forEach(t => t.stop());
+    router.push('/host-p');
   };
 
   const claimBonus = async () => {
@@ -169,7 +166,8 @@ export default function StreamClient({ id }: { id: string }) {
 
   const isPrivate = host?.streamType === 'private';
 
-  if (!areServicesAvailable || (isHostLoading && !loadTimeout)) {
+  // Loading UI
+  if (!loadTimeout && (!areServicesAvailable || isHostLoading)) {
     return (
       <div className="h-screen bg-black flex flex-col items-center justify-center space-y-6">
         <Loader2 className="animate-spin text-primary size-12" />
@@ -178,18 +176,23 @@ export default function StreamClient({ id }: { id: string }) {
     );
   }
 
+  // Timeout UI (Fallback)
   if (loadTimeout && !host) {
     return (
       <div className="h-screen bg-black flex flex-col items-center justify-center p-8 text-center space-y-6">
         <div className="size-20 bg-red-500/20 rounded-[2.5rem] flex items-center justify-center text-red-500 border border-red-500/30">
           <ShieldOff size={40} />
         </div>
-        <h2 className="text-2xl font-black uppercase italic tracking-tighter">Connection Timeout</h2>
-        <p className="text-xs text-slate-500 uppercase font-bold leading-relaxed">
-          The host signal could not be found. <br/>Check Firestore or try again.
-        </p>
-        <Button onClick={() => window.location.reload()} className="w-full h-14 rounded-2xl bg-primary font-black uppercase tracking-widest italic">Retry Signal</Button>
-        <Button variant="ghost" onClick={() => router.push('/global')} className="text-slate-500 text-[10px] font-black uppercase">Return to Marketplace</Button>
+        <div className="space-y-2">
+          <h2 className="text-2xl font-black uppercase italic tracking-tighter text-white">Connection Error</h2>
+          <p className="text-xs text-slate-500 uppercase font-bold leading-relaxed">
+            The host node could not be verified. <br/>Ensure your Firebase project is connected.
+          </p>
+        </div>
+        <div className="w-full space-y-3">
+          <Button onClick={() => window.location.reload()} className="w-full h-14 rounded-2xl bg-primary font-black uppercase tracking-widest italic">Retry Connection</Button>
+          <Button variant="outline" onClick={() => router.push('/global')} className="w-full h-14 rounded-2xl border-white/10 text-slate-400 font-black uppercase text-[10px] tracking-widest">Return to Global</Button>
+        </div>
       </div>
     );
   }
