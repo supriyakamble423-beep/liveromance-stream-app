@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Zap, PlayCircle, Sparkles, ChevronLeft, Loader2, Wallet, TrendingUp } from "lucide-react";
+import { Zap, PlayCircle, Sparkles, ChevronLeft, Loader2, Wallet as WalletIcon, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useFirebase } from "@/firebase";
 import { doc, onSnapshot, updateDoc, increment, serverTimestamp } from "firebase/firestore";
@@ -10,6 +10,10 @@ import Link from "next/link";
 import { BottomNav } from "@/components/BottomNav";
 import { initiateAnonymousSignIn } from "@/firebase/non-blocking-login";
 
+/**
+ * RewardWallet Component
+ * Features real-time balance sync and "Watch & Earn" Adsterra integration.
+ */
 export default function RewardWallet() {
   const { firestore, user, auth, areServicesAvailable } = useFirebase();
   const { toast } = useToast();
@@ -17,6 +21,7 @@ export default function RewardWallet() {
   const [isWatching, setIsWatching] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Real-time Balance Sync
   useEffect(() => {
     if (!firestore || !user?.uid) {
       if (!user && !isLoading) setIsLoading(false);
@@ -37,28 +42,37 @@ export default function RewardWallet() {
     return () => unsubscribe();
   }, [firestore, user?.uid]);
 
+  // Safe Adsterra / Reward Logic
   const handleWatchAd = async () => {
     if (!user && auth) {
-      await initiateAnonymousSignIn(auth);
-      toast({ title: "Connecting Node..." });
-      return;
+      try {
+        await initiateAnonymousSignIn(auth);
+        toast({ title: "Connecting Node..." });
+      } catch (e) {
+        toast({ variant: "destructive", title: "Login Required" });
+        return;
+      }
     }
 
     if (!areServicesAvailable || !user) return;
 
     setIsWatching(true);
     
-    // SAFE AD LOADER (Simulation Link)
-    const adUrl = "https://www.highrevenuegate.com/direct-link";
+    // Simulation: Open Adsterra / Partner link in new tab
+    const adUrl = "https://www.highrevenuegate.com/direct-link"; // Replace with actual direct link
     const adWindow = window.open(adUrl, '_blank');
     
     if (!adWindow || adWindow.closed) {
-      toast({ variant: "destructive", title: "Popup Blocked", description: "Allow popups to earn diamonds." });
+      toast({ 
+        variant: "destructive", 
+        title: "Popup Blocked", 
+        description: "Bhai, popup allow karo varna diamonds nahi milenge." 
+      });
       setIsWatching(false);
       return;
     }
 
-    // Reward after 5 seconds of simulated ad view
+    // Reward after 5 seconds of simulated view
     setTimeout(async () => {
       try {
         const userRef = doc(firestore!, 'users', user.uid);
@@ -87,14 +101,15 @@ export default function RewardWallet() {
             <ChevronLeft className="size-6" />
           </Button>
         </Link>
-        <h1 className="text-2xl font-black italic uppercase tracking-tighter">Vault</h1>
+        <h1 className="text-2xl font-black italic uppercase tracking-tighter text-white">Vault</h1>
         <div className="size-12" />
       </header>
 
       <main className="flex-1 overflow-y-auto px-8 space-y-10 pt-8 no-scrollbar">
+        {/* Balance Display */}
         <div className="bg-gradient-to-br from-[#E11D48] via-[#F472B6] to-[#E11D48] p-10 rounded-[4rem] shadow-2xl relative overflow-hidden romantic-glow">
           <div className="absolute top-0 right-0 p-6 opacity-30">
-            <Wallet className="size-40 rotate-12 fill-white" />
+            <WalletIcon className="size-40 rotate-12 fill-white" />
           </div>
           <div className="relative z-10">
             <p className="text-[11px] font-black uppercase tracking-[0.4em] mb-3 opacity-80">Diamond Balance</p>
@@ -111,6 +126,7 @@ export default function RewardWallet() {
           </div>
         </div>
 
+        {/* Watch & Earn Section */}
         <section className="bg-[#3D263D]/60 border border-white/10 rounded-[3.5rem] p-8 text-center shadow-2xl backdrop-blur-xl">
           <div className="size-20 bg-gradient-to-tr from-[#F472B6] to-[#E11D48] rounded-[2rem] flex items-center justify-center mx-auto mb-6 shadow-2xl">
             <PlayCircle className="size-12 text-white" />
@@ -120,8 +136,8 @@ export default function RewardWallet() {
           
           <Button 
             onClick={handleWatchAd} 
-            disabled={isWatching} 
-            className="w-full h-16 rounded-[2rem] romantic-gradient font-black uppercase tracking-widest text-white shadow-xl active:scale-95 transition-all"
+            disabled={isWatching || !areServicesAvailable} 
+            className="w-full h-16 rounded-[2rem] romantic-gradient font-black uppercase tracking-widest text-white shadow-xl active:scale-95 transition-all disabled:opacity-50"
           >
             {isWatching ? <><Loader2 className="animate-spin mr-2" /> Syncing...</> : <><PlayCircle className="size-5 mr-2" /> Claim Reward</>}
           </Button>
