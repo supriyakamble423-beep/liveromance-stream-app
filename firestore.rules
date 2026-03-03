@@ -1,10 +1,30 @@
-
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // TEMPORARY FULL PUBLIC ACCESS FOR DEBUGGING
-    match /{document=**} {
+    // Users - Public read for profile info, owner-only write for balance/coins
+    match /users/{userId} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Hosts - Public read/write for testing and signal updates
+    match /hosts/{hostId} {
       allow read, write: if true;
+    }
+    
+    // Stream Messages - Public access for live chat testing
+    match /streamMessages/{msgId} {
+      allow read, write: if true;
+    }
+    
+    // Stream Requests - Authenticated users only
+    match /streamRequests/{reqId} {
+      allow read, write: if request.auth != null;
+    }
+
+    // Default catch-all for other collections
+    match /{document=**} {
+      allow read, write: if request.auth != null;
     }
   }
 }

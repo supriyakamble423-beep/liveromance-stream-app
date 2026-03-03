@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useRef } from "react";
@@ -19,6 +18,9 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import LiveEarningTimer from "@/components/Stream/LiveEarningTimer";
 
+/**
+ * StreamClient: High-performance live session hub with ultra-fast camera and chat sync.
+ */
 export default function StreamClient({ id }: { id: string }) {
   const router = useRouter();
   const { firestore, user, areServicesAvailable } = useFirebase();
@@ -29,49 +31,32 @@ export default function StreamClient({ id }: { id: string }) {
   const [giftOpen, setGiftOpen] = useState(false);
   const [minutes, setMinutes] = useState(0);
   const [bonusShow, setBonusShow] = useState(false);
-  const [stream, setStream] = useState<MediaStream | null>(null);
-  const [loadTimeout, setLoadTimeout] = useState(false);
-  const [mockHostActive, setMockHostActive] = useState(false);
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const isHost = user?.uid === id || id === 'simulate_host';
-  
-  // Use user UID for simulation if necessary
   const effectiveId = id === 'simulate_host' ? (user?.uid || 'simulate_host') : id;
-  
+
   const hostRef = useMemoFirebase(() => {
     if (!firestore || !effectiveId) return null;
     return doc(firestore, 'hosts', effectiveId);
   }, [firestore, effectiveId]);
 
-  const { data: host, isLoading: isHostLoading } = useDoc(hostRef);
+  const { data: host } = useDoc(hostRef);
 
-  // Safety Timeout & Mock Fallback for Simulation
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (!host && (isHostLoading || !areServicesAvailable)) {
-        setLoadTimeout(true);
-        if (effectiveId === 'simulate_host' || id === 'simulate_host') {
-          console.warn("Using Mock Host for simulation...");
-          setMockHostActive(true);
-        }
-      }
-    }, 5000);
-    return () => clearTimeout(timer);
-  }, [isHostLoading, areServicesAvailable, host, effectiveId, id]);
-
-  // Camera Permission & Stream
+  // Instant Camera & Mic Startup
   useEffect(() => {
     if (!isHost) return;
     
-    let currentStream: MediaStream | null = null;
-
     const startCamera = async () => {
       try {
-        const s = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-        currentStream = s;
-        setStream(s);
-        if (videoRef.current) videoRef.current.srcObject = s;
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+          video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } }, 
+          audio: true 
+        });
+        setCameraStream(stream);
+        if (videoRef.current) videoRef.current.srcObject = stream;
       } catch (err) {
         toast({ 
           variant: "destructive", 
@@ -82,171 +67,115 @@ export default function StreamClient({ id }: { id: string }) {
     };
 
     startCamera();
+    return () => cameraStream?.getTracks().forEach(t => t.stop());
+  }, [isHost]);
 
-    return () => {
-      if (currentStream) {
-        currentStream.getTracks().forEach(t => t.stop());
-      }
-    };
-  }, [isHost, toast]);
+  // Zero-Latency Real-time Chat Sync
+  useEffect(() => {
+    if (!firestore) return;
+    
+    const q = query(
+      collection(firestore, 'streamMessages'), 
+      orderBy('timestamp', 'desc'), 
+      limit(50)
+    );
 
-  // Timer + Bonus Popup
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const msgs = snapshot.docs.map(d => ({ ...d.data(), id: d.id }));
+      setMessages(msgs.reverse());
+    });
+
+    return () => unsubscribe();
+  }, [firestore]);
+
+  // Timer & Milestone Logic
   useEffect(() => {
     if (!isHost) return;
     const intervalId = setInterval(() => {
       setMinutes(prev => {
-        const newMinutes = prev + 1;
-        if (newMinutes % 30 === 0 && newMinutes > 0) { 
-          setBonusShow(true);
-        }
-        return newMinutes;
+        const next = prev + 1;
+        if (next % 30 === 0 && next > 0) setBonusShow(true);
+        return next;
       });
     }, 60000);
     return () => clearInterval(intervalId);
   }, [isHost]);
 
-  // Live Messages
-  useEffect(() => {
-    if (!firestore || !areServicesAvailable) return;
-    
-    const q = query(collection(firestore, 'streamMessages'), orderBy('timestamp', 'desc'), limit(50));
-    const unsub = onSnapshot(q, snap => {
-      const msgs = snap.docs.map(d => ({ ...d.data(), id: d.id }));
-      setMessages(msgs.reverse() as any);
-    }, (err) => {
-      console.error("Chat listener error:", err);
-    });
-    return unsub;
-  }, [firestore, areServicesAvailable]);
-
   const sendMsg = async () => {
-    if (!inputText.trim() || !firestore) return;
+    if (!inputText.trim() || !firestore || !user) return;
     try {
       await addDoc(collection(firestore, 'streamMessages'), {
         text: inputText,
-        user: user?.displayName || user?.email?.split('@')[0] || 'Guest',
-        uid: user?.uid || 'guest',
-        timestamp: serverTimestamp()
+        user: user.displayName || user.email?.split('@')[0] || 'Guest',
+        uid: user.uid,
+        timestamp: serverTimestamp(),
+        hostId: id
       });
       setInputText("");
     } catch (e) {
-      toast({ variant: "destructive", title: "Send Failed" });
+      toast({ variant: "destructive", title: "Message Failed" });
     }
   };
 
-  const togglePrivate = async () => {
-    if (!hostRef || mockHostActive) {
-      toast({ title: "Simulation: Toggling Private Mode" });
-      return;
-    }
-    const nextMode = host?.streamType === 'private' ? 'public' : 'private';
+  const toggleMode = async () => {
+    if (!hostRef || !host) return;
+    setIsUpdating(true);
+    const nextMode = host.streamType === 'private' ? 'public' : 'private';
     try {
-      await updateDoc(hostRef, { streamType: nextMode, updatedAt: serverTimestamp() });
+      await updateDoc(hostRef, { 
+        streamType: nextMode, 
+        updatedAt: serverTimestamp() 
+      });
       toast({ title: `Mode: ${nextMode.toUpperCase()}` });
     } catch (e) {
-      toast({ variant: "destructive", title: "Update Failed" });
+      toast({ variant: "destructive", title: "Toggle Failed" });
+    } finally {
+      setIsUpdating(false);
     }
   };
 
-  const endStream = () => {
-    if (!confirm("End stream?")) return;
-    if (isHost && hostRef && areServicesAvailable && !mockHostActive) {
-      updateDoc(hostRef, { isLive: false, updatedAt: serverTimestamp() }).catch(() => {});
+  const endStream = async () => {
+    if (!confirm("Signal cut?")) return;
+    if (isHost && hostRef) {
+      await updateDoc(hostRef, { isLive: false, updatedAt: serverTimestamp() });
     }
-    stream?.getTracks().forEach(t => t.stop());
+    cameraStream?.getTracks().forEach(t => t.stop());
     router.push('/host-p');
   };
 
-  const claimBonus = async () => {
-    if (!firestore || (!hostRef && !mockHostActive)) return;
-    try {
-      if (hostRef && !mockHostActive) {
-        await updateDoc(hostRef, {
-          earnings: increment(500),
-          updatedAt: serverTimestamp()
-        });
-      }
-      setBonusShow(false);
-      toast({ title: "Bonus Claimed!", description: "500 Diamonds added to your vault." });
-    } catch (e) {
-      toast({ variant: "destructive", title: "Claim Failed" });
-    }
-  };
-
-  // UI States logic
-  const displayHost = mockHostActive ? {
-    username: "Simulation_Host",
-    previewImageUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=mock_host`,
-    streamType: 'public',
-    viewers: 1250,
-    manualBlur: false
-  } : host;
-
-  const isPrivate = displayHost?.streamType === 'private';
-
-  // Loading UI (Only before timeout)
-  if (!loadTimeout && (!areServicesAvailable || isHostLoading)) {
-    return (
-      <div className="h-screen bg-black flex flex-col items-center justify-center space-y-6">
-        <Loader2 className="animate-spin text-primary size-12" />
-        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary/60 animate-pulse">Establishing Signal...</p>
-      </div>
-    );
-  }
-
-  // Timeout UI (Only if not a simulation path)
-  if (loadTimeout && !displayHost && !mockHostActive) {
-    return (
-      <div className="h-screen bg-black flex flex-col items-center justify-center p-8 text-center space-y-6">
-        <div className="size-20 bg-red-500/20 rounded-[2.5rem] flex items-center justify-center text-red-500 border border-red-500/30">
-          <ShieldOff size={40} />
-        </div>
-        <div className="space-y-2">
-          <h2 className="text-2xl font-black uppercase italic tracking-tighter text-white">Connection Dropped</h2>
-          <p className="text-xs text-slate-500 uppercase font-bold leading-relaxed">
-            The grid connection timed out. <br/>Ensure your Firebase project is initialized.
-          </p>
-        </div>
-        <div className="w-full space-y-3">
-          <Button onClick={() => window.location.reload()} className="w-full h-14 rounded-2xl bg-primary font-black uppercase tracking-widest italic shadow-xl">Re-establish Connection</Button>
-          <Button variant="outline" onClick={() => router.push('/global')} className="w-full h-14 rounded-2xl border-white/10 text-slate-400 font-black uppercase text-[10px] tracking-widest">Return to Market</Button>
-        </div>
-      </div>
-    );
-  }
+  const isPrivate = host?.streamType === 'private';
 
   return (
-    <div className="relative h-screen w-full bg-black overflow-hidden max-w-[430px] mx-auto border-x border-white/10">
-      {/* Video */}
+    <div className="relative h-screen w-full bg-black overflow-hidden max-w-lg mx-auto border-x border-white/10">
+      {/* Video Feed */}
       <video 
         ref={videoRef} 
         autoPlay 
         muted 
         playsInline 
         className={cn(
-          "absolute inset-0 w-full h-full object-cover transition-all duration-500",
-          (isPrivate || displayHost?.manualBlur) && "blur-xl grayscale opacity-60"
+          "absolute inset-0 w-full h-full object-cover transition-all duration-700 scale-x-[-1]",
+          (isPrivate || host?.manualBlur) && "blur-2xl grayscale opacity-60"
         )} 
       />
       <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/80 pointer-events-none" />
 
-      {/* Header */}
+      {/* Luxury Header */}
       <div className="absolute top-10 left-4 right-4 z-50 flex justify-between items-start">
         <div className="flex items-center gap-3 bg-black/40 backdrop-blur-md px-4 py-2 rounded-full border border-white/10 shadow-2xl">
-          <div className="relative">
+          <div className="relative size-11 rounded-full overflow-hidden border-2 border-primary">
             <Image 
-              src={displayHost?.previewImageUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${effectiveId}`} 
+              src={host?.previewImageUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${effectiveId}`} 
               alt="Host" 
-              width={44} 
-              height={44} 
-              className="rounded-full border-2 border-primary" 
+              fill 
+              className="object-cover" 
             />
-            <div className="absolute -bottom-1 -right-1 bg-red-500 size-3 rounded-full border-2 border-black animate-pulse" />
           </div>
           <div>
-            <p className="text-white text-xs font-black uppercase italic tracking-tight truncate max-w-[100px]">@{displayHost?.username || "Host"}</p>
+            <p className="text-white text-xs font-black uppercase italic tracking-tight truncate max-w-[100px]">@{host?.username || "Host"}</p>
             <p className="text-white/70 text-[10px] font-bold flex items-center gap-1">
-              <Eye size={12} className="text-primary" /> {displayHost?.viewers || 0} Watchers
+              <span className="size-1.5 bg-red-500 rounded-full animate-pulse mr-1" />
+              {host?.viewers || 1250} Watching
             </p>
           </div>
         </div>
@@ -254,92 +183,44 @@ export default function StreamClient({ id }: { id: string }) {
         <div className="flex gap-2">
           {isHost && (
             <Button 
-              onClick={togglePrivate} 
+              onClick={toggleMode} 
+              disabled={isUpdating}
               className={cn(
-                "rounded-full px-5 h-10 text-[10px] font-black uppercase tracking-widest shadow-xl border-none transition-all",
+                "rounded-full px-5 h-10 text-[10px] font-black uppercase tracking-widest shadow-xl transition-all",
                 isPrivate ? "bg-red-600" : "bg-green-600"
               )}
             >
-              {isPrivate ? <Lock size={14} className="mr-1" /> : <Zap size={14} className="mr-1" />} 
+              {isUpdating ? <Loader2 className="animate-spin size-4" /> : isPrivate ? <Lock size={14} className="mr-1" /> : <Zap size={14} className="mr-1" />} 
               {isPrivate ? "Private" : "Public"}
             </Button>
           )}
-          <Button 
-            variant="destructive" 
-            size="icon" 
-            className="rounded-full h-10 w-10 shadow-xl" 
-            onClick={endStream}
-          >
+          <Button variant="destructive" size="icon" className="rounded-full h-10 w-10" onClick={endStream}>
             <Power size={18} />
           </Button>
         </div>
       </div>
 
-      {/* Revenue & Target Display */}
+      {/* Target Tracker */}
       <div className="absolute top-24 right-4 z-50">
         <LiveEarningTimer minutes={minutes} hostId={effectiveId} minimal />
       </div>
 
-      {/* Side Buttons */}
+      {/* Side Action Stack */}
       <div className="absolute right-4 top-1/3 flex flex-col gap-4 z-50">
-        <button className="w-12 h-12 bg-black/50 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-white/10 shadow-2xl hover:scale-110 transition-all active:scale-90">
+        <button className="w-12 h-12 bg-black/50 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-white/10 shadow-2xl hover:scale-110 active:scale-90 transition-all">
           <Heart size={24} className="text-red-500 fill-current" />
         </button>
-        <button className="w-12 h-12 bg-black/50 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-white/10 shadow-2xl hover:scale-110 transition-all active:scale-90">
+        <button className="w-12 h-12 bg-black/50 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-white/10 shadow-2xl hover:scale-110 active:scale-90 transition-all">
           <Share2 size={24} className="text-blue-400" />
         </button>
-        <button className="w-12 h-12 bg-black/50 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-white/10 shadow-2xl hover:scale-110 transition-all active:scale-90">
+        <button className="w-12 h-12 bg-black/50 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-white/10 shadow-2xl hover:scale-110 active:scale-90 transition-all">
           <MoreVertical size={24} />
         </button>
       </div>
 
-      {/* Tip Menu */}
-      <div className="absolute bottom-28 left-4 right-4 flex flex-col gap-2 z-50">
-        <div className="bg-black/40 backdrop-blur-md border border-white/5 p-3 rounded-2xl flex justify-between items-center shadow-xl">
-          <div className="flex items-center gap-2">
-            <div className="bg-primary/20 p-1.5 rounded-lg">
-              <Mail size={16} className="text-primary" />
-            </div>
-            <span className="text-white text-[10px] font-black uppercase tracking-widest">Secret DM</span>
-          </div>
-          <span className="text-yellow-400 font-black text-xs">10 TK</span>
-        </div>
-        <div className="bg-black/40 backdrop-blur-md border border-white/5 p-3 rounded-2xl flex justify-between items-center shadow-xl">
-          <div className="flex items-center gap-2">
-            <div className="bg-secondary/20 p-1.5 rounded-lg">
-              <Music size={16} className="text-secondary" />
-            </div>
-            <span className="text-white text-[10px] font-black uppercase tracking-widest">Song Request</span>
-          </div>
-          <span className="text-yellow-400 font-black text-xs">50 TK</span>
-        </div>
-      </div>
-
-      {/* Chat Area */}
-      <div className="absolute bottom-4 left-4 right-4 flex items-center gap-3 z-50">
-        <div className="flex-1 bg-black/40 backdrop-blur-md border border-white/10 rounded-full flex items-center px-5 h-14 shadow-2xl">
-          <Input 
-            placeholder="Say something..." 
-            value={inputText} 
-            onChange={e => setInputText(e.target.value)} 
-            onKeyPress={e => e.key === 'Enter' && sendMsg()}
-            className="bg-transparent border-none text-white text-xs font-bold placeholder-white/30 focus-visible:ring-0 h-full" 
-          />
-          <button onClick={sendMsg} className="text-primary hover:text-secondary transition-colors p-2">
-            <Send size={20} />
-          </button>
-        </div>
-        <button 
-          onClick={() => setGiftOpen(true)} 
-          className="w-14 h-14 bg-gradient-to-tr from-yellow-400 to-amber-600 rounded-full flex items-center justify-center shadow-[0_0_30px_rgba(245,158,11,0.4)] hover:scale-110 transition-transform active:scale-95"
-        >
-          <Gift size={28} className="text-black" />
-        </button>
-      </div>
-
-      {/* Real-time Messages Feed */}
-      <div className="absolute bottom-48 left-4 right-12 max-h-40 overflow-y-auto no-scrollbar flex flex-col gap-2 z-40">
-        {messages.map((msg: any) => (
+      {/* Chat Messages Feed */}
+      <div className="absolute bottom-32 left-4 right-12 max-h-48 overflow-y-auto no-scrollbar flex flex-col gap-2 z-40">
+        {messages.map((msg) => (
           <div key={msg.id} className="bg-black/30 backdrop-blur-sm px-3 py-1.5 rounded-xl w-fit max-w-full animate-in slide-in-from-left-2">
             <p className="text-[10px] leading-tight">
               <span className="text-primary font-black uppercase tracking-tighter mr-1">{msg.user}:</span>
@@ -349,19 +230,34 @@ export default function StreamClient({ id }: { id: string }) {
         ))}
       </div>
 
-      {/* Gift Drawer */}
-      {giftOpen && (
-        <div 
-          className="fixed inset-0 z-[100] flex items-end justify-center bg-black/20 backdrop-blur-sm"
-          onClick={() => setGiftOpen(false)}
+      {/* Instant Message Input */}
+      <div className="absolute bottom-4 left-4 right-4 flex items-center gap-3 z-50">
+        <div className="flex-1 bg-black/40 backdrop-blur-md border border-white/10 rounded-full flex items-center px-5 h-14 shadow-2xl">
+          <Input 
+            placeholder="Broadcast a signal..." 
+            value={inputText} 
+            onChange={e => setInputText(e.target.value)} 
+            onKeyPress={e => e.key === 'Enter' && sendMsg()}
+            className="bg-transparent border-none text-white text-xs font-bold placeholder-white/30 focus-visible:ring-0 h-full" 
+          />
+          <button onClick={sendMsg} className="text-primary p-2 hover:scale-110 transition-transform">
+            <Send size={20} />
+          </button>
+        </div>
+        <button 
+          onClick={() => setGiftOpen(true)} 
+          className="w-14 h-14 bg-gradient-to-tr from-yellow-400 to-amber-600 rounded-full flex items-center justify-center shadow-2xl hover:scale-110 active:scale-95 transition-transform"
         >
-          <div 
-            className="w-full max-w-[430px] bg-[#2D1B2D]/95 backdrop-blur-2xl rounded-t-[3rem] p-8 animate-in slide-in-from-bottom-full duration-500 shadow-[0_-20px_50px_rgba(0,0,0,0.5)] border-t border-white/10"
-            onClick={e => e.stopPropagation()}
-          >
-            <div className="w-12 h-1.5 bg-white/20 rounded-full mx-auto mb-8 cursor-pointer" onClick={() => setGiftOpen(false)} />
-            <h4 className="text-xl font-black uppercase italic text-white mb-8 text-center tracking-widest">Premium Gifts</h4>
-            
+          <Gift size={28} className="text-black" />
+        </button>
+      </div>
+
+      {/* Luxury Gift Drawer */}
+      {giftOpen && (
+        <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/20 backdrop-blur-sm" onClick={() => setGiftOpen(false)}>
+          <div className="w-full max-w-lg bg-[#2D1B2D]/95 backdrop-blur-2xl rounded-t-[3rem] p-8 animate-in slide-in-from-bottom-full duration-500 border-t border-white/10" onClick={e => e.stopPropagation()}>
+            <div className="w-12 h-1.5 bg-white/20 rounded-full mx-auto mb-8" />
+            <h4 className="text-xl font-black uppercase italic text-white mb-8 text-center tracking-widest">Premium Offerings</h4>
             <div className="grid grid-cols-4 gap-4 mb-8">
               {[
                 { e: '🌹', n: 'Rose', p: '1' },
@@ -377,38 +273,21 @@ export default function StreamClient({ id }: { id: string }) {
                 </div>
               ))}
             </div>
-            
-            <Button className="w-full h-16 bg-primary hover:bg-primary/90 text-white font-black uppercase tracking-[0.2em] rounded-2xl shadow-2xl transition-all active:scale-95">
-              Send Signal
-            </Button>
+            <Button className="w-full h-16 bg-primary hover:bg-primary/90 text-white font-black uppercase tracking-[0.2em] rounded-2xl shadow-2xl">Send Gift</Button>
           </div>
         </div>
       )}
 
-      {/* Bonus Popup */}
+      {/* Golden Milestone Popup */}
       {bonusShow && (
-        <div 
-          className="fixed inset-0 bg-black/80 flex items-center justify-center z-[200] p-6 backdrop-blur-md animate-in fade-in duration-500"
-          onClick={() => setBonusShow(false)}
-        >
-          <div 
-            className="bg-gradient-to-br from-[#2D1B2D] to-black border-4 border-yellow-500/50 p-10 rounded-[3.5rem] text-center shadow-[0_0_100px_rgba(234,179,8,0.4)] animate-in zoom-in duration-500 max-w-[340px]"
-            onClick={e => e.stopPropagation()}
-          >
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[200] p-6 backdrop-blur-md animate-in fade-in" onClick={() => setBonusShow(false)}>
+          <div className="bg-gradient-to-br from-[#2D1B2D] to-black border-4 border-yellow-500/50 p-10 rounded-[3.5rem] text-center shadow-2xl animate-in zoom-in max-w-[340px]" onClick={e => e.stopPropagation()}>
             <Trophy className="size-20 text-yellow-400 mx-auto mb-6 animate-bounce" />
-            <h2 className="text-4xl font-black italic uppercase tracking-tighter text-white leading-none mb-2">30 MIN BONUS!</h2>
-            <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-8">Node Uptime Milestone</p>
-            
+            <h2 className="text-4xl font-black italic uppercase tracking-tighter text-white mb-2">30 MIN BONUS!</h2>
             <div className="bg-yellow-500/10 border border-yellow-500/20 p-4 rounded-2xl mb-8">
               <p className="text-2xl font-black text-yellow-400 tracking-tight">+500 DIAMONDS</p>
             </div>
-
-            <Button 
-              onClick={claimBonus} 
-              className="w-full h-16 bg-yellow-500 hover:bg-yellow-600 text-black font-black uppercase tracking-widest rounded-2xl shadow-xl active:scale-95 transition-all"
-            >
-              Claim Reward
-            </Button>
+            <Button onClick={() => setBonusShow(false)} className="w-full h-16 bg-yellow-500 hover:bg-yellow-600 text-black font-black uppercase tracking-widest rounded-2xl shadow-xl">Claim Reward</Button>
           </div>
         </div>
       )}
