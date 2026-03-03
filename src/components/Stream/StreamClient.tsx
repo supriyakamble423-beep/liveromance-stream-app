@@ -1,10 +1,11 @@
+
 'use client';
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { 
-  X, Heart, Send, Lock, Zap, ShieldAlert, 
+  X, Heart, Send, Lock, Zap, ShieldOff, ShieldCheck, 
   Eye, Gift, Music, Share2, MoreVertical, Loader2, Power, Mail, Trophy 
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -29,6 +30,7 @@ export default function StreamClient({ id }: { id: string }) {
   const [minutes, setMinutes] = useState(0);
   const [bonusShow, setBonusShow] = useState(false);
   const [stream, setStream] = useState<MediaStream | null>(null);
+  const [loadTimeout, setLoadTimeout] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const isHost = user?.uid === id || id === 'simulate_host';
@@ -40,7 +42,18 @@ export default function StreamClient({ id }: { id: string }) {
     return doc(firestore, 'hosts', effectiveId);
   }, [firestore, effectiveId]);
 
-  const { data: host } = useDoc(hostRef);
+  const { data: host, isLoading: isHostLoading } = useDoc(hostRef);
+
+  // Loading Timeout Safety
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (isHostLoading || !areServicesAvailable) {
+        setLoadTimeout(true);
+        console.error("Stream loading timeout - checking Firebase connection...");
+      }
+    }, 10000);
+    return () => clearTimeout(timer);
+  }, [isHostLoading, areServicesAvailable]);
 
   // Camera Permission & Stream
   useEffect(() => {
@@ -91,7 +104,6 @@ export default function StreamClient({ id }: { id: string }) {
   useEffect(() => {
     if (!firestore || !areServicesAvailable) return;
     
-    // Using 'streamMessages' to match the database structure
     const q = query(collection(firestore, 'streamMessages'), orderBy('timestamp', 'desc'), limit(50));
     const unsub = onSnapshot(q, snap => {
       const msgs = snap.docs.map(d => ({ ...d.data(), id: d.id }));
@@ -157,10 +169,27 @@ export default function StreamClient({ id }: { id: string }) {
 
   const isPrivate = host?.streamType === 'private';
 
-  if (!areServicesAvailable) {
+  if (!areServicesAvailable || (isHostLoading && !loadTimeout)) {
     return (
-      <div className="h-screen bg-black flex items-center justify-center">
-        <Loader2 className="animate-spin text-primary size-10" />
+      <div className="h-screen bg-black flex flex-col items-center justify-center space-y-6">
+        <Loader2 className="animate-spin text-primary size-12" />
+        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary/60 animate-pulse">Syncing Signature...</p>
+      </div>
+    );
+  }
+
+  if (loadTimeout && !host) {
+    return (
+      <div className="h-screen bg-black flex flex-col items-center justify-center p-8 text-center space-y-6">
+        <div className="size-20 bg-red-500/20 rounded-[2.5rem] flex items-center justify-center text-red-500 border border-red-500/30">
+          <ShieldOff size={40} />
+        </div>
+        <h2 className="text-2xl font-black uppercase italic tracking-tighter">Connection Timeout</h2>
+        <p className="text-xs text-slate-500 uppercase font-bold leading-relaxed">
+          The host signal could not be found. <br/>Check Firestore or try again.
+        </p>
+        <Button onClick={() => window.location.reload()} className="w-full h-14 rounded-2xl bg-primary font-black uppercase tracking-widest italic">Retry Signal</Button>
+        <Button variant="ghost" onClick={() => router.push('/global')} className="text-slate-500 text-[10px] font-black uppercase">Return to Marketplace</Button>
       </div>
     );
   }

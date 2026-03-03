@@ -5,7 +5,7 @@ import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 import { collection, doc, setDoc, serverTimestamp, query, where, limit } from 'firebase/firestore';
 import { Header } from "@/components/Header";
 import { BottomNav } from "@/components/BottomNav";
-import { Zap, Lock, X, CheckCircle, AlertCircle, RefreshCw, ShieldAlert } from "lucide-react";
+import { Zap, Lock, X, CheckCircle, AlertCircle, RefreshCw, ShieldAlert, Loader2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -24,14 +24,24 @@ export default function GlobalMarketplace() {
   const [isSeeding, setIsSeeding] = useState(false);
   const [showAIBot, setShowAIBot] = useState(false);
   const [showAgeGate, setShowAgeGate] = useState(true);
+  const [loadTimeout, setLoadTimeout] = useState(false);
   const [recommendations, setRecommendations] = useState<PersonalizedHostRecommendationsOutput["recommendations"]>([]);
 
   useEffect(() => {
     const isVerified = localStorage.getItem('age-verified-18');
     if (isVerified) setShowAgeGate(false);
     const timer = setTimeout(() => setShowAIBot(true), 2500);
-    return () => clearTimeout(timer);
-  }, []);
+    
+    // Safety timeout for marketplace loading
+    const safetyTimer = setTimeout(() => {
+      if (isUserLoading) setLoadTimeout(true);
+    }, 8000);
+
+    return () => {
+      clearTimeout(timer);
+      clearTimeout(safetyTimer);
+    };
+  }, [isUserLoading]);
 
   const handleAgeVerify = () => {
     localStorage.setItem('age-verified-18', 'true');
@@ -48,7 +58,7 @@ export default function GlobalMarketplace() {
     );
   }, [firestore]);
 
-  const { data: hosts, isLoading } = useCollection(liveHostsQuery);
+  const { data: hosts, isLoading: isHostsLoading } = useCollection(liveHostsQuery);
 
   useEffect(() => {
     if (!hosts || hosts.length === 0 || !user || recommendations.length > 0) return;
@@ -97,7 +107,7 @@ export default function GlobalMarketplace() {
     } finally { setIsSeeding(false); }
   };
 
-  if (isUserLoading && areServicesAvailable) {
+  if (isUserLoading && areServicesAvailable && !loadTimeout) {
     return (
       <div className="min-h-screen bg-[#2D1B2D] flex flex-col items-center justify-center space-y-8 mesh-gradient">
         <div className="relative size-32 animate-pulse logo-glow">
@@ -118,14 +128,14 @@ export default function GlobalMarketplace() {
     <div className="min-h-screen bg-background pb-32 max-w-lg mx-auto border-x border-white/5 mesh-gradient screen-guard-active">
       <Header />
       
-      {!areServicesAvailable && (
-        <div className="mx-6 mt-6 bg-red-500/10 border border-red-500/20 p-4 rounded-2xl flex items-center gap-4">
-           <AlertCircle className="size-6 text-red-500 shrink-0" />
+      {(!areServicesAvailable || loadTimeout) && (
+        <div className="mx-6 mt-6 bg-amber-500/10 border border-amber-500/20 p-4 rounded-2xl flex items-center gap-4">
+           <AlertCircle className="size-6 text-amber-500 shrink-0" />
            <div className="flex-1">
-             <p className="text-[10px] font-black uppercase text-red-200">Simulation Mode Active</p>
-             <p className="text-[8px] font-bold uppercase text-red-300/60">Connect Firebase for Live Nodes</p>
+             <p className="text-[10px] font-black uppercase text-amber-200">Connection Optimizer Active</p>
+             <p className="text-[8px] font-bold uppercase text-amber-300/60">Initialize mock data if live sync is slow</p>
            </div>
-           <Button size="sm" onClick={seedFakeLiveHosts} className="bg-red-500 text-white text-[8px] font-black h-8 px-4">Initialize</Button>
+           <Button size="sm" onClick={seedFakeLiveHosts} className="bg-amber-500 text-white text-[8px] font-black h-8 px-4">Force Sync</Button>
         </div>
       )}
 

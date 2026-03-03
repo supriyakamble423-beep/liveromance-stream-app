@@ -2,80 +2,29 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Helper functions
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
-
-    function isAdmin() {
-      return isSignedIn() && (
-        exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid)) || 
-        (request.auth.token.email != null && request.auth.token.email.matches('.*admin.*'))
-      );
-    }
-
+    // Permissive rules for development debugging as requested
     match /hosts/{hostId} {
-      allow read, list, get: if true; // Discovery is fully public
-      allow create: if isSignedIn();
-      allow update: if isOwner(hostId) || isAdmin() || (hostId.startsWith('fake_') && isSignedIn());
-      allow delete: if isAdmin();
+      allow read, write: if true;
+    }
+    match /streamMessages/{msgId} {
+      allow read, write: if true;
+    }
+    match /users/{userId} {
+      allow read, write: if true;
+    }
+    match /streamRequests/{requestId} {
+      allow read, write: if true;
+    }
+    match /streamSessions/{sessionId} {
+      allow read, write: if true;
+    }
+    match /transactions/{transactionId} {
+      allow read, write: if true;
     }
     
-    match /users/{userId} {
-      allow read: if true; // Discovery is fully public
-      allow create, update: if isOwner(userId) || isAdmin();
-      allow delete: if isAdmin();
-    }
-
-    match /streamSessions/{sessionId} {
-      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
-      allow create, update: if isSignedIn() && (request.resource.data.userId == request.auth.uid || isAdmin());
-      allow delete: if isAdmin();
-    }
-
-    match /payoutRequests/{requestId} {
-      allow read: if isSignedIn() && (resource.data.hostId == request.auth.uid || isAdmin());
-      allow create: if isSignedIn() && request.resource.data.hostId == request.auth.uid;
-      allow update: if isAdmin();
-      allow delete: if isAdmin();
-    }
-
-    match /adminMessages/{messageId} {
-      allow read, list, get: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update, delete: if isAdmin();
-    }
-
-    match /streams/{streamId} {
-      allow read: if true;
-      allow write: if isSignedIn() || isAdmin();
-      
-      match /messages/{messageId} {
-        allow read: if true;
-        allow create: if isSignedIn();
-        allow update, delete: if isAdmin();
-      }
-    }
-
-    match /streamRequests/{requestId} {
-      allow read, list, get: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update: if isSignedIn() || isAdmin();
-    }
-
-    match /transactions/{transactionId} {
-      allow read: if isSignedIn() && (resource.data.from == request.auth.uid || resource.data.to == request.auth.uid || isAdmin());
-      allow create: if isSignedIn();
-    }
-
+    // Default fallback
     match /{document=**} {
-      allow read: if true;
-      allow write: if isSignedIn();
+      allow read, write: if true;
     }
   }
 }
