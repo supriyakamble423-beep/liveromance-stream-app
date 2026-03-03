@@ -31,6 +31,7 @@ export default function StreamClient({ id }: { id: string }) {
   const [bonusShow, setBonusShow] = useState(false);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [loadTimeout, setLoadTimeout] = useState(false);
+  const [mockHostActive, setMockHostActive] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const isHost = user?.uid === id || id === 'simulate_host';
@@ -45,16 +46,19 @@ export default function StreamClient({ id }: { id: string }) {
 
   const { data: host, isLoading: isHostLoading } = useDoc(hostRef);
 
-  // Safety Timeout for Firebase Connection
+  // Safety Timeout & Mock Fallback for Simulation
   useEffect(() => {
     const timer = setTimeout(() => {
       if (!host && (isHostLoading || !areServicesAvailable)) {
         setLoadTimeout(true);
-        console.warn("Stream loading timeout - displaying fallback UI.");
+        if (effectiveId === 'simulate_host' || id === 'simulate_host') {
+          console.warn("Using Mock Host for simulation...");
+          setMockHostActive(true);
+        }
       }
-    }, 10000);
+    }, 5000);
     return () => clearTimeout(timer);
-  }, [isHostLoading, areServicesAvailable, host]);
+  }, [isHostLoading, areServicesAvailable, host, effectiveId, id]);
 
   // Camera Permission & Stream
   useEffect(() => {
@@ -131,7 +135,10 @@ export default function StreamClient({ id }: { id: string }) {
   };
 
   const togglePrivate = async () => {
-    if (!hostRef) return;
+    if (!hostRef || mockHostActive) {
+      toast({ title: "Simulation: Toggling Private Mode" });
+      return;
+    }
     const nextMode = host?.streamType === 'private' ? 'public' : 'private';
     try {
       await updateDoc(hostRef, { streamType: nextMode, updatedAt: serverTimestamp() });
@@ -143,7 +150,7 @@ export default function StreamClient({ id }: { id: string }) {
 
   const endStream = () => {
     if (!confirm("End stream?")) return;
-    if (isHost && hostRef && areServicesAvailable) {
+    if (isHost && hostRef && areServicesAvailable && !mockHostActive) {
       updateDoc(hostRef, { isLive: false, updatedAt: serverTimestamp() }).catch(() => {});
     }
     stream?.getTracks().forEach(t => t.stop());
@@ -151,12 +158,14 @@ export default function StreamClient({ id }: { id: string }) {
   };
 
   const claimBonus = async () => {
-    if (!firestore || !hostRef) return;
+    if (!firestore || (!hostRef && !mockHostActive)) return;
     try {
-      await updateDoc(hostRef, {
-        earnings: increment(500),
-        updatedAt: serverTimestamp()
-      });
+      if (hostRef && !mockHostActive) {
+        await updateDoc(hostRef, {
+          earnings: increment(500),
+          updatedAt: serverTimestamp()
+        });
+      }
       setBonusShow(false);
       toast({ title: "Bonus Claimed!", description: "500 Diamonds added to your vault." });
     } catch (e) {
@@ -164,34 +173,43 @@ export default function StreamClient({ id }: { id: string }) {
     }
   };
 
-  const isPrivate = host?.streamType === 'private';
+  // UI States logic
+  const displayHost = mockHostActive ? {
+    username: "Simulation_Host",
+    previewImageUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=mock_host`,
+    streamType: 'public',
+    viewers: 1250,
+    manualBlur: false
+  } : host;
 
-  // Loading UI
+  const isPrivate = displayHost?.streamType === 'private';
+
+  // Loading UI (Only before timeout)
   if (!loadTimeout && (!areServicesAvailable || isHostLoading)) {
     return (
       <div className="h-screen bg-black flex flex-col items-center justify-center space-y-6">
         <Loader2 className="animate-spin text-primary size-12" />
-        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary/60 animate-pulse">Syncing Signature...</p>
+        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary/60 animate-pulse">Establishing Signal...</p>
       </div>
     );
   }
 
-  // Timeout UI (Fallback)
-  if (loadTimeout && !host) {
+  // Timeout UI (Only if not a simulation path)
+  if (loadTimeout && !displayHost && !mockHostActive) {
     return (
       <div className="h-screen bg-black flex flex-col items-center justify-center p-8 text-center space-y-6">
         <div className="size-20 bg-red-500/20 rounded-[2.5rem] flex items-center justify-center text-red-500 border border-red-500/30">
           <ShieldOff size={40} />
         </div>
         <div className="space-y-2">
-          <h2 className="text-2xl font-black uppercase italic tracking-tighter text-white">Connection Error</h2>
+          <h2 className="text-2xl font-black uppercase italic tracking-tighter text-white">Connection Dropped</h2>
           <p className="text-xs text-slate-500 uppercase font-bold leading-relaxed">
-            The host node could not be verified. <br/>Ensure your Firebase project is connected.
+            The grid connection timed out. <br/>Ensure your Firebase project is initialized.
           </p>
         </div>
         <div className="w-full space-y-3">
-          <Button onClick={() => window.location.reload()} className="w-full h-14 rounded-2xl bg-primary font-black uppercase tracking-widest italic">Retry Connection</Button>
-          <Button variant="outline" onClick={() => router.push('/global')} className="w-full h-14 rounded-2xl border-white/10 text-slate-400 font-black uppercase text-[10px] tracking-widest">Return to Global</Button>
+          <Button onClick={() => window.location.reload()} className="w-full h-14 rounded-2xl bg-primary font-black uppercase tracking-widest italic shadow-xl">Re-establish Connection</Button>
+          <Button variant="outline" onClick={() => router.push('/global')} className="w-full h-14 rounded-2xl border-white/10 text-slate-400 font-black uppercase text-[10px] tracking-widest">Return to Market</Button>
         </div>
       </div>
     );
@@ -207,7 +225,7 @@ export default function StreamClient({ id }: { id: string }) {
         playsInline 
         className={cn(
           "absolute inset-0 w-full h-full object-cover transition-all duration-500",
-          (isPrivate || host?.manualBlur) && "blur-xl grayscale opacity-60"
+          (isPrivate || displayHost?.manualBlur) && "blur-xl grayscale opacity-60"
         )} 
       />
       <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/80 pointer-events-none" />
@@ -217,7 +235,7 @@ export default function StreamClient({ id }: { id: string }) {
         <div className="flex items-center gap-3 bg-black/40 backdrop-blur-md px-4 py-2 rounded-full border border-white/10 shadow-2xl">
           <div className="relative">
             <Image 
-              src={host?.previewImageUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${effectiveId}`} 
+              src={displayHost?.previewImageUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${effectiveId}`} 
               alt="Host" 
               width={44} 
               height={44} 
@@ -226,9 +244,9 @@ export default function StreamClient({ id }: { id: string }) {
             <div className="absolute -bottom-1 -right-1 bg-red-500 size-3 rounded-full border-2 border-black animate-pulse" />
           </div>
           <div>
-            <p className="text-white text-xs font-black uppercase italic tracking-tight truncate max-w-[100px]">@{host?.username || "Simulate Host"}</p>
+            <p className="text-white text-xs font-black uppercase italic tracking-tight truncate max-w-[100px]">@{displayHost?.username || "Host"}</p>
             <p className="text-white/70 text-[10px] font-bold flex items-center gap-1">
-              <Eye size={12} className="text-primary" /> 1.2k Watchers
+              <Eye size={12} className="text-primary" /> {displayHost?.viewers || 0} Watchers
             </p>
           </div>
         </div>
@@ -238,7 +256,7 @@ export default function StreamClient({ id }: { id: string }) {
             <Button 
               onClick={togglePrivate} 
               className={cn(
-                "rounded-full px-5 h-10 text-[10px] font-black uppercase tracking-widest shadow-xl border-none",
+                "rounded-full px-5 h-10 text-[10px] font-black uppercase tracking-widest shadow-xl border-none transition-all",
                 isPrivate ? "bg-red-600" : "bg-green-600"
               )}
             >
