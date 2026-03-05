@@ -1,3 +1,4 @@
+
 import data from '@/app/lib/placeholder-images.json';
 
 export type ImagePlaceholder = {
@@ -7,5 +8,7 @@ export type ImagePlaceholder = {
   imageHint: string;
 };
 
-// Defensive check to prevent 'Unexpected end of JSON' if data is malformed
-export const PlaceHolderImages: ImagePlaceholder[] = data?.placeholderImages || [];
+// Zero-crash guard for JSON parsing
+export const PlaceHolderImages: ImagePlaceholder[] = (data && typeof data === 'object' && 'placeholderImages' in data) 
+  ? (data.placeholderImages as ImagePlaceholder[]) 
+  : [];
