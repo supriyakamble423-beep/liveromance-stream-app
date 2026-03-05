@@ -1,9 +1,12 @@
 /** @type {import('next').NextConfig} */
 import { NextConfig } from 'next';
 
+// ✅ Check if building for static export (Capacitor/APK)
+const isStaticExport = process.env.NEXT_STATIC_EXPORT === 'true';
+
 const nextConfig: NextConfig = {
   images: {
-    unoptimized: true,
+    unoptimized: isStaticExport, // ✅ Required for static export
     remotePatterns: [
       { protocol: 'https', hostname: 'placehold.co' },
       { protocol: 'https', hostname: 'images.unsplash.com' },
@@ -14,13 +17,22 @@ const nextConfig: NextConfig = {
       { protocol: 'https', hostname: 'www.gstatic.com' },
     ],
   },
-  typescript: { ignoreBuildErrors: true },
-  eslint: { ignoreDuringBuilds: true },
+
+  typescript: { 
+    ignoreBuildErrors: true 
+  },
+  
+  eslint: { 
+    ignoreDuringBuilds: true 
+  },
+
   poweredByHeader: false,
   reactStrictMode: true,
-  trailingSlash: true,
+  trailingSlash: isStaticExport, // ✅ Only for static export
   compress: true,
-  output: 'export', // ✅ Static export for Capacitor/Vercel
+
+  // ✅ Conditional output: static for APK, serverless for Vercel
+  ...(isStaticExport && { output: 'export' }),
 };
 
 export default nextConfig;
