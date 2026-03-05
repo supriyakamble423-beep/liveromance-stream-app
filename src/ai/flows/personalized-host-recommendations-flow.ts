@@ -78,10 +78,15 @@ const personalizedHostRecommendationsFlow = ai.defineFlow(
     outputSchema: PersonalizedHostRecommendationsOutputSchema,
   },
   async (input) => {
-    const { output } = await personalizedHostRecommendationsPrompt(input);
-    if (!output) {
-      throw new Error('No recommendations generated.');
+    try {
+      const { output } = await personalizedHostRecommendationsPrompt(input);
+      if (!output) {
+        return { recommendations: [] };
+      }
+      return output;
+    } catch (error) {
+      console.error('Recommendations flow error:', error);
+      return { recommendations: [] };
     }
-    return output;
   }
 );

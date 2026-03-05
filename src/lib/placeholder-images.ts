@@ -7,4 +7,5 @@ export type ImagePlaceholder = {
   imageHint: string;
 };
 
-export const PlaceHolderImages: ImagePlaceholder[] = data.placeholderImages;
+// Defensive check to prevent 'Unexpected end of JSON' if data is malformed
+export const PlaceHolderImages: ImagePlaceholder[] = data?.placeholderImages || [];

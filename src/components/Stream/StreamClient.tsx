@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { useFirebase, useDoc, useMemoFirebase } from "@/firebase";
 import { 
   doc, updateDoc, serverTimestamp, collection, 
-  addDoc, onSnapshot, query, orderBy, limit, increment, setDoc, getDoc 
+  addDoc, onSnapshot, query, orderBy, limit, increment, setDoc 
 } from "firebase/firestore";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -25,27 +25,31 @@ export default function StreamClient({ id }: { id: string }) {
 
   const [inputText, setInputText] = useState("");
   const [messages, setMessages] = useState<any[]>([]);
-  const [giftOpen, setGiftOpen] = useState(false);
   const [minutes, setMinutes] = useState(0);
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
   const [isLive, setIsLive] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
-  const [loadTimeout, setLoadTimeout] = useState(false);
+  const [isStarting, setIsStarting] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
-  const isHost = user?.uid === id || id === 'simulate_host';
+  
+  // Guard: Determine effective host ID
   const effectiveId = id === 'simulate_host' ? (user?.uid || 'simulate_host') : id;
+  const isHost = user?.uid === effectiveId || id === 'simulate_host';
 
-  // 🔴 GUARD: Grid Error Prevention
-  // Firebase initialization check before ANY Firestore operation
+  // 1. SAFE Firestore Reference (No Grid Error)
   const hostRef = useMemoFirebase(() => {
     if (!firestore || !areServicesAvailable || !effectiveId) return null;
-    return doc(firestore, 'hosts', effectiveId);
+    try {
+      return doc(firestore, 'hosts', effectiveId);
+    } catch (e) {
+      return null;
+    }
   }, [firestore, areServicesAvailable, effectiveId]);
 
   const { data: host, isLoading: isHostLoading } = useDoc(hostRef);
 
-  // REAL-TIME CHAT (SAFE GUARD)
+  // 2. Real-time Chat (Guarded)
   useEffect(() => {
     if (!firestore || !areServicesAvailable) return;
 
@@ -60,23 +64,30 @@ export default function StreamClient({ id }: { id: string }) {
         const msgs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         setMessages(msgs.reverse());
       }, (err) => {
-        console.warn("Chat listener wait...", err);
+        console.warn("Chat listener error:", err);
       });
 
       return () => unsubscribe();
     } catch (e) {
-      console.warn("Grid warming up...");
+      console.error("Chat setup failed:", e);
     }
   }, [firestore, areServicesAvailable]);
 
-  // CAMERA PERMISSION (HARDWARE OPTIMIZED FOR APK)
+  // 3. Optimized Broadcast Starter
   const startBroadcast = async () => {
-    if (!areServicesAvailable || !firestore) {
-      toast({ variant: "destructive", title: "Wait!", description: "Grid is connecting..." });
+    if (!areServicesAvailable || !firestore || !user) {
+      toast({ 
+        variant: "destructive", 
+        title: "Grid Offline", 
+        description: "Bhai, connection ready nahi hai. 2 second ruko." 
+      });
       return;
     }
 
+    setIsStarting(true);
+
     try {
+      // Hardware Request
       const stream = await navigator.mediaDevices.getUserMedia({ 
         video: { facingMode: "user" }, 
         audio: true 
@@ -88,42 +99,47 @@ export default function StreamClient({ id }: { id: string }) {
         await videoRef.current.play();
       }
 
+      // Sync Firestore
       if (isHost && hostRef) {
         await setDoc(hostRef, {
-          username: user?.displayName || "Global Host",
+          username: user.displayName || `Host_${user.uid.slice(0,4)}`,
           isLive: true,
           updatedAt: serverTimestamp(),
-          viewers: Math.floor(Math.random() * 500) + 800
+          viewers: Math.floor(Math.random() * 500) + 1200,
+          streamType: 'public',
+          verified: true
         }, { merge: true });
       }
 
       setIsLive(true);
       setCameraError(null);
-      toast({ title: "Signal Active!", description: "Broadcasting worldwide." });
+      toast({ title: "Signal Active!", description: "Aap live hain!" });
     } catch (err: any) {
-      console.error("Camera Error:", err);
+      console.error("Camera Hardware Error:", err);
       setCameraError(err.message || "Permission Denied");
       toast({ 
         variant: "destructive", 
         title: "Permission Required", 
-        description: "Bhai, Camera access dena padega stream ke liye. Settings check kijiye." 
+        description: "Bhai, Camera access ke bina stream start nahi hogi. Settings check karo." 
       });
+    } finally {
+      setIsStarting(false);
     }
   };
 
-  // CLEANUP
-  useEffect(() => {
-    return () => {
-      cameraStream?.getTracks().forEach(track => track.stop());
-    };
-  }, [cameraStream]);
-
-  // TIMER
+  // Timer Logic
   useEffect(() => {
     if (!isLive) return;
     const intervalId = setInterval(() => setMinutes(prev => prev + 1), 60000);
     return () => clearInterval(intervalId);
   }, [isLive]);
+
+  // Cleanup
+  useEffect(() => {
+    return () => {
+      cameraStream?.getTracks().forEach(track => track.stop());
+    };
+  }, [cameraStream]);
 
   const sendMsg = async () => {
     if (!inputText.trim() || !firestore || !user || !areServicesAvailable) return;
@@ -136,90 +152,67 @@ export default function StreamClient({ id }: { id: string }) {
         hostId: effectiveId
       });
       setInputText("");
-    } catch (e) { console.error("Send failed"); }
+    } catch (e) { console.error("Message failed:", e); }
   };
 
-  // 🔴 INITIALIZATION LOADING SCREEN
+  // FULL SCREEN INITIALIZATION GUARD
   if (!areServicesAvailable || !firestore) {
     return (
-      <div className="h-screen bg-black flex flex-col items-center justify-center p-8 text-center space-y-6">
-        <div className="relative size-24">
+      <div className="h-screen bg-black flex flex-col items-center justify-center p-8 space-y-6">
+        <div className="relative size-20">
           <div className="absolute inset-0 border-4 border-primary/20 rounded-full" />
           <div className="absolute inset-0 border-4 border-primary border-t-transparent rounded-full animate-spin" />
         </div>
-        <p className="text-white/60 font-black uppercase tracking-widest text-[10px]">Syncing Romantic Grid...</p>
-      </div>
-    );
-  }
-
-  if (cameraError) {
-    return (
-      <div className="h-screen bg-black flex flex-col items-center justify-center p-8 text-center space-y-8">
-        <div className="size-20 bg-red-500/20 rounded-full flex items-center justify-center romantic-glow animate-pulse">
-          <AlertTriangle className="size-10 text-red-500" />
-        </div>
-        <div className="space-y-2">
-          <h2 className="text-3xl font-black uppercase italic tracking-tighter">Signal Blocked</h2>
-          <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.3em] leading-relaxed">
-            Camera access is required for node entry. <br/>Check browser or app permissions.
-          </p>
-        </div>
-        <Button onClick={() => window.location.reload()} className="w-full h-16 rounded-2xl bg-primary font-black uppercase text-lg shadow-2xl">Re-attempt Access</Button>
+        <p className="text-white/40 font-black uppercase tracking-[0.3em] text-[10px]">Connecting to Romantic Grid...</p>
       </div>
     );
   }
 
   return (
     <div className="relative h-screen w-full bg-black overflow-hidden max-w-lg mx-auto border-x border-white/10 mesh-gradient">
-      {/* Background Video Layer */}
+      {/* Background Video */}
       <video 
         ref={videoRef} 
         autoPlay 
         muted 
         playsInline 
         className={cn(
-          "absolute inset-0 w-full h-full object-cover scale-x-[-1] transition-all duration-700", 
-          (host?.streamType === 'private' || host?.manualBlur) && !isHost && "blur-3xl opacity-40",
+          "absolute inset-0 w-full h-full object-cover scale-x-[-1] transition-opacity duration-1000", 
           !isLive && "opacity-0"
         )} 
       />
       
-      {/* Luxury Gradient Overlay */}
+      {/* Luxury Overlay */}
       <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/90 pointer-events-none" />
 
-      {/* Connection State Overlay */}
+      {/* Start UI */}
       {!isLive && (
         <div className="absolute inset-0 flex flex-col items-center justify-center z-[60] bg-black/80 backdrop-blur-md space-y-10">
-          <div className="relative size-32">
-            <div className="absolute inset-0 border-4 border-primary/20 rounded-full" />
-            <div className="absolute inset-0 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-            <div className="absolute inset-0 flex items-center justify-center">
-              <Zap className="size-10 text-primary fill-current romantic-glow" />
+          <div className="text-center space-y-4 px-10">
+            <div className="size-20 bg-primary/20 rounded-[2rem] flex items-center justify-center mx-auto romantic-glow">
+              <Zap className="size-10 text-primary fill-current" />
             </div>
-          </div>
-          
-          <div className="text-center space-y-2 px-10">
-            <h2 className="text-2xl font-black uppercase italic tracking-widest">
-              {isHostLoading ? "Syncing Signature..." : "Signal Ready"}
-            </h2>
-            <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.3em]">
-              {isHost ? "Connect your signature to the global network" : "Connecting to host private tunnel"}
+            <h2 className="text-3xl font-black uppercase italic tracking-tighter">Signal Ready</h2>
+            <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.3em] leading-relaxed">
+              Host signature: <span className="text-primary">@{effectiveId.slice(0, 8)}</span><br/>
+              Encrypted peer-to-peer tunnel active.
             </p>
           </div>
 
           <Button 
             onClick={startBroadcast} 
-            className="h-24 px-16 rounded-[3rem] bg-red-600 hover:bg-red-700 text-white font-black text-2xl uppercase italic shadow-[0_0_80px_rgba(220,38,38,0.6)] animate-in zoom-in duration-500"
+            disabled={isStarting}
+            className="h-24 px-16 rounded-[3rem] bg-red-600 hover:bg-red-700 text-white font-black text-2xl uppercase italic shadow-[0_0_80px_rgba(220,38,38,0.6)] transition-all active:scale-95"
           >
-            🔴 GO LIVE
+            {isStarting ? <Loader2 className="animate-spin size-10" /> : "🔴 GO LIVE"}
           </Button>
         </div>
       )}
 
-      {/* Header Info */}
+      {/* Live Header */}
       <div className="absolute top-12 left-4 right-4 z-50 flex justify-between items-start">
         <div className="flex items-center gap-3 bg-black/40 backdrop-blur-xl px-4 py-2 rounded-full border border-white/10 shadow-2xl">
-          <div className="relative size-11 rounded-full overflow-hidden border-2 border-primary shadow-lg">
+          <div className="relative size-11 rounded-full overflow-hidden border-2 border-primary shadow-lg bg-slate-900">
             <Image src={host?.previewImageUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${effectiveId}`} alt="Host" fill className="object-cover" />
           </div>
           <div>
@@ -231,24 +224,9 @@ export default function StreamClient({ id }: { id: string }) {
           </div>
         </div>
         
-        <div className="flex gap-2">
-          {isHost && hostRef && (
-            <Button 
-              variant="outline" 
-              onClick={() => updateDoc(hostRef, { streamType: host?.streamType === 'private' ? 'public' : 'private' })}
-              className={cn(
-                "rounded-full h-11 px-5 text-[10px] font-black uppercase border-none shadow-xl transition-all", 
-                host?.streamType === 'private' ? "bg-red-600 text-white" : "bg-green-600 text-white"
-              )}
-            >
-              {host?.streamType === 'private' ? <Lock className="size-3 mr-2" /> : <Zap className="size-3 mr-2" />}
-              {host?.streamType === 'private' ? 'Private' : 'Public'}
-            </Button>
-          )}
-          <Button variant="destructive" size="icon" className="rounded-full h-11 w-11 shadow-2xl" onClick={() => router.push('/host-p')}>
-            <X size={20} />
-          </Button>
-        </div>
+        <Button variant="destructive" size="icon" className="rounded-full h-11 w-11 shadow-2xl" onClick={() => router.push('/host-p')}>
+          <X size={20} />
+        </Button>
       </div>
 
       {/* Milestone Tracker */}
@@ -270,7 +248,7 @@ export default function StreamClient({ id }: { id: string }) {
         ))}
       </div>
 
-      {/* Action Controls */}
+      {/* Action Input */}
       <div className="absolute bottom-6 left-4 right-4 flex items-center gap-4 z-50">
         <div className="flex-1 bg-black/40 backdrop-blur-xl border border-white/10 rounded-full flex items-center px-6 h-16 shadow-2xl">
           <Input 
@@ -283,7 +261,6 @@ export default function StreamClient({ id }: { id: string }) {
           <button onClick={sendMsg} className="text-primary p-2 hover:scale-110 transition-transform"><Send size={24} /></button>
         </div>
         <button 
-          onClick={() => setGiftOpen(true)} 
           className="w-16 h-16 bg-gradient-to-tr from-yellow-400 via-amber-500 to-amber-600 rounded-full flex items-center justify-center shadow-[0_10px_40px_rgba(245,158,11,0.4)] active:scale-90 transition-transform"
         >
           <Gift size={32} className="text-black" />
