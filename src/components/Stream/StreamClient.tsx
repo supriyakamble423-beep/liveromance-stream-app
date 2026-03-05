@@ -20,7 +20,7 @@ import LiveEarningTimer from "@/components/Stream/LiveEarningTimer";
 
 export default function StreamClient({ id }: { id: string }) {
   const router = useRouter();
-  const { firestore, user, areServicesAvailable, isUserLoading } = useFirebase();
+  const { firestore, user, areServicesAvailable } = useFirebase();
   const { toast } = useToast();
 
   const [inputText, setInputText] = useState("");
@@ -36,40 +36,40 @@ export default function StreamClient({ id }: { id: string }) {
   const isHost = user?.uid === id || id === 'simulate_host';
   const effectiveId = id === 'simulate_host' ? (user?.uid || 'simulate_host') : id;
 
-  // SAFE FIRESTORE REFERENCES
+  // 🔴 GUARD: Grid Error Prevention
+  // Firebase initialization check before ANY Firestore operation
   const hostRef = useMemoFirebase(() => {
-    if (!firestore || !effectiveId || !areServicesAvailable) return null;
+    if (!firestore || !areServicesAvailable || !effectiveId) return null;
     return doc(firestore, 'hosts', effectiveId);
-  }, [firestore, effectiveId, areServicesAvailable]);
+  }, [firestore, areServicesAvailable, effectiveId]);
 
   const { data: host, isLoading: isHostLoading } = useDoc(hostRef);
 
-  // REAL-TIME CHAT SYNC (ULTRA-DEFENSIVE)
+  // REAL-TIME CHAT (SAFE GUARD)
   useEffect(() => {
     if (!firestore || !areServicesAvailable) return;
 
     try {
-      const colRef = collection(firestore, 'streamMessages');
-      const msgsQuery = query(
-        colRef, 
-        orderBy('timestamp', 'desc'), 
+      const q = query(
+        collection(firestore, 'streamMessages'),
+        orderBy('timestamp', 'desc'),
         limit(50)
       );
 
-      const unsubscribe = onSnapshot(msgsQuery, (snapshot) => {
-        const msgs = snapshot.docs.map(d => ({ ...d.data(), id: d.id }));
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const msgs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         setMessages(msgs.reverse());
       }, (err) => {
-        console.error("Chat sync error:", err);
+        console.warn("Chat listener wait...", err);
       });
 
       return () => unsubscribe();
     } catch (e) {
-      console.warn("Chat listener initialization deferred.");
+      console.warn("Grid warming up...");
     }
   }, [firestore, areServicesAvailable]);
 
-  // CAMERA PERMISSION & BROADCAST LOGIC (SIMPLIFIED FOR APK)
+  // CAMERA PERMISSION (HARDWARE OPTIMIZED FOR APK)
   const startBroadcast = async () => {
     if (!areServicesAvailable || !firestore) {
       toast({ variant: "destructive", title: "Wait!", description: "Grid is connecting..." });
@@ -88,34 +88,21 @@ export default function StreamClient({ id }: { id: string }) {
         await videoRef.current.play();
       }
 
-      // Simulation/Live Host Support
       if (isHost && hostRef) {
-        const hostSnap = await getDoc(hostRef);
-        if (!hostSnap.exists()) {
-          await setDoc(hostRef, {
-            username: user?.displayName || "Global Host",
-            isLive: true,
-            streamType: 'public',
-            viewers: 1250,
-            verified: true,
-            updatedAt: serverTimestamp(),
-            createdAt: serverTimestamp()
-          });
-        } else {
-          await updateDoc(hostRef, {
-            isLive: true,
-            updatedAt: serverTimestamp(),
-            viewers: increment(Math.floor(Math.random() * 10))
-          });
-        }
+        await setDoc(hostRef, {
+          username: user?.displayName || "Global Host",
+          isLive: true,
+          updatedAt: serverTimestamp(),
+          viewers: Math.floor(Math.random() * 500) + 800
+        }, { merge: true });
       }
 
       setIsLive(true);
       setCameraError(null);
       toast({ title: "Signal Active!", description: "Broadcasting worldwide." });
     } catch (err: any) {
-      console.error("Camera error:", err);
-      setCameraError(err.message || "Permission denied");
+      console.error("Camera Error:", err);
+      setCameraError(err.message || "Permission Denied");
       toast({ 
         variant: "destructive", 
         title: "Permission Required", 
@@ -124,12 +111,17 @@ export default function StreamClient({ id }: { id: string }) {
     }
   };
 
-  // BROADCAST TIMER
+  // CLEANUP
+  useEffect(() => {
+    return () => {
+      cameraStream?.getTracks().forEach(track => track.stop());
+    };
+  }, [cameraStream]);
+
+  // TIMER
   useEffect(() => {
     if (!isLive) return;
-    const intervalId = setInterval(() => {
-      setMinutes(prev => prev + 1);
-    }, 60000);
+    const intervalId = setInterval(() => setMinutes(prev => prev + 1), 60000);
     return () => clearInterval(intervalId);
   }, [isLive]);
 
@@ -144,15 +136,21 @@ export default function StreamClient({ id }: { id: string }) {
         hostId: effectiveId
       });
       setInputText("");
-    } catch (e) {
-      console.error("Msg failed");
-    }
+    } catch (e) { console.error("Send failed"); }
   };
 
-  const endStream = () => {
-    cameraStream?.getTracks().forEach(track => track.stop());
-    router.push('/host-p');
-  };
+  // 🔴 INITIALIZATION LOADING SCREEN
+  if (!areServicesAvailable || !firestore) {
+    return (
+      <div className="h-screen bg-black flex flex-col items-center justify-center p-8 text-center space-y-6">
+        <div className="relative size-24">
+          <div className="absolute inset-0 border-4 border-primary/20 rounded-full" />
+          <div className="absolute inset-0 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+        </div>
+        <p className="text-white/60 font-black uppercase tracking-widest text-[10px]">Syncing Romantic Grid...</p>
+      </div>
+    );
+  }
 
   if (cameraError) {
     return (
@@ -202,7 +200,7 @@ export default function StreamClient({ id }: { id: string }) {
           
           <div className="text-center space-y-2 px-10">
             <h2 className="text-2xl font-black uppercase italic tracking-widest">
-              {isHostLoading ? "Syncing Grid..." : "Signal Ready"}
+              {isHostLoading ? "Syncing Signature..." : "Signal Ready"}
             </h2>
             <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.3em]">
               {isHost ? "Connect your signature to the global network" : "Connecting to host private tunnel"}
@@ -211,10 +209,9 @@ export default function StreamClient({ id }: { id: string }) {
 
           <Button 
             onClick={startBroadcast} 
-            disabled={!areServicesAvailable || isHostLoading}
             className="h-24 px-16 rounded-[3rem] bg-red-600 hover:bg-red-700 text-white font-black text-2xl uppercase italic shadow-[0_0_80px_rgba(220,38,38,0.6)] animate-in zoom-in duration-500"
           >
-            {areServicesAvailable ? "🔴 GO LIVE" : "INITIALIZING..."}
+            🔴 GO LIVE
           </Button>
         </div>
       )}
@@ -248,13 +245,13 @@ export default function StreamClient({ id }: { id: string }) {
               {host?.streamType === 'private' ? 'Private' : 'Public'}
             </Button>
           )}
-          <Button variant="destructive" size="icon" className="rounded-full h-11 w-11 shadow-2xl" onClick={endStream}>
+          <Button variant="destructive" size="icon" className="rounded-full h-11 w-11 shadow-2xl" onClick={() => router.push('/host-p')}>
             <X size={20} />
           </Button>
         </div>
       </div>
 
-      {/* Milestone Tracker (Minimal) */}
+      {/* Milestone Tracker */}
       {isLive && (
         <div className="absolute top-28 right-4 z-50">
           <LiveEarningTimer minutes={minutes} hostId={effectiveId} minimal />
