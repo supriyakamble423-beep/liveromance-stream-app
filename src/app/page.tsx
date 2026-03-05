@@ -17,7 +17,7 @@ function RedirectLogic() {
     if (isUserLoading) return;
 
     const handleLogic = async () => {
-      // 1. Track Referral if coming from a link
+      // 1. Track Referral
       if (refCode && user && firestore) {
         try {
           const userRef = doc(firestore, 'users', user.uid);
@@ -26,26 +26,21 @@ function RedirectLogic() {
             referredAt: serverTimestamp()
           });
         } catch (e) {
-          console.warn("Referral tracking skipped (maybe already set)");
+          console.warn("Referral tracking skipped");
         }
       }
 
       // 2. Smart Redirection
-      const timer = setTimeout(async () => {
-        if (!user) {
+      if (!user) {
+        router.push('/global');
+      } else if (firestore) {
+        const hostSnap = await getDoc(doc(firestore, 'hosts', user.uid));
+        if (hostSnap.exists()) {
+          router.push('/host-p');
+        } else {
           router.push('/global');
-        } else if (firestore) {
-          // Check if user is a host
-          const hostSnap = await getDoc(doc(firestore, 'hosts', user.uid));
-          if (hostSnap.exists()) {
-            router.push('/host-p');
-          } else {
-            router.push('/global');
-          }
         }
-      }, 1500);
-
-      return () => clearTimeout(timer);
+      }
     };
 
     handleLogic();
@@ -54,7 +49,6 @@ function RedirectLogic() {
   return (
     <div className="relative flex flex-col items-center gap-8 z-10">
       <div className="relative size-48 animate-pulse logo-glow flex items-center justify-center">
-        <div className="absolute inset-0 bg-white/10 rounded-full blur-[40px] animate-pulse" />
         <Image 
           src="/logo.png?v=2" 
           alt="Global Love" 
@@ -68,14 +62,7 @@ function RedirectLogic() {
           }}
         />
       </div>
-      
-      <div className="flex flex-col items-center gap-4">
-        <div className="size-10 border-4 border-primary border-t-transparent rounded-full animate-spin shadow-[0_0_15px_rgba(225,29,72,0.5)]" />
-        <div className="space-y-1 text-center">
-          <p className="text-[10px] font-black tracking-[0.4em] text-white uppercase animate-pulse">Establishing Grid</p>
-          <p className="text-[8px] font-bold tracking-[0.2em] text-primary/60 uppercase">Secure Romantic Signal Active</p>
-        </div>
-      </div>
+      <div className="size-10 border-4 border-primary border-t-transparent rounded-full animate-spin shadow-[0_0_15px_rgba(225,29,72,0.5)]" />
     </div>
   );
 }
@@ -86,9 +73,6 @@ export default function RootRedirect() {
       <Suspense fallback={<div className="text-white opacity-20">Syncing...</div>}>
         <RedirectLogic />
       </Suspense>
-      
-      <div className="absolute top-1/4 -left-20 size-96 bg-[#E11D48]/10 rounded-full blur-[120px] animate-bounce duration-[5000ms]" />
-      <div className="absolute bottom-1/4 -right-20 size-96 bg-[#F472B6]/10 rounded-full blur-[120px] animate-bounce duration-[7000ms]" />
     </div>
   );
 }

@@ -1,3 +1,4 @@
+
 import type { Metadata, Viewport } from "next";
 import { Inter, Spline_Sans } from "next/font/google";
 import "./globals.css";
@@ -27,15 +28,12 @@ export const metadata: Metadata = {
     statusBarStyle: 'black-translucent',
     title: 'Global Love',
   },
-  formatDetection: {
-    telephone: false,
-  },
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#2D1B2D",
+  themeColor: "#E11D48",
   viewportFit: 'cover',
 };
 
@@ -47,6 +45,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`dark ${inter.variable} ${splineSans.variable}`} suppressHydrationWarning>
       <head>
+        <link rel="manifest" href="/manifest.json" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="mobile-web-app-capable" content="yes" />
       </head>
@@ -57,48 +56,6 @@ export default function RootLayout({
             <Toaster />
           </FirebaseClientProvider>
         </ErrorBoundary>
-        
-        {/* --- PWA Auto-Update Registration Logic --- */}
-        <Script id="register-sw" strategy="afterInteractive">
-          {`
-            if ('serviceWorker' in navigator) {
-              window.addEventListener('load', function() {
-                navigator.serviceWorker.register('/sw.js').then(
-                  function(registration) {
-                    console.log('SW: Registered successfully');
-
-                    // Detect updates automatically
-                    registration.onupdatefound = () => {
-                      const installingWorker = registration.installing;
-                      if (installingWorker == null) return;
-
-                      installingWorker.onstatechange = () => {
-                        if (installingWorker.state === 'installed') {
-                          if (navigator.serviceWorker.controller) {
-                            console.log('SW: New version detected! Refreshing...');
-                            // Tell the new worker to skip waiting
-                            installingWorker.postMessage({ type: 'SKIP_WAITING' });
-                          }
-                        }
-                      };
-                    };
-                  },
-                  function(err) {
-                    console.log('SW: Registration failed: ', err);
-                  }
-                );
-
-                // Refresh the page when the new service worker takes over
-                let refreshing = false;
-                navigator.serviceWorker.addEventListener('controllerchange', () => {
-                  if (refreshing) return;
-                  refreshing = true;
-                  window.location.reload();
-                });
-              });
-            }
-          `}
-        </Script>
       </body>
     </html>
   );
