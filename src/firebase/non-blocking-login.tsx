@@ -9,11 +9,29 @@ import {
   signInWithPopup,
   UserCredential,
 } from 'firebase/auth';
-import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, setDoc, serverTimestamp, Firestore } from 'firebase/firestore';
+
+/**
+ * Helper to get a safe Firestore instance.
+ * Uses the default Firebase app's Firestore. Will not throw if Firebase is initialized.
+ */
+function getSafeFirestore(): Firestore | null {
+  try {
+    return getFirestore();
+  } catch (e) {
+    console.warn("Firestore not available yet:", e);
+    return null;
+  }
+}
 
 /** Helper to ensure user doc exists with welcome bonus */
 async function ensureUserDoc(credential: UserCredential) {
-  const db = getFirestore();
+  const db = getSafeFirestore();
+  if (!db) {
+    console.warn("Skipping user doc sync: Firestore not initialized.");
+    return;
+  }
+
   const user = credential.user;
   const userRef = doc(db, 'users', user.uid);
   
@@ -24,7 +42,7 @@ async function ensureUserDoc(credential: UserCredential) {
         id: user.uid,
         username: user.displayName || `User_${user.uid.slice(0,5)}`,
         email: user.email || '',
-        diamonds: 50, // 🎁 Welcome Bonus
+        diamonds: 50, // Welcome Bonus
         referralCode: `REF_${user.uid.slice(0, 6).toUpperCase()}`,
         apkDownloaded: false,
         createdAt: serverTimestamp(),
@@ -62,17 +80,46 @@ export async function initiateEmailSignIn(authInstance: Auth, email: string, pas
 
 /** Initiate Google sign-in with popup (returns Promise). */
 export async function initiateGoogleSignIn(authInstance: Auth): Promise<UserCredential> {
-  const provider = new GoogleAuthProvider();
-  provider.setCustomParameters({ prompt: 'select_account' });
-  const cred = await signInWithPopup(authInstance, provider);
-  await ensureUserDoc(cred);
-  return cred;
+  try {
+    const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
+    const cred = await signInWithPopup(authInstance, provider);
+    await ensureUserDoc(cred);
+    return cred;
+  } catch (err: unknown) {
+    // Handle common Firebase Auth errors with actionable messages
+    const error = err as { code?: string; message?: string };
+    if (error.code === 'auth/unauthorized-domain') {
+      console.error(
+        'Google Sign-In failed: Domain not authorized.',
+        'Add your domain to Firebase Console -> Authentication -> Settings -> Authorized domains.'
+      );
+    } else if (error.code === 'auth/popup-blocked') {
+      console.error('Google Sign-In failed: Popup was blocked by the browser.');
+    } else if (error.code === 'auth/popup-closed-by-user') {
+      console.warn('Google Sign-In: User closed the popup.');
+    } else if (error.code === 'auth/invalid-api-key') {
+      console.error('Google Sign-In failed: Invalid API key. Check your NEXT_PUBLIC_FIREBASE_API_KEY.');
+    }
+    throw err;
+  }
 }
 
 /** Initiate Facebook sign-in with popup (returns Promise). */
 export async function initiateFacebookSignIn(authInstance: Auth): Promise<UserCredential> {
-  const provider = new FacebookAuthProvider();
-  const cred = await signInWithPopup(authInstance, provider);
-  await ensureUserDoc(cred);
-  return cred;
+  try {
+    const provider = new FacebookAuthProvider();
+    const cred = await signInWithPopup(authInstance, provider);
+    await ensureUserDoc(cred);
+    return cred;
+  } catch (err: unknown) {
+    const error = err as { code?: string; message?: string };
+    if (error.code === 'auth/unauthorized-domain') {
+      console.error(
+        'Facebook Sign-In failed: Domain not authorized.',
+        'Add your domain to Firebase Console -> Authentication -> Settings -> Authorized domains.'
+      );
+    }
+    throw err;
+  }
 }

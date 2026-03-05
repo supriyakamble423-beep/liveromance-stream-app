@@ -31,6 +31,7 @@ export default function StreamClient({ id }: { id: string }) {
   const [isLive, setIsLive] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [loadTimeout, setLoadTimeout] = useState(false);
+  const [permissionStatus, setPermissionStatus] = useState<'idle' | 'checking' | 'granted' | 'denied'>('idle');
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const isHost = user?.uid === id || id === 'simulate_host';
@@ -69,12 +70,32 @@ export default function StreamClient({ id }: { id: string }) {
     }
   }, [firestore, areServicesAvailable]);
 
-  // CAMERA PERMISSION (HARDWARE OPTIMIZED FOR APK)
+  // TIMEOUT: If Firebase doesn't initialize within 10s, show fallback
+  useEffect(() => {
+    if (areServicesAvailable) return;
+    const timeout = setTimeout(() => setLoadTimeout(true), 10000);
+    return () => clearTimeout(timeout);
+  }, [areServicesAvailable]);
+
+  // CAMERA PERMISSION (HARDWARE OPTIMIZED FOR APK + WEB)
   const startBroadcast = async () => {
     if (!areServicesAvailable || !firestore) {
       toast({ variant: "destructive", title: "Wait!", description: "Grid is connecting..." });
       return;
     }
+
+    // Check if mediaDevices API is available (requires HTTPS or localhost)
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      setCameraError("Camera API not available. Please use HTTPS or a supported browser.");
+      toast({
+        variant: "destructive",
+        title: "Unsupported Environment",
+        description: "Camera requires HTTPS. Please access via a secure connection."
+      });
+      return;
+    }
+
+    setPermissionStatus('checking');
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ 
@@ -99,14 +120,21 @@ export default function StreamClient({ id }: { id: string }) {
 
       setIsLive(true);
       setCameraError(null);
+      setPermissionStatus('granted');
       toast({ title: "Signal Active!", description: "Broadcasting worldwide." });
     } catch (err: any) {
       console.error("Camera Error:", err);
-      setCameraError(err.message || "Permission Denied");
+      setPermissionStatus('denied');
+      const errorMsg = err.name === 'NotAllowedError' 
+        ? "Camera/Mic permission denied. Please allow access in your browser or app settings."
+        : err.name === 'NotFoundError'
+        ? "No camera or microphone found on this device."
+        : err.message || "Permission Denied";
+      setCameraError(errorMsg);
       toast({ 
         variant: "destructive", 
         title: "Permission Required", 
-        description: "Bhai, Camera access dena padega stream ke liye. Settings check kijiye." 
+        description: errorMsg
       });
     }
   };
@@ -139,7 +167,7 @@ export default function StreamClient({ id }: { id: string }) {
     } catch (e) { console.error("Send failed"); }
   };
 
-  // 🔴 INITIALIZATION LOADING SCREEN
+  // 🔴 INITIALIZATION LOADING SCREEN (with timeout fallback)
   if (!areServicesAvailable || !firestore) {
     return (
       <div className="h-screen bg-black flex flex-col items-center justify-center p-8 text-center space-y-6">
@@ -147,7 +175,17 @@ export default function StreamClient({ id }: { id: string }) {
           <div className="absolute inset-0 border-4 border-primary/20 rounded-full" />
           <div className="absolute inset-0 border-4 border-primary border-t-transparent rounded-full animate-spin" />
         </div>
-        <p className="text-white/60 font-black uppercase tracking-widest text-[10px]">Syncing Romantic Grid...</p>
+        <p className="text-white/60 font-black uppercase tracking-widest text-[10px]">
+          {loadTimeout ? "Connection failed. Check your internet or Firebase config." : "Syncing Romantic Grid..."}
+        </p>
+        {loadTimeout && (
+          <div className="space-y-4 w-full max-w-xs">
+            <p className="text-white/40 text-[9px] uppercase tracking-widest">Firebase services could not initialize. Verify your environment variables are set correctly.</p>
+            <Button onClick={() => window.location.reload()} className="w-full h-12 rounded-2xl bg-primary font-black uppercase text-sm">
+              Retry Connection
+            </Button>
+          </div>
+        )}
       </div>
     );
   }
