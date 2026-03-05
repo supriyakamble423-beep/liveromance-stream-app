@@ -209,7 +209,10 @@ export default function GlobalMarketplace() {
             </div>
           ))}
         </div>
-        <AdBanner />
+        <AdBanner 
+          adScriptUrl={process.env.NEXT_PUBLIC_ADSTERRA_SCRIPT_URL} 
+          adOptionsKey={process.env.NEXT_PUBLIC_ADSTERRA_OPTIONS_KEY} 
+        />
       </main>
       <BottomNav />
     </div>

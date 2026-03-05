@@ -34,32 +34,49 @@ export default function RewardWallet() {
     return () => unsubscribe();
   }, [firestore, user?.uid]);
 
+  // Rate-limit ad watching: one reward per 30 seconds
+  const [lastAdTime, setLastAdTime] = useState<number>(0);
+  const AD_COOLDOWN_MS = 30000;
+
   const handleWatchAd = async () => {
-    if (!areServicesAvailable || !user) {
-      toast({ title: "Connecting Grid..." });
+    if (!areServicesAvailable || !firestore || !user) {
+      toast({ title: "Connecting Grid...", description: "Please wait for services to initialize." });
+      return;
+    }
+
+    // Rate-limit check
+    const now = Date.now();
+    if (now - lastAdTime < AD_COOLDOWN_MS) {
+      const waitSec = Math.ceil((AD_COOLDOWN_MS - (now - lastAdTime)) / 1000);
+      toast({ variant: "destructive", title: "Cooldown Active", description: `Please wait ${waitSec}s before watching another ad.` });
       return;
     }
 
     setIsWatching(true);
-    const adUrl = "https://www.highrevenuegate.com/direct-link"; 
+
+    // Use configured Adsterra direct link or fallback
+    const adUrl = process.env.NEXT_PUBLIC_ADSTERRA_DIRECT_LINK || "https://www.highrevenuegate.com/direct-link";
     const adWindow = window.open(adUrl, '_blank');
     
     if (!adWindow || adWindow.closed) {
-      toast({ variant: "destructive", title: "Popup Blocked", description: "Bhai, popup allow karo varna diamonds nahi milenge." });
+      toast({ variant: "destructive", title: "Popup Blocked", description: "Please allow popups for this site to earn diamonds." });
       setIsWatching(false);
       return;
     }
 
+    // Wait 5 seconds for the ad view, then credit reward
     setTimeout(async () => {
       try {
-        const userRef = doc(firestore!, 'users', user.uid);
+        const userRef = doc(firestore, 'users', user.uid);
         await updateDoc(userRef, { 
           diamonds: increment(5), 
           lastAdWatched: serverTimestamp() 
         });
-        toast({ title: "🎉 +5 Diamonds!", description: "Reward added to your vault.", className: "romantic-glow bg-primary text-white" });
+        setLastAdTime(Date.now());
+        toast({ title: "+5 Diamonds!", description: "Reward added to your vault.", className: "romantic-glow bg-primary text-white" });
       } catch (e) {
         console.error("Reward sync failed", e);
+        toast({ variant: "destructive", title: "Reward Failed", description: "Could not credit diamonds. Please try again." });
       } finally {
         setIsWatching(false);
       }
