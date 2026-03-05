@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { useFirebase, useDoc, useMemoFirebase } from "@/firebase";
 import { 
   doc, updateDoc, serverTimestamp, collection, 
-  addDoc, onSnapshot, query, orderBy, limit, increment 
+  addDoc, onSnapshot, query, orderBy, limit, increment, setDoc, getDoc 
 } from "firebase/firestore";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -44,40 +44,41 @@ export default function StreamClient({ id }: { id: string }) {
 
   const { data: host, isLoading: isHostLoading } = useDoc(hostRef);
 
-  // REAL-TIME CHAT SYNC
+  // REAL-TIME CHAT SYNC (ULTRA-DEFENSIVE)
   useEffect(() => {
     if (!firestore || !areServicesAvailable) return;
 
-    const msgsQuery = query(
-      collection(firestore, 'streamMessages'), 
-      orderBy('timestamp', 'desc'), 
-      limit(50)
-    );
+    try {
+      const colRef = collection(firestore, 'streamMessages');
+      const msgsQuery = query(
+        colRef, 
+        orderBy('timestamp', 'desc'), 
+        limit(50)
+      );
 
-    const unsubscribe = onSnapshot(msgsQuery, (snapshot) => {
-      const msgs = snapshot.docs.map(d => ({ ...d.data(), id: d.id }));
-      setMessages(msgs.reverse());
-    }, (err) => {
-      console.error("Chat sync error:", err);
-    });
+      const unsubscribe = onSnapshot(msgsQuery, (snapshot) => {
+        const msgs = snapshot.docs.map(d => ({ ...d.data(), id: d.id }));
+        setMessages(msgs.reverse());
+      }, (err) => {
+        console.error("Chat sync error:", err);
+      });
 
-    return () => unsubscribe();
+      return () => unsubscribe();
+    } catch (e) {
+      console.warn("Chat listener initialization deferred.");
+    }
   }, [firestore, areServicesAvailable]);
 
-  // CAMERA PERMISSION & BROADCAST LOGIC
+  // CAMERA PERMISSION & BROADCAST LOGIC (SIMPLIFIED FOR APK)
   const startBroadcast = async () => {
-    if (!areServicesAvailable) {
-      toast({ variant: "destructive", title: "Wait!", description: "AI Signal is connecting..." });
+    if (!areServicesAvailable || !firestore) {
+      toast({ variant: "destructive", title: "Wait!", description: "Grid is connecting..." });
       return;
     }
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { 
-          facingMode: "user", 
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
-        }, 
+        video: { facingMode: "user" }, 
         audio: true 
       });
       
@@ -87,24 +88,38 @@ export default function StreamClient({ id }: { id: string }) {
         await videoRef.current.play();
       }
 
+      // Simulation/Live Host Support
       if (isHost && hostRef) {
-        await updateDoc(hostRef, {
-          isLive: true,
-          updatedAt: serverTimestamp(),
-          viewers: Math.floor(Math.random() * 500) + 1000
-        });
+        const hostSnap = await getDoc(hostRef);
+        if (!hostSnap.exists()) {
+          await setDoc(hostRef, {
+            username: user?.displayName || "Global Host",
+            isLive: true,
+            streamType: 'public',
+            viewers: 1250,
+            verified: true,
+            updatedAt: serverTimestamp(),
+            createdAt: serverTimestamp()
+          });
+        } else {
+          await updateDoc(hostRef, {
+            isLive: true,
+            updatedAt: serverTimestamp(),
+            viewers: increment(Math.floor(Math.random() * 10))
+          });
+        }
       }
 
       setIsLive(true);
       setCameraError(null);
-      toast({ title: "Signal Active!", description: "You are broadcasting to the world." });
+      toast({ title: "Signal Active!", description: "Broadcasting worldwide." });
     } catch (err: any) {
       console.error("Camera error:", err);
       setCameraError(err.message || "Permission denied");
       toast({ 
         variant: "destructive", 
         title: "Permission Required", 
-        description: "Bhai, Camera/Mic allow karoge tabhi stream chalegi. Settings check karo." 
+        description: "Bhai, Camera access dena padega stream ke liye. Settings check kijiye." 
       });
     }
   };
@@ -118,14 +133,6 @@ export default function StreamClient({ id }: { id: string }) {
     return () => clearInterval(intervalId);
   }, [isLive]);
 
-  // SAFETY TIMEOUT FOR LOADING
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (!isLive && !host && !isHostLoading) setLoadTimeout(true);
-    }, 8000);
-    return () => clearTimeout(timer);
-  }, [isLive, host, isHostLoading]);
-
   const sendMsg = async () => {
     if (!inputText.trim() || !firestore || !user || !areServicesAvailable) return;
     try {
@@ -138,7 +145,7 @@ export default function StreamClient({ id }: { id: string }) {
       });
       setInputText("");
     } catch (e) {
-      toast({ variant: "destructive", title: "Message Failed" });
+      console.error("Msg failed");
     }
   };
 
@@ -195,10 +202,10 @@ export default function StreamClient({ id }: { id: string }) {
           
           <div className="text-center space-y-2 px-10">
             <h2 className="text-2xl font-black uppercase italic tracking-widest">
-              {isHostLoading ? "Syncing Node..." : "Signal Ready"}
+              {isHostLoading ? "Syncing Grid..." : "Signal Ready"}
             </h2>
             <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.3em]">
-              {isHost ? "Ready to broadcast global signature" : "Connecting to host private tunnel"}
+              {isHost ? "Connect your signature to the global network" : "Connecting to host private tunnel"}
             </p>
           </div>
 
@@ -228,10 +235,10 @@ export default function StreamClient({ id }: { id: string }) {
         </div>
         
         <div className="flex gap-2">
-          {isHost && (
+          {isHost && hostRef && (
             <Button 
               variant="outline" 
-              onClick={() => updateDoc(hostRef!, { streamType: host?.streamType === 'private' ? 'public' : 'private' })}
+              onClick={() => updateDoc(hostRef, { streamType: host?.streamType === 'private' ? 'public' : 'private' })}
               className={cn(
                 "rounded-full h-11 px-5 text-[10px] font-black uppercase border-none shadow-xl transition-all", 
                 host?.streamType === 'private' ? "bg-red-600 text-white" : "bg-green-600 text-white"
@@ -248,9 +255,11 @@ export default function StreamClient({ id }: { id: string }) {
       </div>
 
       {/* Milestone Tracker (Minimal) */}
-      <div className="absolute top-28 right-4 z-50">
-        <LiveEarningTimer minutes={minutes} hostId={effectiveId} minimal />
-      </div>
+      {isLive && (
+        <div className="absolute top-28 right-4 z-50">
+          <LiveEarningTimer minutes={minutes} hostId={effectiveId} minimal />
+        </div>
+      )}
 
       {/* Chat Messages */}
       <div className="absolute bottom-36 left-4 right-12 max-h-52 overflow-y-auto no-scrollbar flex flex-col gap-2 z-40">
