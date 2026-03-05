@@ -15,24 +15,33 @@ function RedirectLogic() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [showFallback, setShowFallback] = useState(false);
 
-  // Safety Timeout: 6 seconds baad fallback button dikhao agar kuch load na ho
+  // Safety Timeout: 4 seconds baad fallback dikhao ya auto-redirect karo
   useEffect(() => {
     const timer = setTimeout(() => {
       if (!isProcessing) {
-        setShowFallback(true);
+        console.warn("Firebase taking too long or missing config. Redirecting to Global.");
+        if (!isProcessing) {
+          router.push('/global');
+        }
       }
-    }, 6000);
+    }, 4000);
     return () => clearTimeout(timer);
-  }, [isProcessing]);
+  }, [isProcessing, router]);
 
   useEffect(() => {
-    // Wait for services to be ready
-    if (isUserLoading || !areServicesAvailable || !firestore || isProcessing) return;
+    // Don't run if already processing or still initial auth loading
+    if (isUserLoading || isProcessing) return;
 
     const handleLogic = async () => {
       setIsProcessing(true);
       
       try {
+        // If services are not available (missing env vars), just go to global
+        if (!areServicesAvailable || !firestore) {
+          router.push('/global');
+          return;
+        }
+
         // 1. Track Referral if present
         const refCode = searchParams.get('ref');
         if (refCode && user) {
@@ -58,8 +67,6 @@ function RedirectLogic() {
       } catch (e) {
         console.warn("Redirection logic encountered a delay, falling back to Marketplace");
         router.push('/global');
-      } finally {
-        // We don't set isProcessing(false) here because we're navigating away
       }
     };
 
@@ -83,25 +90,10 @@ function RedirectLogic() {
         />
       </div>
       
-      {!showFallback ? (
-        <div className="space-y-4">
-          <div className="size-10 border-4 border-primary border-t-transparent rounded-full animate-spin shadow-[0_0_15px_rgba(225,29,72,0.5)] mx-auto" />
-          <p className="text-white/40 text-[10px] font-black uppercase tracking-[0.4em] animate-pulse">Establishing Secure Signal...</p>
-        </div>
-      ) : (
-        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
-          <div className="bg-amber-500/10 border border-amber-500/20 p-4 rounded-2xl flex items-center gap-3">
-            <AlertCircle className="size-5 text-amber-500 shrink-0" />
-            <p className="text-[10px] font-black uppercase text-amber-200 tracking-wider">Connection established. Signal syncing.</p>
-          </div>
-          <Button 
-            onClick={() => router.push('/global')}
-            className="w-full h-16 rounded-2xl romantic-gradient text-white font-black uppercase tracking-widest text-lg shadow-2xl shadow-primary/40 gap-3"
-          >
-            <Zap className="size-6 fill-current" /> Manual Entry
-          </Button>
-        </div>
-      )}
+      <div className="space-y-4">
+        <div className="size-10 border-4 border-primary border-t-transparent rounded-full animate-spin shadow-[0_0_15px_rgba(225,29,72,0.5)] mx-auto" />
+        <p className="text-white/40 text-[10px] font-black uppercase tracking-[0.4em] animate-pulse">Establishing Secure Signal...</p>
+      </div>
     </div>
   );
 }
