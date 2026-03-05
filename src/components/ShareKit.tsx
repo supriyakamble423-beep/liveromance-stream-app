@@ -1,90 +1,130 @@
-
 'use client';
-
 import { QRCodeSVG } from 'qrcode.react';
-import { Button } from "@/components/ui/button";
-import { Share2, Copy, Send, Smartphone, Download, Zap } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { Button } from '@/components/ui/button';
+import { useFirebase } from '@/firebase';
+import { Share2, Facebook, Instagram, MessageCircle, Link2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
-export function ShareKit({ hostId, username }: { hostId: string; username?: string }) {
+export default function ShareKit({ hostId }: { hostId: string }) {
+  const { user } = useFirebase();
   const { toast } = useToast();
-  // Using relative path for robustness, production will use the actual domain
-  const shareUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/?ref=${hostId}`;
-  const apkUrl = "https://liveromance-stream-app.vercel.app/app-release.apk"; 
+  
+  // 🔗 Unique referral link
+  const referralLink = `https://liveromance.vercel.app/join?ref=${hostId}`;
+  const appLink = `https://liveromance.vercel.app/stream/${hostId}`;
+  
+  // 📱 APK Download URL (Firebase Storage se)
+  const apkUrl = process.env.NEXT_PUBLIC_APK_URL || 'https://firebasestorage.googleapis.com/.../app-release.apk';
+
+  // 📤 Share Functions
+  const shareWhatsApp = () => {
+    const text = `🌹 Join my Live Romance Stream!\n\nWatch me live: ${appLink}\n\nUse my code: ${hostId}\n\n💎 Get 50 Welcome Diamonds!`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+    trackShare('whatsapp');
+  };
+
+  const shareFacebook = () => {
+    const url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(appLink)}&quote=🌹 Join my Live Romance Stream!`;
+    window.open(url, '_blank', 'width=600,height=400');
+    trackShare('facebook');
+  };
+
+  const shareInstagram = () => {
+    // Instagram direct share not available via web, so copy link
+    navigator.clipboard.writeText(appLink);
+    toast({ title: "Link Copied!", description: "Paste in Instagram Story/DM" });
+    trackShare('instagram');
+  };
 
   const copyLink = () => {
-    navigator.clipboard.writeText(shareUrl);
-    toast({ title: "Signal Copied!", description: "Referral link added to your clipboard." });
+    navigator.clipboard.writeText(referralLink);
+    toast({ title: "Link Copied!", description: "Share anywhere!" });
   };
 
-  const shareWhatsApp = () => {
-    const text = `Join my private room on Global Love! 🚀\n${shareUrl}`;
-    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
-  };
-
-  const downloadAPK = () => {
-    window.open(apkUrl, '_blank');
-    toast({ title: "Downloading APK", description: "Stream-X v1.0 is starting..." });
+  // 📊 Track shares in Firestore
+  const trackShare = async (platform: string) => {
+    if (!user || !hostId) return;
+    try {
+      const { db } = await import('@/firebase');
+      const { collection, addDoc, serverTimestamp } = await import('firebase/firestore');
+      await addDoc(collection(db, 'referrals'), {
+        hostId,
+        userId: user.uid,
+        platform,
+        sharedAt: serverTimestamp()
+      });
+    } catch (e) {
+      console.error("Share tracking error:", e);
+    }
   };
 
   return (
-    <div className="bg-gradient-to-br from-[#1a1a1a] to-[#0a0a0a] p-8 rounded-[3rem] border border-white/10 shadow-2xl space-y-8 relative overflow-hidden">
-      {/* Decorative Glow */}
-      <div className="absolute -top-20 -right-20 size-40 bg-primary/20 rounded-full blur-[60px]" />
+    <div className="bg-gradient-to-br from-[#3D263D] to-[#2D1B2D] p-6 rounded-[2.5rem] border border-pink-500/20">
       
-      <div className="flex flex-col items-center text-center space-y-6 relative z-10">
-        <div className="bg-white p-6 rounded-[2.5rem] shadow-[0_0_50px_rgba(225,29,72,0.3)] group hover:scale-105 transition-transform duration-500">
-          <QRCodeSVG 
-            value={shareUrl} 
-            size={180} 
-            level="H" 
-            includeMargin={true} 
-            fgColor="#E11D48"
-          />
-        </div>
-        
-        <div className="space-y-2">
-          <h2 className="text-xl font-black italic uppercase tracking-tighter text-white">
-            Invite Hub <span className="text-primary">@ {username || "NODE"}</span>
-          </h2>
-          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.2em] px-4 leading-relaxed">
-            Scan to bypass the grid & unlock 1% lifetime revenue
-          </p>
-        </div>
+      {/* 🔹 QR Code */}
+      <div className="bg-white/10 backdrop-blur-md p-4 rounded-2xl inline-block mb-4 shadow-lg">
+        <QRCodeSVG
+          value={referralLink}
+          size={180}
+          level="H"
+          includeMargin={true}
+          fgColor="#E11D48"
+          bgColor="transparent"
+        />
+      </div>
+      
+      <p className="text-[10px] text-slate-300 font-bold uppercase tracking-widest mb-4 text-center">
+        Scan to Join My Network
+      </p>
 
-        <div className="grid grid-cols-2 gap-3 w-full">
-          <Button 
-            onClick={shareWhatsApp}
-            className="bg-[#25D366] hover:bg-[#25D366]/90 rounded-2xl h-14 font-black uppercase text-[10px] gap-2 text-white border-none shadow-lg"
-          >
-            <Send className="size-4" /> WhatsApp
-          </Button>
-          <Button 
-            onClick={copyLink}
-            className="bg-white text-black hover:bg-slate-200 rounded-2xl h-14 font-black uppercase text-[10px] gap-2 border-none shadow-lg"
-          >
-            <Copy className="size-4" /> Copy Link
-          </Button>
-        </div>
+      {/* 🔹 Social Share Buttons */}
+      <div className="grid grid-cols-4 gap-2 mb-4">
+        <Button
+          size="icon"
+          className="bg-[#25D366] hover:bg-[#25D366]/90 rounded-xl h-10"
+          onClick={shareWhatsApp}
+        >
+          <MessageCircle size={18} className="text-white" />
+        </Button>
+        <Button
+          size="icon"
+          className="bg-[#1877F2] hover:bg-[#1877F2]/90 rounded-xl h-10"
+          onClick={shareFacebook}
+        >
+          <Facebook size={18} className="text-white" />
+        </Button>
+        <Button
+          size="icon"
+          className="bg-gradient-to-tr from-[#F09433] via-[#E6683C] to-[#C13584] rounded-xl h-10"
+          onClick={shareInstagram}
+        >
+          <Instagram size={18} className="text-white" />
+        </Button>
+        <Button
+          size="icon"
+          className="bg-white/20 hover:bg-white/30 rounded-xl h-10"
+          onClick={copyLink}
+        >
+          <Link2 size={18} className="text-white" />
+        </Button>
+      </div>
 
-        <div className="w-full pt-4 space-y-4">
-          <Button 
-            onClick={downloadAPK}
-            className="w-full h-16 romantic-gradient rounded-[1.5rem] font-black uppercase tracking-widest text-[11px] gap-3 shadow-[0_10px_30px_rgba(225,29,72,0.4)] border-none hover:scale-[1.02] transition-transform"
-          >
-            <Download className="size-5" /> Download App (v1.0)
-          </Button>
-          
-          <div className="flex items-center justify-center gap-4 opacity-40">
-            <div className="flex items-center gap-1.5 text-[8px] font-black uppercase tracking-widest">
-              <Smartphone className="size-3" /> Android 10+
-            </div>
-            <div className="size-1 bg-white/20 rounded-full" />
-            <div className="flex items-center gap-1.5 text-[8px] font-black uppercase tracking-widest">
-              <Zap className="size-3 fill-current" /> Fast Sync
-            </div>
-          </div>
-        </div>
+      {/* 🔹 APK Download Button */}
+      <Button
+        className="w-full h-12 bg-gradient-to-r from-red-600 to-pink-500 rounded-2xl font-black uppercase text-[10px] shadow-[0_0_20px_rgba(225,29,72,0.4)] hover:scale-[1.02] transition-transform"
+        onClick={() => {
+          window.open(apkUrl, '_blank');
+          trackShare('apk_download');
+        }}
+      >
+        📱 Download App (v1.0)
+      </Button>
+
+      {/* 🔹 Stats */}
+      <div className="mt-4 text-center">
+        <p className="text-[10px] text-slate-400">
+          Shares today: <span className="text-pink-400 font-bold">12</span>
+        </p>
       </div>
     </div>
   );

@@ -1,6 +1,7 @@
-
 /** @type {import('next').NextConfig} */
-const nextConfig = {
+import { NextConfig } from 'next';
+
+const nextConfig: NextConfig = {
   images: {
     unoptimized: true,
     remotePatterns: [
@@ -13,15 +14,13 @@ const nextConfig = {
       { protocol: 'https', hostname: 'www.gstatic.com' },
     ],
   },
-
   typescript: { ignoreBuildErrors: true },
   eslint: { ignoreDuringBuilds: true },
-
   poweredByHeader: false,
   reactStrictMode: true,
-
   trailingSlash: true,
   compress: true,
+  output: 'export', // ✅ Static export for Capacitor/Vercel
 };
 
 export default nextConfig;
