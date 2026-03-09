@@ -1,3 +1,4 @@
+'use server';
 'use client';
 
 import { useState, useEffect, useRef, useMemo } from "react";
@@ -35,7 +36,7 @@ export default function StreamClient({ id }: { id: string }) {
     return doc(firestore, 'hosts', id);
   }, [firestore, id]);
 
-  const {  host } = useDoc(hostRef);
+  const { data: host } = useDoc(hostRef);
 
   // ✅ Grid Error Recovery - Fallback host data
   useEffect(() => {
@@ -86,7 +87,7 @@ export default function StreamClient({ id }: { id: string }) {
       }
 
       // Update host as LIVE
-      if (hostRef && isHost) {
+      if (hostRef && isHost && user) {
         await updateDoc(hostRef, {
           isLive: true,
           streamType: 'public',
