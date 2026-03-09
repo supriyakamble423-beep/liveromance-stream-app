@@ -5,7 +5,6 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { FirebaseClientProvider } from "@/firebase/client-provider";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import Script from "next/script";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -22,7 +21,6 @@ const splineSans = Spline_Sans({
 export const metadata: Metadata = {
   title: 'Global Love - Social Discovery',
   description: 'Connect with hosts around the world in real-time.',
-  manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
@@ -45,7 +43,6 @@ export default function RootLayout({
   return (
     <html lang="en" className={`dark ${inter.variable} ${splineSans.variable}`} suppressHydrationWarning>
       <head>
-        <link rel="manifest" href="/manifest.json" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="mobile-web-app-capable" content="yes" />
       </head>
