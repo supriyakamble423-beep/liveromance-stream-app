@@ -3,7 +3,6 @@
 
 import { useEffect, Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import Image from 'next/image';
 import { useFirebase } from '@/firebase';
 import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { Loader2, Zap } from 'lucide-react';
@@ -16,31 +15,46 @@ function RedirectLogic() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [showManualBypass, setShowManualBypass] = useState(false);
 
-  // Safety Timeout: If Firebase takes too long, allow manual entry or auto-redirect
+  // ✅ Hard Bypass: If signal establishment is too slow
   useEffect(() => {
     const timer = setTimeout(() => {
       if (!isProcessing) {
-        console.warn("Signal establishing slow. Showing bypass.");
+        console.warn("Signal timeout. Showing manual bypass.");
         setShowManualBypass(true);
       }
-    }, 6000);
-    return () => clearTimeout(timer);
-  }, [isProcessing]);
+    }, 4000);
+    
+    // Auto-redirect to global after 8 seconds as absolute fallback
+    const autoTimer = setTimeout(() => {
+      if (!isProcessing) {
+        setIsProcessing(true);
+        router.push('/global');
+      }
+    }, 8000);
+
+    return () => {
+      clearTimeout(timer);
+      clearTimeout(autoTimer);
+    };
+  }, [isProcessing, router]);
 
   useEffect(() => {
+    // If services are missing, skip to global immediately
+    if (!areServicesAvailable && !isUserLoading) {
+      router.push('/global');
+      setIsProcessing(true);
+      return;
+    }
+
+    // Wait for auth to settle
     if (isUserLoading || isProcessing) return;
 
     const handleLogic = async () => {
       setIsProcessing(true);
       
       try {
-        if (!areServicesAvailable || !firestore) {
-          router.push('/global');
-          return;
-        }
-
         const refCode = searchParams.get('ref');
-        if (refCode && user) {
+        if (refCode && user && firestore) {
           const userRef = doc(firestore, 'users', user.uid);
           await updateDoc(userRef, {
             referredBy: refCode,
@@ -50,13 +64,15 @@ function RedirectLogic() {
 
         if (!user) {
           router.push('/global');
-        } else {
+        } else if (firestore) {
           const hostSnap = await getDoc(doc(firestore, 'hosts', user.uid));
           if (hostSnap.exists()) {
             router.push('/host-p');
           } else {
             router.push('/global');
           }
+        } else {
+          router.push('/global');
         }
       } catch (e) {
         router.push('/global');
@@ -76,18 +92,24 @@ function RedirectLogic() {
       
       <div className="space-y-6">
         <div className="flex flex-col items-center gap-3">
-          <Loader2 className="size-10 text-primary animate-spin shadow-[0_0_15px_rgba(225,29,72,0.5)]" />
-          <p className="text-white/40 text-[10px] font-black uppercase tracking-[0.4em] animate-pulse">Establishing Secure Signal...</p>
+          <Loader2 className="size-10 text-primary animate-spin" />
+          <p className="text-white/40 text-[10px] font-black uppercase tracking-[0.4em] animate-pulse">Establishing Romantic Grid...</p>
         </div>
 
         {showManualBypass && (
-          <Button 
-            variant="outline" 
-            onClick={() => router.push('/global')}
-            className="rounded-2xl border-white/10 text-white/60 font-black uppercase text-[10px] tracking-widest px-8 h-12 hover:bg-white/5 animate-in fade-in slide-in-from-bottom-2 duration-700"
-          >
-            <Zap className="size-3 mr-2 text-primary fill-current" /> Manual Entry
-          </Button>
+          <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-700">
+            <p className="text-[10px] text-primary/60 font-black uppercase tracking-widest">Signal Slow? Try Manual Override</p>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setIsProcessing(true);
+                router.push('/global');
+              }}
+              className="rounded-2xl border-white/10 text-white font-black uppercase text-[10px] tracking-widest px-8 h-12 hover:bg-white/5"
+            >
+              <Zap className="size-3 mr-2 text-primary fill-current" /> Enter Marketplace
+            </Button>
+          </div>
         )}
       </div>
     </div>

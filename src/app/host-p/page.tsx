@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useFirebase, useDoc, useMemoFirebase } from "@/firebase";
@@ -35,7 +36,13 @@ export default function HostProfileDashboard() {
   const [isTogglingLive, setIsTogglingLive] = useState(false);
   const [isAuthLoading, setIsAuthLoading] = useState(false);
   const [editName, setEditName] = useState("");
-  const [gridReady, setGridReady] = useState(false);
+  const [loadTimeout, setLoadTimeout] = useState(false);
+
+  // Safety Timeout for loading
+  useEffect(() => {
+    const timer = setTimeout(() => setLoadTimeout(true), 5000);
+    return () => clearTimeout(timer);
+  }, []);
 
   const hostRef = useMemoFirebase(() => {
     if (!firestore || !userId) return null;
@@ -43,13 +50,6 @@ export default function HostProfileDashboard() {
   }, [firestore, userId]);
 
   const { data: hostProfile, isLoading: isProfileLoading } = useDoc(hostRef);
-
-  // ✅ Grid Safety Guard
-  useEffect(() => {
-    if (areServicesAvailable && !isUserLoading) {
-      setGridReady(true);
-    }
-  }, [areServicesAvailable, isUserLoading]);
 
   useEffect(() => {
     if (hostProfile) {
@@ -71,7 +71,6 @@ export default function HostProfileDashboard() {
 
     setIsTogglingLive(true);
     try {
-      // ✅ Ensure host document exists and update status
       await setDoc(hostRef!, {
         userId,
         isLive: true,
@@ -79,7 +78,7 @@ export default function HostProfileDashboard() {
         username: editName || hostProfile?.username || "New Host",
         previewImageUrl: hostProfile?.previewImageUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${userId}`,
         streamType: 'public',
-        verified: hostProfile?.verified || true // Auto-verify for simulate_host
+        verified: hostProfile?.verified || true 
       }, { merge: true });
 
       toast({ title: "Signal Active", description: "Establishing broadcast node..." });
@@ -101,8 +100,8 @@ export default function HostProfileDashboard() {
       .finally(() => setIsAuthLoading(false));
   };
 
-  // ✅ Show proper loading instead of "Grid Error"
-  if (!gridReady || isProfileLoading) {
+  // ✅ Bypass loading screen if timeout hits or services are ready but profile is slow
+  if ((isProfileLoading || isUserLoading) && !loadTimeout) {
     return (
       <div className="min-h-screen bg-[#2D1B2D] flex flex-col items-center justify-center space-y-6">
         <div className="relative size-24 animate-pulse">
@@ -164,8 +163,8 @@ export default function HostProfileDashboard() {
           <div className="flex-1">
             <h2 className="text-2xl font-black tracking-tighter uppercase italic truncate">@{hostProfile?.username || 'New Node'}</h2>
             <div className="flex items-center gap-2 mt-2">
-              <Badge className={cn("h-6 text-[9px] font-black", (hostProfile?.verified || userId === 'simulate_host') ? "bg-green-500" : "bg-white/10")}>{(hostProfile?.verified || userId === 'simulate_host') ? "VERIFIED" : "PENDING"}</Badge>
-              {hostProfile?.isLive && <Badge className="h-6 text-[9px] font-black bg-primary animate-pulse">ON AIR</Badge>}
+              <Badge className={cn("h-6 text-[9px] font-black", (hostProfile?.verified || userId === 'simulate_host') ? "bg-green-500 text-white" : "bg-white/10 text-white")}>{(hostProfile?.verified || userId === 'simulate_host') ? "VERIFIED" : "PENDING"}</Badge>
+              {hostProfile?.isLive && <Badge className="h-6 text-[9px] font-black bg-primary text-white animate-pulse">ON AIR</Badge>}
             </div>
           </div>
         </div>
