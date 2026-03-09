@@ -1,10 +1,9 @@
-'use server';
 'use client';
 
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { X, Heart, Send, Lock, Zap, Eye, Gift, Music, Share2, MoreVertical, Power, Mail, Trophy, Grid3X3, Users } from "lucide-react";
+import { X, Heart, Send, Lock, Zap, Eye, Gift, Music, Share2, MoreVertical, Power, Mail, Trophy, Grid3X3, Users, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useFirebase, useDoc, useMemoFirebase } from "@/firebase";
@@ -24,53 +23,48 @@ export default function StreamClient({ id }: { id: string }) {
   const [bonusShow, setBonusShow] = useState(false);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [isLive, setIsLive] = useState(false);
-  const [gridError, setGridError] = useState(false);
   const [hostData, setHostData] = useState<any>(null);
+  const [isGridLoading, setIsGridLoading] = useState(true);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const isHost = user?.uid === id || id === 'simulate_host';
 
-  // ✅ Safe host reference with guard
+  // ✅ Safe host reference
   const hostRef = useMemo(() => {
     if (!firestore || !id) return null;
     return doc(firestore, 'hosts', id);
   }, [firestore, id]);
 
-  const { data: host } = useDoc(hostRef);
+  const { data: host, isLoading: isHostLoading } = useDoc(hostRef);
 
-  // ✅ Grid Error Recovery - Fallback host data
+  // ✅ Grid Error Prevention - Robust Data Loading
   useEffect(() => {
     if (!areServicesAvailable) return;
     
-    const loadHostData = async () => {
-      try {
-        if (id === 'simulate_host' && !host) {
-          // Mock data for simulation mode
-          setHostData({
-            username: "TestHost",
-            streamType: "public",
-            isLive: false,
-            viewers: 1250,
-            verified: true,
-            photo: `https://api.dicebear.com/7.x/avataaars/svg?seed=${id}`
-          });
-        } else if (host) {
-          setHostData(host);
-        }
-        setGridError(false);
-      } catch (err) {
-        console.error("Grid load error:", err);
-        setGridError(true);
-      }
-    };
-    
-    loadHostData();
-  }, [host, id, areServicesAvailable]);
+    if (id === 'simulate_host' && !host) {
+      setHostData({
+        username: "TestHost",
+        streamType: "public",
+        isLive: true,
+        viewers: 1250,
+        verified: true,
+        photo: `https://api.dicebear.com/7.x/avataaars/svg?seed=${id}`
+      });
+      setIsGridLoading(false);
+    } else if (host) {
+      setHostData(host);
+      setIsGridLoading(false);
+    } else if (!isHostLoading) {
+      // Document might not exist yet, fallback
+      setHostData({ username: "New Node", streamType: 'public', viewers: 0 });
+      setIsGridLoading(false);
+    }
+  }, [host, id, areServicesAvailable, isHostLoading]);
 
-  // ✅ Camera Permission - Only on GO LIVE click
+  // ✅ Camera Permission - Standard Trigger
   const startBroadcast = async () => {
     if (!areServicesAvailable) {
-      toast({ variant: "destructive", title: "Loading...", description: "Please wait" });
+      toast({ variant: "destructive", title: "Loading Services", description: "Grid node is syncing..." });
       return;
     }
 
@@ -86,49 +80,29 @@ export default function StreamClient({ id }: { id: string }) {
         await videoRef.current.play();
       }
 
-      // Update host as LIVE
-      if (hostRef && isHost && user) {
+      if (hostRef && isHost) {
         await updateDoc(hostRef, {
           isLive: true,
           streamType: 'public',
-          viewers: increment(1),
           lastLive: serverTimestamp()
         });
       }
       
       setIsLive(true);
-      setGridError(false);
-      toast({ title: "🔴 LIVE", description: "You are now broadcasting!" });
-      
+      toast({ title: "🔴 LIVE", description: "Your broadcast signal is active." });
     } catch (err: any) {
-      console.error("Camera/Grid Error:", err);
-      setGridError(true);
+      console.error("Camera Error:", err);
       toast({
         variant: "destructive",
-        title: "Grid Error",
-        description: "Camera access denied or grid failed. Tap to retry."
+        title: "Permission Denied",
+        description: "Bhai, Camera access allow karo varna stream nahi chalegi."
       });
     }
   };
 
-  // ✅ Timer + Bonus (Fixed Logic)
-  useEffect(() => {
-    if (!isHost) return;
-    const interval = setInterval(() => {
-      setMinutes(prev => {
-        const newMinutes = prev + 1;
-        if (newMinutes % 30 === 0) {
-          setBonusShow(true);
-        }
-        return newMinutes;
-      });
-    }, 60000);
-    return () => clearInterval(interval);
-  }, [isHost]);
-
   // ✅ Real-time Messages
   useEffect(() => {
-    if (!firestore) return;
+    if (!firestore || !areServicesAvailable) return;
     
     const q = query(
       collection(firestore, 'streamMessages'),
@@ -139,11 +113,11 @@ export default function StreamClient({ id }: { id: string }) {
     const unsub = onSnapshot(q, (snap) => {
       setMessages(snap.docs.map(d => ({ id: d.id, ...d.data() })).reverse());
     }, (error) => {
-      console.error("Chat error:", error);
+      console.warn("Chat signal slow:", error.message);
     });
     
     return () => unsub();
-  }, [firestore]);
+  }, [firestore, areServicesAvailable]);
 
   // ✅ Send Message
   const sendMsg = async () => {
@@ -158,7 +132,7 @@ export default function StreamClient({ id }: { id: string }) {
       });
       setInputText("");
     } catch (e) {
-      console.error("Send error:", e);
+      console.error("Message send failed");
     }
   };
 
@@ -169,24 +143,18 @@ export default function StreamClient({ id }: { id: string }) {
     };
   }, [stream]);
 
-  // ✅ Grid Error Fallback UI
-  if (gridError || !areServicesAvailable) {
+  // ✅ Emergency Loading UI
+  if (isGridLoading || !areServicesAvailable) {
     return (
-      <div className="h-screen bg-black flex flex-col items-center justify-center p-6 text-center">
-        <Grid3X3 className="w-16 h-16 text-red-400 mb-4 animate-pulse" />
-        <h3 className="text-white font-bold text-lg mb-2">Grid Loading...</h3>
-        <p className="text-white/60 text-sm mb-6">
-          {!areServicesAvailable ? "Connecting to Firebase..." : "Grid render failed"}
-        </p>
-        <Button 
-          onClick={() => {
-            setGridError(false);
-            if (isHost) startBroadcast();
-          }}
-          className="bg-primary px-8 py-3 rounded-full font-bold"
-        >
-          Retry Grid
-        </Button>
+      <div className="h-screen bg-black flex flex-col items-center justify-center p-6 text-center space-y-6">
+        <div className="relative size-20">
+          <Grid3X3 className="size-full text-primary animate-pulse" />
+          <Loader2 className="absolute -bottom-2 -right-2 size-8 text-primary animate-spin" />
+        </div>
+        <div className="space-y-2">
+          <h3 className="text-white font-black uppercase italic tracking-widest">Syncing Grid Node</h3>
+          <p className="text-white/40 text-[10px] font-bold uppercase tracking-[0.3em]">Connecting to Romantic AI Hub</p>
+        </div>
       </div>
     );
   }
@@ -194,37 +162,37 @@ export default function StreamClient({ id }: { id: string }) {
   const displayHost = hostData || host;
 
   return (
-    <div className="relative h-screen w-full bg-black overflow-hidden max-w-[430px] mx-auto">
-      
-      {/* ✅ Video Layer */}
+    <div className="relative h-screen w-full bg-black overflow-hidden max-w-[430px] mx-auto screen-guard-active">
+      {/* Video Layer */}
       <video 
         ref={videoRef} 
         autoPlay 
         muted 
         playsInline 
         className={cn(
-          "absolute inset-0 w-full h-full object-cover transition-opacity",
+          "absolute inset-0 w-full h-full object-cover transition-opacity duration-1000",
           isLive ? "opacity-100" : "opacity-30"
         )} 
       />
       
-      {/* ✅ Overlay Gradient */}
+      {/* Overlay Gradient */}
       <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-transparent to-black/90 pointer-events-none" />
 
-      {/* ✅ Header - Safe Render */}
-      <div className="absolute top-4 left-4 right-4 z-50 flex justify-between items-start">
+      {/* Header */}
+      <div className="absolute top-4 left-4 right-4 z-50 flex justify-between items-start animate-in fade-in slide-in-from-top-4">
         <div className="flex items-center gap-3 bg-black/60 backdrop-blur-md px-4 py-2 rounded-full border border-white/20">
-          <Image
-            src={displayHost?.photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${id}`}
-            alt="Host"
-            width={48}
-            height={48}
-            className="rounded-full border-2 border-purple-500"
-          />
+          <div className="relative size-10 rounded-full overflow-hidden border-2 border-primary shadow-lg">
+            <Image
+              src={displayHost?.photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${id}`}
+              alt="Host"
+              fill
+              className="object-cover"
+            />
+          </div>
           <div>
-            <p className="text-white font-bold">@{displayHost?.username || "Host"}</p>
-            <p className="text-white/70 text-sm flex items-center gap-1">
-              <Eye size={14} /> {displayHost?.viewers || 0} Watching
+            <p className="text-white font-black text-xs uppercase italic tracking-tight">@{displayHost?.username || "Host"}</p>
+            <p className="text-primary text-[9px] font-black uppercase flex items-center gap-1">
+              <Eye size={10} /> {displayHost?.viewers || 0} Watchers
             </p>
           </div>
         </div>
@@ -237,110 +205,114 @@ export default function StreamClient({ id }: { id: string }) {
                 const newType = displayHost?.streamType === 'public' ? 'private' : 'public';
                 await updateDoc(hostRef, { streamType: newType });
               }}
-              className={cn("rounded-full px-4", displayHost?.streamType === 'private' ? "bg-red-600" : "bg-green-600")}
+              className={cn("rounded-full px-4 h-10 text-[9px] font-black uppercase tracking-widest", displayHost?.streamType === 'private' ? "bg-red-600 shadow-[0_0_15px_#dc2626]" : "bg-green-600 shadow-[0_0_15px_#16a34a]")}
             >
-              {displayHost?.streamType === 'private' ? <Lock size={14} /> : <Zap size={14} />}
+              {displayHost?.streamType === 'private' ? <Lock size={12} className="mr-1" /> : <Zap size={12} className="mr-1" />}
+              {displayHost?.streamType}
             </Button>
-            <Button variant="destructive" size="icon" className="rounded-full" onClick={() => {
-              stream?.getTracks().forEach(t => t.stop());
-              setIsLive(false);
-              router.push('/host-p');
-            }}>
+            <Button variant="destructive" size="icon" className="rounded-full size-10 shadow-lg" onClick={() => router.push('/host-p')}>
               <Power size={16} />
             </Button>
           </div>
         )}
       </div>
 
-      {/* ✅ Side Buttons */}
-      <div className="absolute right-4 top-1/3 flex flex-col gap-4 z-50">
-        <button className="w-12 h-12 bg-black/50 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-white/20 hover:scale-110 transition">
-          <Heart size={24} className="text-red-400" />
+      {/* Side Buttons */}
+      <div className="absolute right-4 top-1/3 flex flex-col gap-4 z-50 animate-in fade-in slide-in-from-right-4">
+        <button className="size-12 bg-black/50 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-white/20 hover:scale-110 transition shadow-xl group">
+          <Heart size={24} className="text-primary fill-transparent group-hover:fill-primary transition-colors" />
         </button>
-        <button className="w-12 h-12 bg-black/50 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-white/20 hover:scale-110 transition">
-          <Share2 size={24} className="text-blue-400" />
+        <button className="size-12 bg-black/50 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-white/20 hover:scale-110 transition shadow-xl">
+          <Share2 size={22} className="text-secondary" />
         </button>
-        <button className="w-12 h-12 bg-black/50 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-white/20 hover:scale-110 transition">
-          <MoreVertical size={24} />
+        <button className="size-12 bg-black/50 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-white/20 hover:scale-110 transition shadow-xl">
+          <MoreVertical size={22} />
         </button>
       </div>
 
-      {/* ✅ Messages Grid - Safe Render */}
-      <div className="absolute bottom-32 left-4 right-4 max-h-40 overflow-y-auto space-y-2 z-40">
+      {/* Messages Feed */}
+      <div className="absolute bottom-28 left-4 right-4 max-h-48 overflow-y-auto space-y-2 z-40 no-scrollbar">
         {messages.map((msg) => (
-          <div key={msg.id} className="bg-black/40 backdrop-blur-md px-3 py-2 rounded-xl max-w-[85%]">
-            <span className="text-purple-400 font-bold text-xs">{msg.user}: </span>
-            <span className="text-white/90 text-xs">{msg.text}</span>
+          <div key={msg.id} className="bg-black/40 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/5 inline-block max-w-[85%] animate-in slide-in-from-left-2">
+            <p className="text-[10px] leading-relaxed">
+              <span className="text-secondary font-black uppercase italic mr-2">{msg.user}:</span>
+              <span className="text-white/90 font-medium">{msg.text}</span>
+            </p>
           </div>
         ))}
       </div>
 
-      {/* ✅ Input + Gift */}
-      <div className="absolute bottom-4 left-4 right-4 flex items-center gap-3 z-50">
-        <div className="flex-1 bg-black/50 backdrop-blur-md border border-white/20 rounded-full flex items-center px-4 py-2">
+      {/* Input Bar */}
+      <div className="absolute bottom-6 left-4 right-4 flex items-center gap-3 z-50 animate-in slide-in-from-bottom-4">
+        <div className="flex-1 bg-black/60 backdrop-blur-xl border border-white/10 rounded-[2rem] flex items-center px-5 py-3 shadow-2xl">
           <Input
-            placeholder="Say something..."
+            placeholder="Send love..."
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             onKeyPress={(e) => e.key === 'Enter' && sendMsg()}
-            className="bg-transparent border-none text-white placeholder-white/50 focus:ring-0 text-sm"
+            className="bg-transparent border-none text-white placeholder-white/30 focus:ring-0 text-xs font-bold"
           />
-          <button onClick={sendMsg} className="text-purple-400 ml-2">
-            <Send size={18} />
+          <button onClick={sendMsg} className="text-primary hover:scale-110 transition">
+            <Send size={20} />
           </button>
         </div>
         <button
           onClick={() => setGiftOpen(true)}
-          className="w-12 h-12 bg-yellow-400 rounded-full flex items-center justify-center shadow-lg hover:scale-105 transition"
+          className="size-14 bg-gradient-to-tr from-yellow-400 to-amber-600 rounded-full flex items-center justify-center shadow-[0_0_20px_rgba(245,158,11,0.4)] hover:scale-105 active:scale-95 transition"
         >
-          <Gift size={22} className="text-black" />
+          <Gift size={26} className="text-black" />
         </button>
       </div>
 
-      {/* ✅ GO LIVE Button - Only for Host */}
+      {/* GO LIVE Overlay */}
       {!isLive && isHost && (
-        <div className="absolute bottom-24 left-0 right-0 flex justify-center z-50">
-          <Button
-            onClick={startBroadcast}
-            disabled={!areServicesAvailable}
-            className="bg-red-600 hover:bg-red-700 text-white px-10 py-4 rounded-full font-bold text-lg shadow-[0_0_30px_rgba(220,38,38,0.6)] disabled:opacity-50"
-          >
-            🔴 GO LIVE
-          </Button>
-        </div>
-      )}
-
-      {/* ✅ Bonus Popup */}
-      {bonusShow && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[200]" onClick={() => setBonusShow(false)}>
-          <div className="bg-gradient-to-br from-yellow-500 to-amber-600 p-8 rounded-3xl text-center max-w-[320px] mx-4" onClick={(e) => e.stopPropagation()}>
-            <Trophy className="w-20 h-20 text-white mx-auto mb-4" />
-            <h2 className="text-3xl font-black text-white">30 MIN BONUS!</h2>
-            <p className="text-xl text-white mt-2 font-bold">+500 Diamonds</p>
-            <Button onClick={() => setBonusShow(false)} className="mt-6 bg-white text-yellow-600 px-8 py-3 rounded-full font-bold">
-              Claim Now
+        <div className="absolute inset-0 flex flex-col items-center justify-center z-[60] bg-black/40 backdrop-blur-sm">
+          <div className="text-center space-y-8 px-8">
+            <div className="size-32 mx-auto relative">
+              <div className="absolute inset-0 bg-primary/30 rounded-full animate-ping" />
+              <div className="relative size-full bg-primary rounded-full flex items-center justify-center shadow-[0_0_50px_#E11D48]">
+                <Power size={48} className="text-white" />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <h2 className="text-4xl font-black italic uppercase tracking-tighter text-white">Grid Standby</h2>
+              <p className="text-white/60 text-[10px] font-black uppercase tracking-[0.4em]">Node ID: {id.slice(0, 8)}</p>
+            </div>
+            <Button
+              onClick={startBroadcast}
+              className="w-full h-20 bg-primary hover:bg-primary/90 text-white rounded-[2.5rem] font-black text-2xl uppercase italic tracking-tighter shadow-2xl transition-transform active:scale-95"
+            >
+              🔴 GO LIVE
             </Button>
           </div>
         </div>
       )}
 
-      {/* ✅ Gift Drawer */}
+      {/* Gift Drawer */}
       {giftOpen && (
-        <div className="fixed inset-x-0 bottom-0 bg-slate-900/95 backdrop-blur-xl rounded-t-[2rem] z-[100] p-6" onClick={(e) => e.target === e.currentTarget && setGiftOpen(false)}>
-          <div className="w-12 h-1.5 bg-white/30 rounded-full mx-auto mb-6" />
-          <h4 className="text-xl font-bold text-white mb-6 text-center">Send a Gift</h4>
-          <div className="grid grid-cols-4 gap-4 mb-6">
-            {['🌹 Rose 1TK', '🍦 Ice 5TK', '💎 Diamond 100TK', '🚀 Rocket 1kTK'].map((item) => (
-              <div key={item} className="flex flex-col items-center gap-2 p-2 rounded-xl hover:bg-white/5 cursor-pointer">
-                <div className="w-14 h-14 bg-gradient-to-br from-yellow-300 to-amber-500 rounded-2xl flex items-center justify-center text-2xl">
-                  {item.split(' ')[0]}
+        <div className="fixed inset-x-0 bottom-0 bg-[#2D1B2D]/95 backdrop-blur-2xl rounded-t-[3rem] z-[100] p-8 border-t border-white/10 animate-in slide-in-from-bottom-full duration-500" onClick={(e) => e.target === e.currentTarget && setGiftOpen(false)}>
+          <div className="w-16 h-1.5 bg-white/10 rounded-full mx-auto mb-8" />
+          <h4 className="text-2xl font-black text-white mb-8 text-center italic uppercase tracking-tighter">Luxury Vault</h4>
+          <div className="grid grid-cols-4 gap-4 mb-10">
+            {[
+              { label: 'Rose', cost: '1TK', icon: '🌹', color: 'from-red-400 to-pink-600' },
+              { label: 'Ice', cost: '5TK', icon: '🍦', color: 'from-cyan-400 to-blue-600' },
+              { label: 'Diamond', cost: '100TK', icon: '💎', color: 'from-purple-400 to-indigo-600' },
+              { label: 'Rocket', cost: '1kTK', icon: '🚀', color: 'from-orange-400 to-red-600' }
+            ].map((item) => (
+              <div key={item.label} className="flex flex-col items-center gap-3 p-3 rounded-2xl hover:bg-white/5 transition-colors cursor-pointer group">
+                <div className={cn("size-16 rounded-3xl flex items-center justify-center text-3xl shadow-xl group-hover:scale-110 transition-transform bg-gradient-to-br", item.color)}>
+                  {item.icon}
                 </div>
-                <span className="text-yellow-300 text-[10px] font-bold text-center">{item.split(' ').slice(1).join(' ')}</span>
+                <div className="text-center">
+                  <p className="text-white font-black text-[8px] uppercase tracking-widest">{item.label}</p>
+                  <p className="text-primary font-black text-[10px]">{item.cost}</p>
+                </div>
               </div>
             ))}
           </div>
-          <Button className="w-full bg-purple-600 h-12 rounded-2xl font-bold" onClick={() => setGiftOpen(false)}>
-            Send Gift
+          <Button className="w-full h-16 romantic-gradient rounded-[2rem] font-black uppercase tracking-widest text-white shadow-xl shadow-primary/20" onClick={() => setGiftOpen(false)}>
+            Confirm Signature
           </Button>
         </div>
       )}

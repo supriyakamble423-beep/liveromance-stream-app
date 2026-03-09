@@ -101,7 +101,7 @@ body {
   animation: scan 2s linear infinite;
 }
 
-/* Grid Error Recovery */
+/* ✅ Grid Error Recovery */
 .grid-container {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -115,7 +115,7 @@ body {
   min-height: 200px;
 }
 
-/* Mobile Grid Fix */
+/* ✅ Mobile Grid Fix */
 @media (max-width: 430px) {
   .grid-container {
     grid-template-columns: repeat(2, 1fr);
