@@ -208,7 +208,7 @@ export default function GlobalMarketplace() {
           ))}
         </div>
         
-        {/* Marketplace Adsterra Unit */}
+        {/* Marketplace Adsterra Unit (ID: 28678576) */}
         <AdBanner zoneId="28678576" />
       </main>
       <BottomNav />
