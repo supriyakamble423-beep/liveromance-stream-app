@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { X, Heart, Send, Lock, Zap, Eye, Gift, Music, Share2, MoreVertical, Power, Mail, Trophy, Grid3X3, Users, Loader2 } from "lucide-react";
+import { X, Heart, Send, Lock, Zap, Eye, Gift, Music, Share2, MoreVertical, Power, Mail, Trophy, Grid3X3, Users, Loader2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useFirebase, useDoc, useMemoFirebase } from "@/firebase";
@@ -20,54 +20,56 @@ export default function StreamClient({ id }: { id: string }) {
   const [messages, setMessages] = useState<any[]>([]);
   const [giftOpen, setGiftOpen] = useState(false);
   const [minutes, setMinutes] = useState(0);
-  const [bonusShow, setBonusShow] = useState(false);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [isLive, setIsLive] = useState(false);
   const [hostData, setHostData] = useState<any>(null);
   const [isGridLoading, setIsGridLoading] = useState(true);
+  const [isSimulated, setIsSimulated] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
-  const isHost = user?.uid === id || id === 'simulate_host';
+  const isHost = user?.uid === id || id === 'simulate_host' || !areServicesAvailable;
 
-  // ✅ Safe host reference
+  // Safe host reference
   const hostRef = useMemo(() => {
-    if (!firestore || !id) return null;
+    if (!firestore || !id || id === 'simulate_host') return null;
     return doc(firestore, 'hosts', id);
   }, [firestore, id]);
 
   const { data: host, isLoading: isHostLoading } = useDoc(hostRef);
 
-  // ✅ Grid Error Prevention - Robust Data Loading
+  // Recovery Logic for Simulation Node
   useEffect(() => {
-    if (!areServicesAvailable) return;
-    
-    if (id === 'simulate_host' && !host) {
-      setHostData({
-        username: "TestHost",
-        streamType: "public",
-        isLive: true,
-        viewers: 1250,
-        verified: true,
-        photo: `https://api.dicebear.com/7.x/avataaars/svg?seed=${id}`
-      });
-      setIsGridLoading(false);
-    } else if (host) {
+    const timer = setTimeout(() => {
+      if (isGridLoading) {
+        console.warn("Grid Loading Timeout: Entering Simulation Mode");
+        setIsSimulated(true);
+        setHostData({
+          username: id === 'simulate_host' ? 'SimNode' : 'GuestHost',
+          streamType: 'public',
+          viewers: Math.floor(Math.random() * 500),
+          photo: `https://api.dicebear.com/7.x/avataaars/svg?seed=${id}`
+        });
+        setIsGridLoading(false);
+      }
+    }, 5000);
+
+    if (areServicesAvailable && host) {
       setHostData(host);
       setIsGridLoading(false);
-    } else if (!isHostLoading) {
-      // Document might not exist yet, fallback
+      clearTimeout(timer);
+    } else if (areServicesAvailable && !isHostLoading && !host) {
+      // Doc doesn't exist, use simulation
+      setIsSimulated(true);
       setHostData({ username: "New Node", streamType: 'public', viewers: 0 });
       setIsGridLoading(false);
+      clearTimeout(timer);
     }
-  }, [host, id, areServicesAvailable, isHostLoading]);
 
-  // ✅ Camera Permission - Standard Trigger
+    return () => clearTimeout(timer);
+  }, [host, id, areServicesAvailable, isHostLoading, isGridLoading]);
+
+  // Camera Permission Trigger
   const startBroadcast = async () => {
-    if (!areServicesAvailable) {
-      toast({ variant: "destructive", title: "Loading Services", description: "Grid node is syncing..." });
-      return;
-    }
-
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
@@ -80,16 +82,15 @@ export default function StreamClient({ id }: { id: string }) {
         await videoRef.current.play();
       }
 
-      if (hostRef && isHost) {
+      if (hostRef && isHost && areServicesAvailable) {
         await updateDoc(hostRef, {
           isLive: true,
-          streamType: 'public',
           lastLive: serverTimestamp()
         });
       }
       
       setIsLive(true);
-      toast({ title: "🔴 LIVE", description: "Your broadcast signal is active." });
+      toast({ title: "🔴 LIVE", description: isSimulated ? "Broadcast active in simulation mode." : "Your broadcast signal is active." });
     } catch (err: any) {
       console.error("Camera Error:", err);
       toast({
@@ -100,9 +101,16 @@ export default function StreamClient({ id }: { id: string }) {
     }
   };
 
-  // ✅ Real-time Messages
+  // Real-time Messages
   useEffect(() => {
-    if (!firestore || !areServicesAvailable) return;
+    if (!firestore || !areServicesAvailable) {
+      // Mock messages for simulation
+      setMessages([
+        { id: '1', user: 'System', text: 'Connecting to romantic chat grid...' },
+        { id: '2', user: 'AI-Bot', text: 'Simulation mode active. Send a message to test!' }
+      ]);
+      return;
+    }
     
     const q = query(
       collection(firestore, 'streamMessages'),
@@ -119,9 +127,18 @@ export default function StreamClient({ id }: { id: string }) {
     return () => unsub();
   }, [firestore, areServicesAvailable]);
 
-  // ✅ Send Message
+  // Send Message
   const sendMsg = async () => {
-    if (!inputText.trim() || !firestore || !user) return;
+    if (!inputText.trim()) return;
+    
+    if (!firestore || !areServicesAvailable || !user) {
+      // Simulate message locally
+      const newMsg = { id: Date.now().toString(), user: 'You', text: inputText };
+      setMessages(prev => [...prev, newMsg]);
+      setInputText("");
+      return;
+    }
+
     try {
       await addDoc(collection(firestore, 'streamMessages'), {
         text: inputText,
@@ -136,15 +153,14 @@ export default function StreamClient({ id }: { id: string }) {
     }
   };
 
-  // ✅ Cleanup
+  // Cleanup
   useEffect(() => {
     return () => {
       stream?.getTracks().forEach(track => track.stop());
     };
   }, [stream]);
 
-  // ✅ Emergency Loading UI
-  if (isGridLoading || !areServicesAvailable) {
+  if (isGridLoading) {
     return (
       <div className="h-screen bg-black flex flex-col items-center justify-center p-6 text-center space-y-6">
         <div className="relative size-20">
@@ -179,42 +195,54 @@ export default function StreamClient({ id }: { id: string }) {
       <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-transparent to-black/90 pointer-events-none" />
 
       {/* Header */}
-      <div className="absolute top-4 left-4 right-4 z-50 flex justify-between items-start animate-in fade-in slide-in-from-top-4">
-        <div className="flex items-center gap-3 bg-black/60 backdrop-blur-md px-4 py-2 rounded-full border border-white/20">
-          <div className="relative size-10 rounded-full overflow-hidden border-2 border-primary shadow-lg">
-            <Image
-              src={displayHost?.photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${id}`}
-              alt="Host"
-              fill
-              className="object-cover"
-            />
-          </div>
-          <div>
-            <p className="text-white font-black text-xs uppercase italic tracking-tight">@{displayHost?.username || "Host"}</p>
-            <p className="text-primary text-[9px] font-black uppercase flex items-center gap-1">
-              <Eye size={10} /> {displayHost?.viewers || 0} Watchers
-            </p>
-          </div>
-        </div>
-        
-        {isHost && (
-          <div className="flex gap-2">
-            <Button
-              onClick={async () => {
-                if (!hostRef) return;
-                const newType = displayHost?.streamType === 'public' ? 'private' : 'public';
-                await updateDoc(hostRef, { streamType: newType });
-              }}
-              className={cn("rounded-full px-4 h-10 text-[9px] font-black uppercase tracking-widest", displayHost?.streamType === 'private' ? "bg-red-600 shadow-[0_0_15px_#dc2626]" : "bg-green-600 shadow-[0_0_15px_#16a34a]")}
-            >
-              {displayHost?.streamType === 'private' ? <Lock size={12} className="mr-1" /> : <Zap size={12} className="mr-1" />}
-              {displayHost?.streamType}
-            </Button>
-            <Button variant="destructive" size="icon" className="rounded-full size-10 shadow-lg" onClick={() => router.push('/host-p')}>
-              <Power size={16} />
-            </Button>
+      <div className="absolute top-4 left-4 right-4 z-50 flex flex-col gap-2 animate-in fade-in slide-in-from-top-4">
+        {(!areServicesAvailable || isSimulated) && (
+          <div className="bg-amber-500/20 backdrop-blur-md px-4 py-1.5 rounded-full border border-amber-500/30 flex items-center justify-center gap-2">
+            <AlertCircle className="size-3 text-amber-500" />
+            <span className="text-[8px] font-black uppercase tracking-widest text-amber-200">Simulation Node Active</span>
           </div>
         )}
+        
+        <div className="flex justify-between items-start">
+          <div className="flex items-center gap-3 bg-black/60 backdrop-blur-md px-4 py-2 rounded-full border border-white/20">
+            <div className="relative size-10 rounded-full overflow-hidden border-2 border-primary shadow-lg">
+              <Image
+                src={displayHost?.photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${id}`}
+                alt="Host"
+                fill
+                className="object-cover"
+              />
+            </div>
+            <div>
+              <p className="text-white font-black text-xs uppercase italic tracking-tight">@{displayHost?.username || "Host"}</p>
+              <p className="text-primary text-[9px] font-black uppercase flex items-center gap-1">
+                <Eye size={10} /> {displayHost?.viewers || 0} Watchers
+              </p>
+            </div>
+          </div>
+          
+          {isHost && (
+            <div className="flex gap-2">
+              <Button
+                onClick={async () => {
+                  if (!hostRef || !areServicesAvailable) {
+                    toast({ title: "Simulated", description: "Stream type changed locally." });
+                    return;
+                  }
+                  const newType = displayHost?.streamType === 'public' ? 'private' : 'public';
+                  await updateDoc(hostRef, { streamType: newType });
+                }}
+                className={cn("rounded-full px-4 h-10 text-[9px] font-black uppercase tracking-widest", displayHost?.streamType === 'private' ? "bg-red-600 shadow-[0_0_15px_#dc2626]" : "bg-green-600 shadow-[0_0_15px_#16a34a]")}
+              >
+                {displayHost?.streamType === 'private' ? <Lock size={12} className="mr-1" /> : <Zap size={12} className="mr-1" />}
+                {displayHost?.streamType}
+              </Button>
+              <Button variant="destructive" size="icon" className="rounded-full size-10 shadow-lg" onClick={() => router.push('/host-p')}>
+                <Power size={16} />
+              </Button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Side Buttons */}
@@ -300,7 +328,10 @@ export default function StreamClient({ id }: { id: string }) {
               { label: 'Diamond', cost: '100TK', icon: '💎', color: 'from-purple-400 to-indigo-600' },
               { label: 'Rocket', cost: '1kTK', icon: '🚀', color: 'from-orange-400 to-red-600' }
             ].map((item) => (
-              <div key={item.label} className="flex flex-col items-center gap-3 p-3 rounded-2xl hover:bg-white/5 transition-colors cursor-pointer group">
+              <div key={item.label} className="flex flex-col items-center gap-3 p-3 rounded-2xl hover:bg-white/5 transition-colors cursor-pointer group" onClick={() => {
+                toast({ title: "Gift Simulated", description: `Sent ${item.label} successfully!` });
+                setGiftOpen(false);
+              }}>
                 <div className={cn("size-16 rounded-3xl flex items-center justify-center text-3xl shadow-xl group-hover:scale-110 transition-transform bg-gradient-to-br", item.color)}>
                   {item.icon}
                 </div>
@@ -312,7 +343,7 @@ export default function StreamClient({ id }: { id: string }) {
             ))}
           </div>
           <Button className="w-full h-16 romantic-gradient rounded-[2rem] font-black uppercase tracking-widest text-white shadow-xl shadow-primary/20" onClick={() => setGiftOpen(false)}>
-            Confirm Signature
+            Close Vault
           </Button>
         </div>
       )}

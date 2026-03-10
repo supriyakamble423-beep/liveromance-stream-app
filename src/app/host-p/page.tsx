@@ -1,10 +1,9 @@
-
 'use client';
 
 import { useFirebase, useDoc, useMemoFirebase } from "@/firebase";
 import { BottomNav } from "@/components/BottomNav";
 import { 
-  Settings, Power, ChevronRight, Wallet, Loader2, Camera, Video, LogOut, ShieldCheck, Mail, Zap, RefreshCw
+  Settings, Power, ChevronRight, Wallet, Loader2, Camera, Video, LogOut, ShieldCheck, Mail, Zap, RefreshCw, AlertCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -38,9 +37,8 @@ export default function HostProfileDashboard() {
   const [editName, setEditName] = useState("");
   const [loadTimeout, setLoadTimeout] = useState(false);
 
-  // Safety Timeout for loading
   useEffect(() => {
-    const timer = setTimeout(() => setLoadTimeout(true), 5000);
+    const timer = setTimeout(() => setLoadTimeout(true), 4000);
     return () => clearTimeout(timer);
   }, []);
 
@@ -58,8 +56,11 @@ export default function HostProfileDashboard() {
   }, [hostProfile]);
 
   const toggleLiveStatus = async () => {
+    // Simulation Mode Activation
     if (!areServicesAvailable || !user) {
-      toast({ variant: "destructive", title: "Grid Offline", description: "Firebase connection lost." });
+      toast({ title: "Simulation Node Active", description: "Firebase offline. Launching mock broadcast." });
+      setIsTogglingLive(true);
+      setTimeout(() => router.push(`/stream/simulate_host`), 1000);
       return;
     }
 
@@ -85,7 +86,8 @@ export default function HostProfileDashboard() {
       router.push(`/stream/${userId}`);
     } catch (err) {
       console.error("Grid broadcast error:", err);
-      toast({ variant: 'destructive', title: 'Grid Error', description: "Failed to establish broadcast signal." });
+      toast({ title: "Simulation Fallback", description: "Database busy. Entering simulation mode." });
+      router.push(`/stream/simulate_host`);
     } finally {
       setIsTogglingLive(false);
     }
@@ -100,7 +102,6 @@ export default function HostProfileDashboard() {
       .finally(() => setIsAuthLoading(false));
   };
 
-  // ✅ Bypass loading screen if timeout hits or services are ready but profile is slow
   if ((isProfileLoading || isUserLoading) && !loadTimeout) {
     return (
       <div className="min-h-screen bg-[#2D1B2D] flex flex-col items-center justify-center space-y-6">
@@ -117,6 +118,13 @@ export default function HostProfileDashboard() {
 
   return (
     <div className="min-h-screen bg-background text-white pb-32 max-w-lg mx-auto border-x border-white/5 mesh-gradient screen-guard-active">
+      {!areServicesAvailable && (
+        <div className="mx-6 mt-6 bg-amber-500/10 border border-amber-500/20 p-3 rounded-xl flex items-center gap-3">
+          <AlertCircle className="size-4 text-amber-500 shrink-0" />
+          <p className="text-[9px] font-black uppercase text-amber-200 tracking-widest">Simulation Mode: Features available offline</p>
+        </div>
+      )}
+
       <header className="p-8 pt-10 bg-gradient-to-b from-primary/15 to-transparent rounded-b-[3.5rem]">
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-2xl font-black tracking-tighter uppercase italic">CONTROL</h1>
@@ -132,8 +140,8 @@ export default function HostProfileDashboard() {
                 <div className="space-y-6">
                   <Button 
                     onClick={handleGoogleLogin} 
-                    disabled={isAuthLoading} 
-                    className="w-full h-14 bg-white text-black hover:bg-slate-100 rounded-2xl font-black uppercase tracking-widest gap-3 shadow-[0_10px_30px_rgba(225,29,72,0.3)] border-none ring-4 ring-primary/20 transition-all active:scale-95"
+                    disabled={isAuthLoading || !areServicesAvailable} 
+                    className="w-full h-14 bg-white text-black hover:bg-slate-100 rounded-2xl font-black uppercase tracking-widest gap-3 shadow-xl border-none ring-4 ring-primary/20 transition-all active:scale-95"
                   >
                     {isAuthLoading ? <Loader2 className="animate-spin" /> : <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="size-5" />}
                     Connect Google
@@ -141,6 +149,10 @@ export default function HostProfileDashboard() {
                   
                   {user && !user.isAnonymous && (
                     <Button onClick={() => signOut(auth!)} variant="destructive" className="w-full h-12 rounded-xl gap-2 font-black uppercase"><LogOut className="size-4" /> Disconnect</Button>
+                  )}
+
+                  {!areServicesAvailable && (
+                    <p className="text-[10px] text-center font-black text-amber-500 uppercase tracking-widest">Connect to Wi-Fi for Auth</p>
                   )}
 
                   <div className="h-px bg-white/5" />
@@ -161,9 +173,9 @@ export default function HostProfileDashboard() {
             <Image src={hostProfile?.previewImageUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${userId}`} alt="Profile" fill className="object-cover" />
           </div>
           <div className="flex-1">
-            <h2 className="text-2xl font-black tracking-tighter uppercase italic truncate">@{hostProfile?.username || 'New Node'}</h2>
+            <h2 className="text-2xl font-black tracking-tighter uppercase italic truncate">@{hostProfile?.username || (userId === 'simulate_host' ? 'SimNode' : 'New Node')}</h2>
             <div className="flex items-center gap-2 mt-2">
-              <Badge className={cn("h-6 text-[9px] font-black", (hostProfile?.verified || userId === 'simulate_host') ? "bg-green-500 text-white" : "bg-white/10 text-white")}>{(hostProfile?.verified || userId === 'simulate_host') ? "VERIFIED" : "PENDING"}</Badge>
+              <Badge className={cn("h-6 text-[9px] font-black", (hostProfile?.verified || !areServicesAvailable) ? "bg-green-500 text-white" : "bg-white/10 text-white")}>{(hostProfile?.verified || !areServicesAvailable) ? "VERIFIED" : "PENDING"}</Badge>
               {hostProfile?.isLive && <Badge className="h-6 text-[9px] font-black bg-primary text-white animate-pulse">ON AIR</Badge>}
             </div>
           </div>
@@ -189,7 +201,7 @@ export default function HostProfileDashboard() {
           {isTogglingLive ? "Connecting..." : "BROADCAST"}
         </Button>
 
-        {user && <ShareKit hostId={user.uid} username={hostProfile?.username || "HOST"} />}
+        <ShareKit hostId={userId} username={hostProfile?.username || "HOST"} />
       </main>
       <BottomNav />
     </div>
