@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Zap, PlayCircle, Sparkles, ChevronLeft, Loader2, Wallet as WalletIcon, TrendingUp, X, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useFirebase } from "@/firebase";
@@ -18,11 +18,13 @@ export default function RewardWallet() {
   const [isLoading, setIsLoading] = useState(true);
   const [adTimer, setAdTimer] = useState(0);
   const [showRewardSuccess, setShowRewardSuccess] = useState(false);
+  
+  // Guard to prevent multiple reward claims
+  const isClaimingRef = useRef(false);
 
   // Load User Balance
   useEffect(() => {
     if (!firestore || !user?.uid) {
-      // Simulation mode fallback balance
       if (!areServicesAvailable) {
         setBalance(150);
         setIsLoading(false);
@@ -44,8 +46,11 @@ export default function RewardWallet() {
     return () => unsubscribe();
   }, [firestore, user?.uid, areServicesAvailable]);
 
-  // Finish Ad Logic - Memoized to prevent re-renders
+  // Finish Ad Logic - Memoized
   const finishAd = useCallback(async () => {
+    if (isClaimingRef.current) return;
+    isClaimingRef.current = true;
+    
     setIsWatching(false);
     
     // Credit logic
@@ -61,7 +66,6 @@ export default function RewardWallet() {
         console.error("Reward sync failed", e);
       }
     } else {
-      // Local simulation reward
       setBalance(prev => prev + 5);
     }
 
@@ -72,7 +76,10 @@ export default function RewardWallet() {
       className: "romantic-glow bg-primary text-white" 
     });
     
-    setTimeout(() => setShowRewardSuccess(false), 3000);
+    setTimeout(() => {
+      setShowRewardSuccess(false);
+      isClaimingRef.current = false;
+    }, 3000);
   }, [areServicesAvailable, user, firestore, toast]);
 
   // Timer Effect: Safe way to handle countdown and completion
@@ -94,8 +101,9 @@ export default function RewardWallet() {
 
   // Handle Ad Watching Start
   const handleWatchAd = () => {
+    if (isWatching) return;
     setIsWatching(true);
-    setAdTimer(10); // 10 second watch time
+    setAdTimer(10); 
 
     // Open actual Adsterra Direct Link in background
     const adUrl = "https://www.highrevenuegate.com/direct-link"; 
