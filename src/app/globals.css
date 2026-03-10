@@ -36,7 +36,6 @@
   }
 }
 
-/* 🔥 SECURITY SCREEN GUARD */
 body {
   -webkit-user-select: none;
   -moz-user-select: none;
@@ -77,10 +76,6 @@ body {
   @apply shadow-[0_0_20px_rgba(225,29,72,0.4)];
 }
 
-.romantic-card-glow {
-  @apply shadow-[0_10px_40px_rgba(225,29,72,0.15)];
-}
-
 .mesh-gradient {
   background-color: #2D1B2D;
   background-image: 
@@ -101,7 +96,6 @@ body {
   animation: scan 2s linear infinite;
 }
 
-/* ✅ Grid Error Recovery */
 .grid-container {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -115,7 +109,6 @@ body {
   min-height: 200px;
 }
 
-/* ✅ Mobile Grid Fix */
 @media (max-width: 430px) {
   .grid-container {
     grid-template-columns: repeat(2, 1fr);

@@ -35,7 +35,6 @@ export default function AdminControlRoom() {
       
       let totalD = 0;
       usersSnap.forEach(d => {
-        // Checking both diamonds and coins depending on how they are stored
         totalD += (d.data().diamonds || 0);
       });
 
@@ -43,7 +42,6 @@ export default function AdminControlRoom() {
         totalUsers: usersSnap.size,
         activeStreams: hostsSnap.size,
         totalEarnings: totalD,
-        // Profit Model: 1000 Diamonds = ₹20 (80% commission logic applied during conversion)
         platformRevenue: totalD * 0.02 * 0.8 
       });
     } catch (e) {
@@ -54,7 +52,6 @@ export default function AdminControlRoom() {
   useEffect(() => {
     async function checkAdmin() {
       if (!areServicesAvailable || !user || !firestore) {
-        // Delay checking to allow auth to settle
         const timeout = setTimeout(() => {
           if (!user && !isChecking) router.push('/global');
         }, 5000);
@@ -62,7 +59,6 @@ export default function AdminControlRoom() {
       }
 
       try {
-        // Primary Check: admins collection
         const adminSnap = await getDocs(query(collection(firestore, 'admins'), where('email', '==', user.email)));
         
         if (adminSnap.empty && user.email !== 'supriyakamble423@gmail.com') {
@@ -78,7 +74,7 @@ export default function AdminControlRoom() {
       }
     }
     checkAdmin();
-  }, [user, firestore, areServicesAvailable]);
+  }, [user, firestore, areServicesAvailable, isChecking, router]);
 
   const activeStreamsQuery = useMemoFirebase(() => {
     if (!firestore || !isAdmin) return null;
@@ -101,7 +97,6 @@ export default function AdminControlRoom() {
     );
   }
 
-  // 🔐 ACCESS DENIED UI
   if (!isAdmin) {
     return (
       <div className="h-screen bg-slate-950 text-white flex flex-col items-center justify-center p-8 text-center max-w-lg mx-auto">
@@ -110,7 +105,7 @@ export default function AdminControlRoom() {
         </div>
         <h1 className="text-3xl font-black uppercase italic mb-4 tracking-tighter">Access <span className="text-red-500">Denied</span></h1>
         <p className="text-xs text-slate-400 mb-10 leading-relaxed uppercase font-bold tracking-widest px-6">
-          Aapka email <span className="text-primary">{user?.email || 'Guest'}</span> admin list mein nahi hai. Admin access ke liye niche di gayi details ko Firestore mein add karein:
+          Authority Restricted. Your email <span className="text-primary">{user?.email || 'Guest'}</span> is not in the Overseer list.
         </p>
         
         <div className="w-full bg-white/5 border border-white/10 rounded-3xl p-8 space-y-6 text-left mb-10 shadow-2xl">
@@ -119,13 +114,8 @@ export default function AdminControlRoom() {
             <p className="text-sm font-mono bg-black/40 p-3 rounded-xl border border-white/5">admins</p>
           </div>
           <div>
-            <p className="text-[10px] font-black text-primary uppercase mb-2 tracking-widest">2. Add this Email Field</p>
+            <p className="text-[10px] font-black text-primary uppercase mb-2 tracking-widest">2. Email Field</p>
             <p className="text-sm font-mono bg-black/40 p-3 rounded-xl border border-white/5 select-all truncate">{user?.email || 'Login Required'}</p>
-          </div>
-          <div className="p-4 bg-primary/5 rounded-2xl border border-primary/10">
-            <p className="text-[9px] font-bold text-primary/80 uppercase leading-relaxed">
-              Tip: Firestore mein ek document banayein jisme field 'email' ho aur value aapki upar wali email ho.
-            </p>
           </div>
         </div>
 
@@ -165,7 +155,6 @@ export default function AdminControlRoom() {
       </header>
 
       <main className="flex-1 overflow-y-auto px-6 space-y-8 pb-32 no-scrollbar pt-8">
-        {/* Real-time Dashboard Cards */}
         <section className="grid grid-cols-2 gap-4">
           <div className="bg-blue-600/10 p-6 rounded-[2.5rem] border border-blue-500/20 shadow-xl">
             <Users className="size-6 text-blue-400 mb-3" />
@@ -189,7 +178,6 @@ export default function AdminControlRoom() {
           </div>
         </section>
 
-        {/* System Health Section */}
         <section className="bg-white/5 border border-white/10 rounded-[3rem] p-8 space-y-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -209,7 +197,6 @@ export default function AdminControlRoom() {
           </div>
         </section>
 
-        {/* Active Streams Monitoring */}
         <section className="space-y-6">
           <div className="flex items-center justify-between px-2">
             <h2 className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">Live Signals</h2>

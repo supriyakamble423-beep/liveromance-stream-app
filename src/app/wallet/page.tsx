@@ -42,9 +42,8 @@ export default function RewardWallet() {
     return () => unsubscribe();
   }, [firestore, user?.uid, areServicesAvailable]);
 
-  // ✅ Ad Verification Logic
   useEffect(() => {
-    const timer = setTimeout(() => setAdLoaded(true), 3000); // Simulate check
+    const timer = setTimeout(() => setAdLoaded(true), 3000);
     return () => clearTimeout(timer);
   }, []);
 
@@ -87,7 +86,7 @@ export default function RewardWallet() {
 
   const handleWatchAd = () => {
     if (isWatching || !adLoaded) {
-      toast({ variant: "destructive", title: "Ad Signal Weak", description: "Wait 2 seconds for ad buffer." });
+      toast({ variant: "destructive", title: "Ad Signal Weak", description: "Wait for ad buffer." });
       return;
     }
     setIsWatching(true);

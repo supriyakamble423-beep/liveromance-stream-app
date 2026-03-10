@@ -14,7 +14,6 @@ function RedirectLogic() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [showManualBypass, setShowManualBypass] = useState(false);
 
-  // ✅ Hard Bypass: Prevent infinite hang if Firebase signal is missing
   useEffect(() => {
     const timer = setTimeout(() => {
       if (!isProcessing) {
@@ -23,7 +22,6 @@ function RedirectLogic() {
       }
     }, 3000);
     
-    // Absolute fallback after 6 seconds
     const autoTimer = setTimeout(() => {
       if (!isProcessing) {
         setIsProcessing(true);
@@ -38,14 +36,12 @@ function RedirectLogic() {
   }, [isProcessing, router]);
 
   useEffect(() => {
-    // If services are confirmed missing, jump to marketplace
     if (!areServicesAvailable && !isUserLoading) {
       setIsProcessing(true);
       router.push('/global');
       return;
     }
 
-    // Wait for auth settlement
     if (isUserLoading || isProcessing) return;
 
     const handleLogic = async () => {

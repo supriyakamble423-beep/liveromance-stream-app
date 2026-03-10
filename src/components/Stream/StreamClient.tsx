@@ -1,9 +1,3 @@
-'use server';
-/**
- * @fileOverview Streaming Client Component.
- * Handles broadcast logic, chat, and permissions.
- */
-
 'use client';
 
 import { useState, useEffect, useRef, useMemo } from "react";
@@ -29,6 +23,7 @@ export default function StreamClient({ id }: { id: string }) {
   const [hostData, setHostData] = useState<any>(null);
   const [isGridLoading, setIsGridLoading] = useState(true);
   const [isSimulated, setIsSimulated] = useState(false);
+  const [stream, setStream] = useState<MediaStream | null>(null);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const isHost = user?.uid === id || id === 'simulate_host';
@@ -38,7 +33,7 @@ export default function StreamClient({ id }: { id: string }) {
     return doc(firestore, 'hosts', id);
   }, [firestore, id]);
 
-  const { data: host, isLoading: isHostLoading } = useDoc(hostRef);
+  const { data: host } = useDoc(hostRef);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -63,7 +58,6 @@ export default function StreamClient({ id }: { id: string }) {
     return () => clearTimeout(timer);
   }, [host, id, areServicesAvailable, isGridLoading]);
 
-  // ✅ Camera & Location Permission Logic
   const requestPermissions = async () => {
     try {
       const mediaStream = await navigator.mediaDevices.getUserMedia({
@@ -82,7 +76,7 @@ export default function StreamClient({ id }: { id: string }) {
       toast({
         variant: "destructive",
         title: "Permissions Denied",
-        description: "Camera & Mic access zaroori hai streaming ke liye."
+        description: "Camera & Mic access is required for streaming."
       });
       throw err;
     }
@@ -110,8 +104,6 @@ export default function StreamClient({ id }: { id: string }) {
       console.error(err);
     }
   };
-
-  const [stream, setStream] = useState<MediaStream | null>(null);
 
   useEffect(() => {
     if (!firestore || !areServicesAvailable) return;
