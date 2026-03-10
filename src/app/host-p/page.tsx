@@ -3,7 +3,7 @@
 import { useFirebase, useDoc, useMemoFirebase } from "@/firebase";
 import { BottomNav } from "@/components/BottomNav";
 import { 
-  Settings, Power, ChevronRight, Wallet, Loader2, Camera, Video, LogOut, ShieldCheck, Mail, Zap, RefreshCw, AlertCircle
+  Settings, Power, ChevronRight, Wallet, Loader2, Camera, Video, LogOut, ShieldCheck, Mail, Zap, RefreshCw, AlertCircle, UserCheck, LogIn
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -56,7 +56,6 @@ export default function HostProfileDashboard() {
   }, [hostProfile]);
 
   const toggleLiveStatus = async () => {
-    // Simulation Mode Activation
     if (!areServicesAvailable || !user) {
       toast({ title: "Simulation Node Active", description: "Firebase offline. Launching mock broadcast." });
       setIsTogglingLive(true);
@@ -76,8 +75,8 @@ export default function HostProfileDashboard() {
         userId,
         isLive: true,
         updatedAt: serverTimestamp(),
-        username: editName || hostProfile?.username || "New Host",
-        previewImageUrl: hostProfile?.previewImageUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${userId}`,
+        username: editName || hostProfile?.username || user.displayName || "New Host",
+        previewImageUrl: hostProfile?.previewImageUrl || user.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${userId}`,
         streamType: 'public',
         verified: hostProfile?.verified || true 
       }, { merge: true });
@@ -93,13 +92,29 @@ export default function HostProfileDashboard() {
     }
   };
 
-  const handleGoogleLogin = () => {
-    if (!auth) return;
+  const handleGoogleLogin = async () => {
+    if (!auth) {
+      toast({ variant: "destructive", title: "Service Unavailable", description: "Firebase not initialized." });
+      return;
+    }
     setIsAuthLoading(true);
-    initiateGoogleSignIn(auth)
-      .then(() => toast({ title: "Access Granted" }))
-      .catch((err: any) => toast({ variant: "destructive", title: "Auth Failed" }))
-      .finally(() => setIsAuthLoading(false));
+    try {
+      await initiateGoogleSignIn(auth);
+      toast({ title: "Identity Tunnel Secured", description: "Successfully logged in with Google." });
+    } catch (err: any) {
+      console.error("Auth Error:", err);
+      let msg = "Check your connection and try again.";
+      if (err.code === 'auth/popup-blocked') msg = "Popup blocked! Please allow popups for this site.";
+      if (err.code === 'auth/cancelled-popup-request') msg = "Login cancelled.";
+      
+      toast({ 
+        variant: "destructive", 
+        title: "Auth Failed", 
+        description: msg 
+      });
+    } finally {
+      setIsAuthLoading(false);
+    }
   };
 
   if ((isProfileLoading || isUserLoading) && !loadTimeout) {
@@ -115,6 +130,8 @@ export default function HostProfileDashboard() {
       </div>
     );
   }
+
+  const isAnonymous = user?.isAnonymous || !user;
 
   return (
     <div className="min-h-screen bg-background text-white pb-32 max-w-lg mx-auto border-x border-white/5 mesh-gradient screen-guard-active">
@@ -134,33 +151,31 @@ export default function HostProfileDashboard() {
               <DialogTrigger asChild><Button variant="ghost" size="icon" className="rounded-full bg-white/5 border border-white/10 size-11"><Settings className="size-5 text-white/60" /></Button></DialogTrigger>
               <DialogContent className="bg-[#2D1B2D] border-white/10 text-white rounded-[2.5rem] p-8 max-w-[90vw] mx-auto shadow-2xl">
                 <DialogHeader className="items-center mb-6">
-                  <DialogTitle className="text-xl font-black uppercase italic tracking-widest text-primary">Identity Tunnel</DialogTitle>
+                  <DialogTitle className="text-xl font-black uppercase italic tracking-widest text-primary">System Config</DialogTitle>
                 </DialogHeader>
                 
                 <div className="space-y-6">
-                  <Button 
-                    onClick={handleGoogleLogin} 
-                    disabled={isAuthLoading || !areServicesAvailable} 
-                    className="w-full h-14 bg-white text-black hover:bg-slate-100 rounded-2xl font-black uppercase tracking-widest gap-3 shadow-xl border-none ring-4 ring-primary/20 transition-all active:scale-95"
-                  >
-                    {isAuthLoading ? <Loader2 className="animate-spin" /> : <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="size-5" />}
-                    Connect Google
-                  </Button>
-                  
                   {user && !user.isAnonymous && (
-                    <Button onClick={() => signOut(auth!)} variant="destructive" className="w-full h-12 rounded-xl gap-2 font-black uppercase"><LogOut className="size-4" /> Disconnect</Button>
+                    <div className="p-4 bg-white/5 rounded-2xl border border-white/10 flex items-center gap-3">
+                      <div className="size-10 rounded-full overflow-hidden relative">
+                        <Image src={user.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.uid}`} alt="Avatar" fill />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-black truncate">{user.email}</p>
+                        <p className="text-[8px] text-primary font-black uppercase">Verified Signal</p>
+                      </div>
+                      <Button onClick={() => signOut(auth!)} variant="ghost" size="icon" className="text-red-400 hover:bg-red-500/10"><LogOut size={18} /></Button>
+                    </div>
                   )}
 
                   {!areServicesAvailable && (
                     <p className="text-[10px] text-center font-black text-amber-500 uppercase tracking-widest">Connect to Wi-Fi for Auth</p>
                   )}
 
-                  <div className="h-px bg-white/5" />
-                  
                   <div className="space-y-3">
                     <p className="text-[10px] font-black uppercase tracking-widest text-primary/60">Profile Tuner</p>
                     <Input value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="Node Alias" className="bg-white/5 border-white/10 h-12 rounded-xl" />
-                    <Button className="w-full h-12 romantic-gradient rounded-xl font-black uppercase">Save Sig</Button>
+                    <Button className="w-full h-12 romantic-gradient rounded-xl font-black uppercase">Save Configuration</Button>
                   </div>
                 </div>
               </DialogContent>
@@ -168,12 +183,35 @@ export default function HostProfileDashboard() {
           </div>
         </div>
 
+        {/* --- IDENTITY TUNNEL SECTION --- */}
+        {isAnonymous && areServicesAvailable && (
+          <div className="mb-8 p-6 bg-primary/10 border border-primary/20 rounded-[2.5rem] relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:rotate-12 transition-transform">
+              <ShieldCheck className="size-16" />
+            </div>
+            <div className="relative z-10">
+              <h3 className="text-sm font-black uppercase tracking-widest mb-1 italic">Identity Tunnel Open</h3>
+              <p className="text-[9px] text-slate-400 font-bold uppercase mb-4 leading-relaxed">
+                Connect your Google account to secure your earnings <br/>and unlock private broadcasting nodes.
+              </p>
+              <Button 
+                onClick={handleGoogleLogin} 
+                disabled={isAuthLoading}
+                className="w-full h-12 bg-white text-black hover:bg-slate-100 rounded-xl font-black uppercase text-[10px] tracking-widest gap-2 shadow-xl border-none"
+              >
+                {isAuthLoading ? <Loader2 className="size-4 animate-spin" /> : <LogIn size={16} />}
+                Connect with Google
+              </Button>
+            </div>
+          </div>
+        )}
+
         <div className="flex items-center gap-5 mb-8">
           <div className="relative size-24 rounded-[2.5rem] overflow-hidden border-4 border-primary bg-slate-900 shadow-2xl">
-            <Image src={hostProfile?.previewImageUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${userId}`} alt="Profile" fill className="object-cover" />
+            <Image src={hostProfile?.previewImageUrl || user?.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${userId}`} alt="Profile" fill className="object-cover" />
           </div>
           <div className="flex-1">
-            <h2 className="text-2xl font-black tracking-tighter uppercase italic truncate">@{hostProfile?.username || (userId === 'simulate_host' ? 'SimNode' : 'New Node')}</h2>
+            <h2 className="text-2xl font-black tracking-tighter uppercase italic truncate">@{hostProfile?.username || user?.displayName || (userId === 'simulate_host' ? 'SimNode' : 'New Node')}</h2>
             <div className="flex items-center gap-2 mt-2">
               <Badge className={cn("h-6 text-[9px] font-black", (hostProfile?.verified || !areServicesAvailable) ? "bg-green-500 text-white" : "bg-white/10 text-white")}>{(hostProfile?.verified || !areServicesAvailable) ? "VERIFIED" : "PENDING"}</Badge>
               {hostProfile?.isLive && <Badge className="h-6 text-[9px] font-black bg-primary text-white animate-pulse">ON AIR</Badge>}
@@ -201,7 +239,7 @@ export default function HostProfileDashboard() {
           {isTogglingLive ? "Connecting..." : "BROADCAST"}
         </Button>
 
-        <ShareKit hostId={userId} username={hostProfile?.username || "HOST"} />
+        <ShareKit hostId={userId} username={hostProfile?.username || user?.displayName || "HOST"} />
       </main>
       <BottomNav />
     </div>

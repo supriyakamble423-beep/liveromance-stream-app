@@ -13,18 +13,21 @@ import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from 'firebase/fir
 
 /** Helper to ensure user doc exists with welcome bonus */
 async function ensureUserDoc(credential: UserCredential) {
-  const db = getFirestore();
-  const user = credential.user;
-  const userRef = doc(db, 'users', user.uid);
-  
+  // Use try-catch to avoid crashing auth flow if Firestore fails
   try {
+    const db = getFirestore();
+    const user = credential.user;
+    const userRef = doc(db, 'users', user.uid);
+    
     const snap = await getDoc(userRef);
     if (!snap.exists()) {
       await setDoc(userRef, {
         id: user.uid,
+        uid: user.uid,
         username: user.displayName || `User_${user.uid.slice(0,5)}`,
         email: user.email || '',
         diamonds: 50, // 🎁 Welcome Bonus
+        photoURL: user.photoURL || '',
         referralCode: `REF_${user.uid.slice(0, 6).toUpperCase()}`,
         apkDownloaded: false,
         createdAt: serverTimestamp(),
@@ -32,7 +35,12 @@ async function ensureUserDoc(credential: UserCredential) {
         lastLogin: serverTimestamp()
       }, { merge: true });
     } else {
-      await setDoc(userRef, { lastLogin: serverTimestamp() }, { merge: true });
+      // For existing users, update metadata but keep their earnings
+      await setDoc(userRef, { 
+        lastLogin: serverTimestamp(),
+        photoURL: user.photoURL || snap.data()?.photoURL || '',
+        updatedAt: serverTimestamp()
+      }, { merge: true });
     }
   } catch (e) {
     console.warn("User doc sync failed:", e);
@@ -64,6 +72,7 @@ export async function initiateEmailSignIn(authInstance: Auth, email: string, pas
 export async function initiateGoogleSignIn(authInstance: Auth): Promise<UserCredential> {
   const provider = new GoogleAuthProvider();
   provider.setCustomParameters({ prompt: 'select_account' });
+  // Ensure popup is triggered by user gesture (this function should be called in onClick)
   const cred = await signInWithPopup(authInstance, provider);
   await ensureUserDoc(cred);
   return cred;
