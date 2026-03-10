@@ -71,14 +71,14 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
       const userSnap = await getDoc(userRef);
       
       if (!userSnap.exists()) {
-        // 🎁 NEW USER: Welcome Bonus - 50 Diamonds
+        // 🎁 NEW USER: Welcome Bonus - 20 Diamonds (Updated)
         await setDoc(userRef, {
           id: firebaseUser.uid,
           uid: firebaseUser.uid,
           username: firebaseUser.displayName || `User_${firebaseUser.uid.slice(0, 5)}`,
           email: firebaseUser.email || '',
           photoURL: firebaseUser.photoURL || '',
-          diamonds: 50, // ✨ Welcome Bonus
+          diamonds: 20, // ✨ Welcome Bonus: Adjusted to 20
           referralCode: `REF_${firebaseUser.uid.slice(0, 6).toUpperCase()}`,
           referredBy: null,
           apkDownloaded: false,
@@ -87,7 +87,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
           updatedAt: serverTimestamp(),
           lastLogin: serverTimestamp()
         }, { merge: true });
-        console.log('✅ New user created with 50 Diamonds welcome bonus');
+        console.log('✅ New user created with 20 Diamonds welcome bonus');
       } else {
         // Existing user: Just update lastLogin
         await setDoc(userRef, { 

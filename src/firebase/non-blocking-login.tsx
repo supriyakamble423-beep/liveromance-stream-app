@@ -26,7 +26,7 @@ async function ensureUserDoc(credential: UserCredential) {
         uid: user.uid,
         username: user.displayName || `User_${user.uid.slice(0,5)}`,
         email: user.email || '',
-        diamonds: 50, // 🎁 Welcome Bonus
+        diamonds: 20, // 🎁 Welcome Bonus: Adjusted to 20
         photoURL: user.photoURL || '',
         referralCode: `REF_${user.uid.slice(0, 6).toUpperCase()}`,
         apkDownloaded: false,
