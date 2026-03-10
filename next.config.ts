@@ -3,6 +3,7 @@ import { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
   images: {
+    unoptimized: process.env.NEXT_STATIC_EXPORT === 'true',
     remotePatterns: [
       { protocol: 'https', hostname: 'placehold.co' },
       { protocol: 'https', hostname: 'images.unsplash.com' },
@@ -17,6 +18,8 @@ const nextConfig: NextConfig = {
   eslint: { ignoreDuringBuilds: true },
   poweredByHeader: false,
   reactStrictMode: true,
+  // Performance optimizations
+  compress: true,
   // Ensure the output is standard for development/studio environments
   output: process.env.NEXT_STATIC_EXPORT === 'true' ? 'export' : undefined,
   trailingSlash: process.env.NEXT_STATIC_EXPORT === 'true',
