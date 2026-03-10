@@ -7,6 +7,7 @@ import {
   AlertTriangle, ShieldCheck, Search
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { useFirebase } from "@/firebase";
 import { doc, onSnapshot, updateDoc, increment, serverTimestamp } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
