@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { 
-  Zap, PlayCircle, Sparkles, ChevronLeft, Loader2, 
-  Wallet as WalletIcon, TrendingUp, X, CheckCircle2, 
-  AlertTriangle, ShieldCheck, Search, Gift
+  Zap, PlayCircle, ChevronLeft, Loader2, 
+  Wallet as WalletIcon, TrendingUp, CheckCircle2, 
+  Gift
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -12,7 +12,6 @@ import { useFirebase } from "@/firebase";
 import { doc, onSnapshot, updateDoc, increment, serverTimestamp } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
-import { BottomNav } from "@/components/BottomNav";
 import { cn } from "@/lib/utils";
 import { validateAdReward } from "@/ai/flows/ad-reward-validation-flow";
 
@@ -21,14 +20,10 @@ export default function RewardWallet() {
   const { toast } = useToast();
   
   const [balance, setBalance] = useState<number>(0);
-  const [isWatching, setIsWatching] = useState(false);
   const [isAiChecking, setIsAiChecking] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [adTimer, setAdTimer] = useState(0);
   const [showRewardSuccess, setShowRewardSuccess] = useState(false);
   const [adLoaded, setAdLoaded] = useState(false);
-  
-  const isClaimingRef = useRef(false);
 
   // Load Balance
   useEffect(() => {
@@ -58,7 +53,7 @@ export default function RewardWallet() {
   }, []);
 
   const handleWatchAd = async () => {
-    if (isWatching || isAiChecking || !adLoaded) {
+    if (isAiChecking || !adLoaded) {
       toast({ variant: "destructive", title: "Ad Signal Weak", description: "Wait for ad engine to initialize." });
       return;
     }
@@ -68,7 +63,7 @@ export default function RewardWallet() {
     // 1. Open Adsterra High-CPM Link
     window.open("https://www.highrevenuegate.com/direct-link-28788998", '_blank');
 
-    // 2. Start AI Audit Process
+    // 2. Start AI Audit Process (Simulated delay)
     setTimeout(async () => {
       try {
         const res = await validateAdReward({
@@ -77,18 +72,21 @@ export default function RewardWallet() {
           timeSpent: 10
         });
 
-        if (res.isValid && areServicesAvailable && user && firestore) {
-          const userRef = doc(firestore, 'users', user.uid);
-          await updateDoc(userRef, { 
-            diamonds: increment(2), 
-            lastAdWatched: serverTimestamp(),
-            updatedAt: serverTimestamp()
-          });
+        if (res.isValid) {
+          if (areServicesAvailable && user && firestore) {
+            const userRef = doc(firestore, 'users', user.uid);
+            await updateDoc(userRef, { 
+              diamonds: increment(2), 
+              lastAdWatched: serverTimestamp(),
+              updatedAt: serverTimestamp()
+            });
+          } else {
+            setBalance(p => p + 2);
+          }
           setShowRewardSuccess(true);
           toast({ title: "💎 +2 Diamonds!", description: res.message });
-        } else if (!areServicesAvailable) {
-          setBalance(p => p + 2);
-          setShowRewardSuccess(true);
+        } else {
+          toast({ variant: "destructive", title: "AI Scan Failed", description: res.message });
         }
       } catch (e) {
         console.error(e);
@@ -96,7 +94,7 @@ export default function RewardWallet() {
         setIsAiChecking(false);
         setTimeout(() => setShowRewardSuccess(false), 3000);
       }
-    }, 5000); // 5-sec simulation
+    }, 5000); 
   };
 
   const isLowBalance = balance < 10;
@@ -171,7 +169,6 @@ export default function RewardWallet() {
         <section className="space-y-4 pb-10">
           <div className="flex items-center justify-between px-4">
             <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-white/40">Recent Activity</h4>
-            <Badge variant="outline" className="text-[8px] border-white/5 opacity-40">AUTO-LOG</Badge>
           </div>
           <div className="bg-white/5 rounded-[2.5rem] border border-white/5 divide-y divide-white/5">
             <div className="p-5 flex items-center justify-between">
@@ -200,7 +197,6 @@ export default function RewardWallet() {
            </div>
         </div>
       )}
-      <BottomNav />
     </div>
   );
 }
