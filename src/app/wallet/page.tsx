@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   Zap, PlayCircle, Sparkles, ChevronLeft, Loader2, 
   Wallet as WalletIcon, TrendingUp, X, CheckCircle2, 
-  AlertTriangle, ShieldCheck, Search
+  AlertTriangle, ShieldCheck, Search, Gift
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 import { BottomNav } from "@/components/BottomNav";
 import { cn } from "@/lib/utils";
+import { validateAdReward } from "@/ai/flows/ad-reward-validation-flow";
 
 export default function RewardWallet() {
   const { firestore, user, areServicesAvailable } = useFirebase();
@@ -33,7 +34,7 @@ export default function RewardWallet() {
   useEffect(() => {
     if (!firestore || !user?.uid) {
       if (!areServicesAvailable) {
-        setBalance(15); // Mock balance for simulation
+        setBalance(15); 
         setIsLoading(false);
       }
       return;
@@ -56,61 +57,46 @@ export default function RewardWallet() {
     return () => clearTimeout(timer);
   }, []);
 
-  // Reward Processing (Stable)
-  const processReward = useCallback(async () => {
-    if (isClaimingRef.current) return;
-    isClaimingRef.current = true;
-    setIsWatching(false);
-    
-    if (areServicesAvailable && user && firestore) {
-      try {
-        const userRef = doc(firestore, 'users', user.uid);
-        await updateDoc(userRef, { 
-          diamonds: increment(5), 
-          lastAdWatched: serverTimestamp(),
-          updatedAt: serverTimestamp()
-        });
-      } catch (e) { console.error(e); }
-    } else {
-      setBalance(prev => prev + 5);
-    }
-
-    setShowRewardSuccess(true);
-    toast({ title: "🎉 +5 Diamonds!", description: "Ad bonus successfully added to your vault." });
-    
-    setTimeout(() => {
-      setShowRewardSuccess(false);
-      isClaimingRef.current = false;
-    }, 3000);
-  }, [areServicesAvailable, user, firestore, toast]);
-
-  // Timer Hook
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (isWatching && adTimer > 0) {
-      interval = setInterval(() => setAdTimer(prev => prev - 1), 1000);
-    } else if (isWatching && adTimer === 0) {
-      processReward();
-    }
-    return () => clearInterval(interval);
-  }, [isWatching, adTimer, processReward]);
-
-  const handleWatchAd = () => {
+  const handleWatchAd = async () => {
     if (isWatching || isAiChecking || !adLoaded) {
       toast({ variant: "destructive", title: "Ad Signal Weak", description: "Wait for ad engine to initialize." });
       return;
     }
 
-    // AI Check Simulation
     setIsAiChecking(true);
     
-    setTimeout(() => {
-      setIsAiChecking(false);
-      setIsWatching(true);
-      setAdTimer(10); 
-      // Redirect to your Adsterra high-revenue direct link
-      window.open("https://www.highrevenuegate.com/direct-link", '_blank');
-    }, 2000); // 2-sec AI Scan
+    // 1. Open Adsterra High-CPM Link
+    window.open("https://www.highrevenuegate.com/direct-link-28788998", '_blank');
+
+    // 2. Start AI Audit Process
+    setTimeout(async () => {
+      try {
+        const res = await validateAdReward({
+          userId: user?.uid || 'guest',
+          adId: '28788998',
+          timeSpent: 10
+        });
+
+        if (res.isValid && areServicesAvailable && user && firestore) {
+          const userRef = doc(firestore, 'users', user.uid);
+          await updateDoc(userRef, { 
+            diamonds: increment(2), 
+            lastAdWatched: serverTimestamp(),
+            updatedAt: serverTimestamp()
+          });
+          setShowRewardSuccess(true);
+          toast({ title: "💎 +2 Diamonds!", description: res.message });
+        } else if (!areServicesAvailable) {
+          setBalance(p => p + 2);
+          setShowRewardSuccess(true);
+        }
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setIsAiChecking(false);
+        setTimeout(() => setShowRewardSuccess(false), 3000);
+      }
+    }, 5000); // 5-sec simulation
   };
 
   const isLowBalance = balance < 10;
@@ -152,55 +138,33 @@ export default function RewardWallet() {
           </div>
         </div>
 
-        {/* Low Balance Warning */}
-        {isLowBalance && !isLoading && (
-          <div className="bg-amber-500/10 border border-amber-500/20 p-5 rounded-[2.5rem] flex items-start gap-4 animate-in slide-in-from-top-4">
-            <div className="size-10 bg-amber-500/20 rounded-2xl flex items-center justify-center shrink-0">
-              <AlertTriangle className="size-5 text-amber-500" />
-            </div>
-            <div>
-              <p className="text-[10px] font-black uppercase text-amber-200 tracking-widest mb-1">Low Balance Alert</p>
-              <p className="text-[9px] text-amber-300/60 font-bold uppercase leading-relaxed">
-                Your balance is below 10 💎. You might not be able to join Private Rooms. Watch an ad to recharge!
-              </p>
-            </div>
-          </div>
-        )}
-
         {/* Reward Hub */}
         <section className="bg-[#3D263D]/60 border border-white/10 rounded-[3.5rem] p-8 text-center backdrop-blur-xl relative overflow-hidden shadow-2xl">
-          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
-          
-          <div className="size-20 bg-gradient-to-tr from-[#F472B6] to-[#E11D48] rounded-[2rem] flex items-center justify-center mx-auto mb-6 shadow-xl romantic-glow">
-            <PlayCircle className="size-12 text-white" />
+          <div className="size-20 bg-gradient-to-tr from-amber-400 to-orange-600 rounded-[2rem] flex items-center justify-center mx-auto mb-6 shadow-xl romantic-glow">
+            <Gift className="size-12 text-black" />
           </div>
           
           <div className="space-y-2 mb-8">
-            <h3 className="text-2xl font-black uppercase tracking-tight italic">Reward Hub</h3>
-            <div className="flex items-center justify-center gap-2">
-              <Sparkles className="size-3 text-amber-400 fill-current" />
-              <p className="text-[11px] text-[#FDA4AF] font-black uppercase tracking-[0.2em]">+5 Diamonds Per Ad</p>
-            </div>
+            <h3 className="text-2xl font-black uppercase tracking-tight italic">Watch & Earn</h3>
+            <p className="text-[11px] text-[#FDA4AF] font-black uppercase tracking-[0.2em]">+2 Diamonds per Ad</p>
           </div>
           
           <Button 
             onClick={handleWatchAd} 
-            disabled={isWatching || isAiChecking || isLoading} 
+            disabled={isAiChecking || isLoading} 
             className={cn(
               "w-full h-16 rounded-[2.2rem] font-black uppercase tracking-widest transition-all gap-3 shadow-xl active:scale-95", 
-              (isWatching || isAiChecking) ? "bg-slate-800" : "romantic-gradient hover:shadow-primary/40"
+              isAiChecking ? "bg-slate-800" : "romantic-gradient hover:shadow-primary/40"
             )}
           >
             {isAiChecking ? (
-              <><Loader2 className="size-5 animate-spin" /> AI SCANNING...</>
-            ) : isWatching ? (
-              <><Zap className="size-5 text-amber-400 animate-pulse" /> SYNCING {adTimer}s</>
+              <><Loader2 className="size-5 animate-spin" /> AI AUDITING...</>
             ) : (
-              <><PlayCircle className="size-5" /> CLAIM REWARD</>
+              <><PlayCircle className="size-5" /> WATCH AD FOR 💎</>
             )}
           </Button>
 
-          <p className="text-[8px] text-white/20 font-black uppercase mt-6 tracking-[0.3em]">Ad Engine Status: {adLoaded ? "Online" : "Initializing..."}</p>
+          <p className="text-[8px] text-white/20 font-black uppercase mt-6 tracking-[0.3em]">AI Agent: AdAudit-v1.0 Active</p>
         </section>
 
         {/* Transaction History Mock */}
@@ -218,69 +182,20 @@ export default function RewardWallet() {
                   <p className="text-[8px] text-white/40 font-bold uppercase">Just Now</p>
                 </div>
               </div>
-              <span className="text-xs font-black text-green-400">+5 💎</span>
-            </div>
-            <div className="p-5 flex items-center justify-between opacity-50">
-              <div className="flex items-center gap-3">
-                <div className="size-8 rounded-full bg-primary/10 flex items-center justify-center"><Zap className="size-4 text-primary" /></div>
-                <div>
-                  <p className="text-[10px] font-black uppercase">Welcome Bonus</p>
-                  <p className="text-[8px] text-white/40 font-bold uppercase">Account Created</p>
-                </div>
-              </div>
-              <span className="text-xs font-black text-primary">+20 💎</span>
+              <span className="text-xs font-black text-green-400">+2 💎</span>
             </div>
           </div>
         </section>
       </main>
 
-      {/* AI Scanning / Watching Overlay */}
-      {(isWatching || isAiChecking) && (
-        <div className="fixed inset-0 z-[200] bg-black/90 backdrop-blur-xl flex flex-col items-center justify-center p-8 animate-in fade-in duration-500">
-           <div className="absolute top-10 right-10 px-6 py-3 bg-white/5 border border-white/10 rounded-full text-xs font-black tracking-widest">
-             {isAiChecking ? "SCANNING" : `${adTimer}s`}
-           </div>
-           
-           <div className="relative size-56 mx-auto">
-              <div className="absolute inset-0 bg-primary/20 rounded-full animate-ping" />
-              <div className="relative size-full bg-[#1A0F1A] border-4 border-primary rounded-full flex flex-col items-center justify-center shadow-[0_0_60px_rgba(225,29,72,0.4)]">
-                 {isAiChecking ? (
-                   <>
-                     <Search className="size-16 text-primary animate-pulse mb-4" />
-                     <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Checking Ad Source</p>
-                   </>
-                 ) : (
-                   <>
-                     <Zap className="size-20 text-primary animate-bounce mb-4" />
-                     <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Signal Sync Active</p>
-                   </>
-                 )}
-              </div>
-           </div>
-           
-           <h2 className="text-3xl font-black uppercase italic tracking-widest mt-12 text-center leading-none">
-             {isAiChecking ? "AI Verification" : "Secure Node"}
-           </h2>
-           <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.3em] mt-4 text-center max-w-[200px] leading-relaxed">
-             {isAiChecking 
-               ? "Analyzing partner ad connection for safe reward delivery." 
-               : "Watching secure romantic sponsor ad. Reward is processing."}
-           </p>
-
-           <div className="absolute bottom-20 flex items-center gap-2">
-             <ShieldCheck className="size-4 text-green-500" />
-             <span className="text-[8px] font-black uppercase tracking-widest text-slate-500">Stream-X Security Tunnel Active</span>
-           </div>
-        </div>
-      )}
-
+      {/* AI Success Overlay */}
       {showRewardSuccess && (
         <div className="fixed inset-0 z-[250] flex items-center justify-center pointer-events-none p-6">
            <div className="bg-green-500 text-white px-10 py-6 rounded-[2.5rem] flex flex-col items-center gap-3 animate-in zoom-in shadow-[0_0_50px_rgba(34,197,94,0.4)] border-4 border-white/20">
               <CheckCircle2 className="size-12" />
               <div className="text-center">
-                <span className="text-xl font-black uppercase tracking-widest block">BOOST COLLECTED</span>
-                <span className="text-sm font-bold opacity-80">+5 DIAMONDS ADDED</span>
+                <span className="text-xl font-black uppercase tracking-widest block">AI VALIDATED</span>
+                <span className="text-sm font-bold opacity-80">+2 DIAMONDS ADDED</span>
               </div>
            </div>
         </div>

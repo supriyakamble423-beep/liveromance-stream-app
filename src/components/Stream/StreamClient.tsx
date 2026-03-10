@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { X, Heart, Send, Lock, Zap, Eye, Gift, Share2, MoreVertical, Power, Grid3X3, Loader2, AlertCircle, MapPin } from "lucide-react";
+import { X, Heart, Send, Lock, Zap, Eye, Gift, Share2, MoreVertical, Power, Grid3X3, Loader2, AlertCircle, MapPin, Camera, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useFirebase, useDoc } from "@/firebase";
@@ -11,6 +11,7 @@ import { doc, updateDoc, serverTimestamp, collection, addDoc, onSnapshot, query,
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import AdBanner from "@/components/Ads/AdBanner";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export default function StreamClient({ id }: { id: string }) {
   const router = useRouter();
@@ -25,6 +26,7 @@ export default function StreamClient({ id }: { id: string }) {
   const [isGridLoading, setIsGridLoading] = useState(true);
   const [isSimulated, setIsSimulated] = useState(false);
   const [stream, setStream] = useState<MediaStream | null>(null);
+  const [showPermissionModal, setShowPermissionModal] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const isHost = user?.uid === id || id === 'simulate_host';
@@ -65,13 +67,6 @@ export default function StreamClient({ id }: { id: string }) {
         video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
         audio: true
       });
-
-      if ("geolocation" in navigator) {
-        navigator.geolocation.getCurrentPosition(
-          (pos) => console.log('📍 Node Position locked'),
-          (err) => console.warn('⚠️ Location optional')
-        );
-      }
       return mediaStream;
     } catch (err) {
       toast({
@@ -84,6 +79,7 @@ export default function StreamClient({ id }: { id: string }) {
   };
 
   const startBroadcast = async () => {
+    setShowPermissionModal(false);
     try {
       const mediaStream = await requestPermissions();
       setStream(mediaStream);
@@ -151,16 +147,33 @@ export default function StreamClient({ id }: { id: string }) {
 
   return (
     <div className="relative h-screen w-full bg-black overflow-hidden max-w-[430px] mx-auto screen-guard-active">
-      <video ref={videoRef} autoPlay muted playsInline className={cn("absolute inset-0 w-full h-full object-cover transition-opacity duration-1000", isLive ? "opacity-100" : "opacity-30")} />
+      {/* Social Bar Safe Zone Padding (Top & Bottom) */}
+      <div className="absolute inset-0 pt-16 pb-24">
+        <video ref={videoRef} autoPlay muted playsInline className={cn("w-full h-full object-cover transition-opacity duration-1000 rounded-3xl", isLive ? "opacity-100" : "opacity-30")} />
+      </div>
       <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-transparent to-black/90 pointer-events-none" />
 
-      <div className="absolute top-4 left-4 right-4 z-50 flex flex-col gap-2">
-        {isSimulated && (
-          <div className="bg-amber-500/20 backdrop-blur-md px-4 py-1.5 rounded-full border border-amber-500/30 flex items-center justify-center gap-2">
-            <AlertCircle className="size-3 text-amber-500" />
-            <span className="text-[8px] font-black uppercase tracking-widest text-amber-200">Simulation Node Active</span>
+      {/* Permission Modal */}
+      <Dialog open={showPermissionModal} onOpenChange={setShowPermissionModal}>
+        <DialogContent className="bg-[#2D1B2D] border-white/10 text-white rounded-[3rem] p-8 max-w-[90vw] mx-auto shadow-2xl">
+          <div className="flex flex-col items-center text-center space-y-6">
+            <div className="size-20 bg-primary/20 rounded-full flex items-center justify-center border-2 border-primary animate-pulse">
+              <Camera className="size-10 text-primary" />
+            </div>
+            <div className="space-y-2">
+              <DialogTitle className="text-2xl font-black uppercase italic tracking-tighter">Identity Access</DialogTitle>
+              <p className="text-sm text-slate-400 font-bold uppercase leading-relaxed">
+                Duniya se judne ke liye <br/><span className="text-white">Camera aur Mic</span> allow karein.
+              </p>
+            </div>
+            <Button onClick={startBroadcast} className="w-full h-16 romantic-gradient rounded-2xl font-black uppercase tracking-widest text-lg shadow-xl">
+              Chalo Shuru Karein
+            </Button>
           </div>
-        )}
+        </DialogContent>
+      </Dialog>
+
+      <div className="absolute top-4 left-4 right-4 z-50 flex flex-col gap-2">
         <div className="flex justify-between items-start">
           <div className="flex items-center gap-3 bg-black/60 backdrop-blur-md px-4 py-2 rounded-full border border-white/20">
             <div className="relative size-10 rounded-full overflow-hidden border-2 border-primary">
@@ -192,11 +205,6 @@ export default function StreamClient({ id }: { id: string }) {
         ))}
       </div>
 
-      <div className="absolute bottom-24 left-0 right-0 z-30 px-4">
-        {/* Stream Page Adsterra Unit (Below Chat) */}
-        <AdBanner zoneId="28678563" />
-      </div>
-
       <div className="absolute bottom-6 left-4 right-4 flex items-center gap-3 z-50">
         <div className="flex-1 bg-black/60 backdrop-blur-xl border border-white/10 rounded-[2rem] flex items-center px-5 py-3">
           <Input placeholder="Send love..." value={inputText} onChange={(e) => setInputText(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && sendMsg()} className="bg-transparent border-none text-white focus:ring-0 text-xs font-bold" />
@@ -207,7 +215,7 @@ export default function StreamClient({ id }: { id: string }) {
 
       {!isLive && isHost && (
         <div className="absolute inset-0 flex flex-col items-center justify-center z-[60] bg-black/40 backdrop-blur-sm">
-          <Button onClick={startBroadcast} className="w-64 h-20 bg-primary text-white rounded-[2.5rem] font-black text-2xl uppercase italic tracking-tighter shadow-2xl">🔴 GO LIVE</Button>
+          <Button onClick={() => setShowPermissionModal(true)} className="w-64 h-20 bg-primary text-white rounded-[2.5rem] font-black text-2xl uppercase italic tracking-tighter shadow-2xl">🔴 GO LIVE</Button>
         </div>
       )}
     </div>
