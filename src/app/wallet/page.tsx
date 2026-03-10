@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Zap, PlayCircle, Sparkles, ChevronLeft, Loader2, Wallet as WalletIcon, TrendingUp, X, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useFirebase } from "@/firebase";
@@ -44,29 +44,8 @@ export default function RewardWallet() {
     return () => unsubscribe();
   }, [firestore, user?.uid, areServicesAvailable]);
 
-  // Handle Ad Watching Logic
-  const handleWatchAd = () => {
-    setIsWatching(true);
-    setAdTimer(10); // 10 second watch time
-
-    // Open actual Adsterra Direct Link in background if possible
-    const adUrl = "https://www.highrevenuegate.com/direct-link"; 
-    window.open(adUrl, '_blank');
-
-    // Countdown logic
-    const timer = setInterval(() => {
-      setAdTimer((prev) => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          finishAd();
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-  };
-
-  const finishAd = async () => {
+  // Finish Ad Logic - Memoized to prevent re-renders
+  const finishAd = useCallback(async () => {
     setIsWatching(false);
     
     // Credit logic
@@ -87,9 +66,40 @@ export default function RewardWallet() {
     }
 
     setShowRewardSuccess(true);
-    toast({ title: "🎉 +5 Diamonds!", description: "High-yield ad bonus added.", className: "romantic-glow bg-primary text-white" });
+    toast({ 
+      title: "🎉 +5 Diamonds!", 
+      description: "High-yield ad bonus added.", 
+      className: "romantic-glow bg-primary text-white" 
+    });
     
     setTimeout(() => setShowRewardSuccess(false), 3000);
+  }, [areServicesAvailable, user, firestore, toast]);
+
+  // Timer Effect: Safe way to handle countdown and completion
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    
+    if (isWatching && adTimer > 0) {
+      interval = setInterval(() => {
+        setAdTimer((prev) => prev - 1);
+      }, 1000);
+    } else if (isWatching && adTimer === 0) {
+      finishAd();
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isWatching, adTimer, finishAd]);
+
+  // Handle Ad Watching Start
+  const handleWatchAd = () => {
+    setIsWatching(true);
+    setAdTimer(10); // 10 second watch time
+
+    // Open actual Adsterra Direct Link in background
+    const adUrl = "https://www.highrevenuegate.com/direct-link"; 
+    window.open(adUrl, '_blank');
   };
 
   return (
@@ -168,7 +178,7 @@ export default function RewardWallet() {
         <div className="fixed inset-0 z-[200] bg-black flex flex-col items-center justify-center p-8 animate-in fade-in duration-500">
            <div className="absolute top-10 right-10 flex items-center gap-2 px-4 py-2 bg-white/10 rounded-full">
               <span className="text-xs font-black text-white">{adTimer}s</span>
-              <X className="size-4 text-white/20" />
+              <X onClick={() => setIsWatching(false)} className="size-4 text-white/20 cursor-pointer" />
            </div>
            
            <div className="w-full max-w-xs space-y-8 text-center">
