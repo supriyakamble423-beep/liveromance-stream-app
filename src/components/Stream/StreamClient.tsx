@@ -10,6 +10,7 @@ import { useFirebase, useDoc } from "@/firebase";
 import { doc, updateDoc, serverTimestamp, collection, addDoc, onSnapshot, query, orderBy, limit } from "firebase/firestore";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import AdBanner from "@/components/Ads/AdBanner";
 
 export default function StreamClient({ id }: { id: string }) {
   const router = useRouter();
@@ -170,20 +171,30 @@ export default function StreamClient({ id }: { id: string }) {
               <p className="text-primary text-[9px] font-black uppercase flex items-center gap-1"><Eye size={10} /> {hostData?.viewers || 0} Watchers</p>
             </div>
           </div>
-          {isHost && (
-            <Button variant="destructive" size="icon" className="rounded-full size-10 shadow-lg" onClick={() => router.push('/host-p')}>
-              <Power size={16} />
+          <div className="flex items-center gap-2">
+            {isHost && (
+              <Button variant="destructive" size="icon" className="rounded-full size-10 shadow-lg" onClick={() => router.push('/host-p')}>
+                <Power size={16} />
+              </Button>
+            )}
+            <Button variant="ghost" size="icon" className="rounded-full size-10 bg-black/40 backdrop-blur-md border border-white/10" onClick={() => router.push('/global')}>
+              <X size={20} className="text-white" />
             </Button>
-          )}
+          </div>
         </div>
       </div>
 
-      <div className="absolute bottom-28 left-4 right-4 max-h-48 overflow-y-auto space-y-2 z-40 no-scrollbar">
+      <div className="absolute bottom-44 left-4 right-4 max-h-40 overflow-y-auto space-y-2 z-40 no-scrollbar">
         {messages.map((msg) => (
           <div key={msg.id} className="bg-black/40 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/5 inline-block max-w-[85%]">
             <p className="text-[10px]"><span className="text-secondary font-black uppercase italic mr-2">{msg.user}:</span><span className="text-white/90">{msg.text}</span></p>
           </div>
         ))}
+      </div>
+
+      <div className="absolute bottom-24 left-0 right-0 z-30 px-4">
+        {/* Stream Page Adsterra Unit (Below Chat) */}
+        <AdBanner zoneId="28678563" />
       </div>
 
       <div className="absolute bottom-6 left-4 right-4 flex items-center gap-3 z-50">

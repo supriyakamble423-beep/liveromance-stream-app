@@ -1,11 +1,10 @@
-
 'use client';
 
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 import { collection, doc, setDoc, serverTimestamp, query, where, limit } from 'firebase/firestore';
 import { Header } from "@/components/Header";
 import { BottomNav } from "@/components/BottomNav";
-import { Zap, Lock, X, CheckCircle, AlertCircle, RefreshCw, ShieldAlert, Loader2 } from "lucide-react";
+import { Zap, Lock, X, CheckCircle, AlertCircle, RefreshCw, ShieldAlert } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -32,7 +31,6 @@ export default function GlobalMarketplace() {
     if (isVerified) setShowAgeGate(false);
     const timer = setTimeout(() => setShowAIBot(true), 2500);
     
-    // Safety timeout for marketplace loading
     const safetyTimer = setTimeout(() => {
       if (isUserLoading) setLoadTimeout(true);
     }, 8000);
@@ -58,7 +56,7 @@ export default function GlobalMarketplace() {
     );
   }, [firestore]);
 
-  const { data: hosts, isLoading: isHostsLoading } = useCollection(liveHostsQuery);
+  const { data: hosts } = useCollection(liveHostsQuery);
 
   useEffect(() => {
     if (!hosts || hosts.length === 0 || !user || recommendations.length > 0) return;
@@ -209,7 +207,9 @@ export default function GlobalMarketplace() {
             </div>
           ))}
         </div>
-        <AdBanner />
+        
+        {/* Marketplace Adsterra Unit */}
+        <AdBanner zoneId="28678576" />
       </main>
       <BottomNav />
     </div>
