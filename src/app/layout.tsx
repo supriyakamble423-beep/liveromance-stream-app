@@ -1,3 +1,4 @@
+'use client';
 
 import type { Metadata, Viewport } from "next";
 import { Inter, Spline_Sans } from "next/font/google";
@@ -5,6 +6,7 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { FirebaseClientProvider } from "@/firebase/client-provider";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import Script from "next/script";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -18,23 +20,6 @@ const splineSans = Spline_Sans({
   display: 'swap',
 });
 
-export const metadata: Metadata = {
-  title: 'Global Love - Social Discovery',
-  description: 'Connect with hosts around the world in real-time.',
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: 'black-translucent',
-    title: 'Global Love',
-  },
-};
-
-export const viewport: Viewport = {
-  width: "device-width",
-  initialScale: 1,
-  themeColor: "#E11D48",
-  viewportFit: 'cover',
-};
-
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -45,6 +30,13 @@ export default function RootLayout({
       <head>
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="mobile-web-app-capable" content="yes" />
+        {/* Adsterra Global Social Bar - High CPM Unit */}
+        <Script 
+          id="adsterra-social-bar"
+          strategy="afterInteractive"
+          src="//pl25914325.highratecpm.com/73/64/82/7364828678576.js" 
+          onError={(e) => console.error("Social Bar failed to load", e)}
+        />
       </head>
       <body className="font-body antialiased selection:bg-primary/30 selection:text-primary mesh-gradient min-h-screen" suppressHydrationWarning>
         <ErrorBoundary>

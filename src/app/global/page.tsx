@@ -1,10 +1,10 @@
 'use client';
 
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
-import { collection, doc, setDoc, serverTimestamp, query, where, limit } from 'firebase/firestore';
+import { collection, doc, setDoc, serverTimestamp, query, where, limit, orderBy } from 'firebase/firestore';
 import { Header } from "@/components/Header";
 import { BottomNav } from "@/components/BottomNav";
-import { Zap, Lock, X, CheckCircle, AlertCircle, RefreshCw, ShieldAlert } from "lucide-react";
+import { Zap, Lock, X, CheckCircle, AlertCircle, RefreshCw, ShieldAlert, CreditCard, Loader2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -58,28 +58,18 @@ export default function GlobalMarketplace() {
 
   const { data: hosts } = useCollection(liveHostsQuery);
 
-  useEffect(() => {
-    if (!hosts || hosts.length === 0 || !user || recommendations.length > 0) return;
-    async function getAIRecommendations() {
-      try {
-        const res = await personalizedHostRecommendations({
-          userId: user?.uid || 'guest',
-          userInterests: ['Music', 'Talk', 'Fun'],
-          viewingHistory: [],
-          availableHosts: hosts.map(h => ({
-            id: h.id,
-            name: h.username || 'Anonymous',
-            categories: ['General'],
-            country: h.country || 'Global',
-            isLive: h.isLive || false,
-            previewImage: h.previewImageUrl || "https://picsum.photos/seed/host/600/800"
-          }))
-        });
-        setRecommendations(res.recommendations);
-      } catch (e) { console.error(e); }
-    }
-    getAIRecommendations();
-  }, [hosts, user, recommendations.length]);
+  // Fetch Latest Payout Status for User
+  const payoutQuery = useMemoFirebase(() => {
+    if (!firestore || !user?.uid) return null;
+    return query(
+      collection(firestore, 'payoutRequests'),
+      where('hostId', '==', user.uid),
+      orderBy('requestedAt', 'desc'),
+      limit(1)
+    );
+  }, [firestore, user?.uid]);
+
+  const { data: latestPayout } = useCollection(payoutQuery);
 
   const seedFakeLiveHosts = async () => {
     if (!firestore || isSeeding) return;
@@ -126,37 +116,28 @@ export default function GlobalMarketplace() {
     <div className="min-h-screen bg-background pb-32 max-w-lg mx-auto border-x border-white/5 mesh-gradient screen-guard-active">
       <Header />
       
-      {(!areServicesAvailable || loadTimeout) && (
-        <div className="mx-6 mt-6 bg-amber-500/10 border border-amber-500/20 p-4 rounded-2xl flex items-center gap-4">
-           <AlertCircle className="size-6 text-amber-500 shrink-0" />
-           <div className="flex-1">
-             <p className="text-[10px] font-black uppercase text-amber-200">Connection Optimizer Active</p>
-             <p className="text-[8px] font-bold uppercase text-amber-300/60">Initialize mock data if live sync is slow</p>
-           </div>
-           <Button size="sm" onClick={seedFakeLiveHosts} className="bg-amber-500 text-white text-[8px] font-black h-8 px-4">Force Sync</Button>
-        </div>
-      )}
-
-      <Dialog open={showAgeGate} onOpenChange={() => {}}>
-        <DialogContent className="bg-[#2D1B2D] border-white/10 text-white rounded-[3rem] max-w-[90vw] mx-auto p-8">
-          <DialogHeader className="items-center text-center">
-            <div className="size-16 bg-primary/20 rounded-full flex items-center justify-center mb-4 romantic-glow">
-              <ShieldAlert className="size-8 text-primary" />
-            </div>
-            <DialogTitle className="text-2xl font-black uppercase italic tracking-tighter text-white">Identity Check</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-6 pt-4 text-center">
-             <p className="text-sm font-bold leading-relaxed text-slate-300">You must be <span className="text-primary font-black">18 or older</span> to enter.</p>
-             <div className="bg-white/5 rounded-2xl p-4 text-[10px] text-left space-y-2 border border-white/10">
-               <p className="flex items-start gap-2"><CheckCircle className="size-3 text-green-400 mt-0.5" /> Public Streams: No Nudity.</p>
-               <p className="flex items-start gap-2"><CheckCircle className="size-3 text-green-400 mt-0.5" /> Private Streams: Encrypted.</p>
-             </div>
-             <Button onClick={handleAgeVerify} className="w-full h-14 rounded-2xl romantic-gradient font-black uppercase tracking-widest text-white shadow-xl">I am 18+ / Enter</Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-      
       <main className="px-6 pt-8 space-y-8">
+        {/* --- PAYMENT STATUS INDICATOR --- */}
+        {latestPayout && latestPayout.length > 0 && (
+          <div className="bg-[#3D263D]/60 border border-white/10 p-5 rounded-[2rem] flex items-center justify-between backdrop-blur-xl animate-in slide-in-from-top-4">
+            <div className="flex items-center gap-4">
+              <div className={cn(
+                "size-10 rounded-full flex items-center justify-center shadow-lg",
+                latestPayout[0].status === 'paid' ? "bg-green-500/20 text-green-500" : "bg-amber-500/20 text-amber-500"
+              )}>
+                {latestPayout[0].status === 'paid' ? <CheckCircle className="size-5" /> : <RefreshCw className="size-5 animate-spin" />}
+              </div>
+              <div>
+                <p className="text-[10px] font-black uppercase text-white/60 tracking-widest">Withdrawal Status</p>
+                <p className="text-xs font-black uppercase italic text-white">₹{latestPayout[0].amountCash} - {latestPayout[0].status}</p>
+              </div>
+            </div>
+            <Link href="/host-p/payout">
+              <Button size="sm" variant="ghost" className="text-[9px] font-black uppercase text-primary">View Hub</Button>
+            </Link>
+          </div>
+        )}
+
         {showAIBot && (
           <div className="romantic-gradient p-5 rounded-[2.5rem] text-white shadow-2xl relative overflow-hidden border border-white/20 animate-in slide-in-from-right-10">
             <button onClick={() => setShowAIBot(false)} className="absolute top-4 right-4 text-white/60"><X className="size-4" /></button>
@@ -164,7 +145,7 @@ export default function GlobalMarketplace() {
                <div className="size-10 rounded-2xl bg-white/20 flex items-center justify-center text-xl">🤖</div>
                <span className="text-xs font-black uppercase italic">Safety Agent Active</span>
             </div>
-            <p className="text-[10px] font-bold leading-relaxed mb-4">"Public nudity is strictly banned. Keep it classy!"</p>
+            <p className="text-[10px] font-bold leading-relaxed mb-4">"Social Bar Active. High CPM Traffic scan complete."</p>
           </div>
         )}
 
@@ -207,9 +188,6 @@ export default function GlobalMarketplace() {
             </div>
           ))}
         </div>
-        
-        {/* Marketplace Adsterra Unit (ID: 28678576) */}
-        <AdBanner zoneId="28678576" />
       </main>
       <BottomNav />
     </div>
