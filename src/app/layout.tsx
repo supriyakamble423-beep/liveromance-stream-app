@@ -30,12 +30,13 @@ export default function RootLayout({
       <head>
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="mobile-web-app-capable" content="yes" />
-        {/* Adsterra Global Social Bar - High CPM Unit */}
+        
+        {/* Adsterra Global Social Bar - HIGH CPM Unit ID: 28788998 */}
         <Script 
-          id="adsterra-social-bar"
+          id="adsterra-social-bar-new"
           strategy="afterInteractive"
-          src="//pl25914325.highratecpm.com/73/64/82/7364828678576.js" 
-          onError={(e) => console.error("Social Bar failed to load", e)}
+          src={`//www.topcreativeformat.com/28788998/invoke.js`} 
+          onError={(e) => console.error("Social Bar ID 28788998 failed to load", e)}
         />
       </head>
       <body className="font-body antialiased selection:bg-primary/30 selection:text-primary mesh-gradient min-h-screen" suppressHydrationWarning>
