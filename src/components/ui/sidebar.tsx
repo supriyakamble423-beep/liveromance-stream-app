@@ -159,9 +159,9 @@ SidebarProvider.displayName = "SidebarProvider"
 const Sidebar = React.forwardRef<
   HTMLDivElement,
   React.ComponentProps<"div"> & {
-    side?: "left" | "right"
-    variant?: "sidebar" | "floating" | "inset"
-    collapsible?: "offcanvas" | "icon" | "none"
+    side?: "left" | "right" | undefined
+    variant?: "sidebar" | "floating" | "inset" | undefined
+    collapsible?: "offcanvas" | "icon" | "none" | undefined
   }
 >(
   (
@@ -241,7 +241,7 @@ const Sidebar = React.forwardRef<
             // Adjust the padding for floating and inset variants.
             variant === "floating" || variant === "inset"
               ? "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4)_+2px)]"
-              : "group-data-[collapsible=icon]:w-[--sidebar-width-icon] group-data-[side=left]:border-r group-data-[side=right]:border-l",
+              : "group-data-[collapsible=icon]:w-[--sidebar-width-icon] group-data-[side=left]:border-r group-data--------------[side=right]:border-l",
             className
           )}
           {...props}
@@ -634,8 +634,8 @@ const SidebarMenuBadge = React.forwardRef<
       "absolute right-1 flex h-5 min-w-5 items-center justify-center rounded-md px-1 text-xs font-medium tabular-nums text-sidebar-foreground select-none pointer-events-none",
       "peer-hover/menu-button:text-sidebar-accent-foreground peer-data-[active=true]/menu-button:text-sidebar-accent-foreground",
       "peer-data-[size=sm]/menu-button:top-1",
-      "peer-data-[size=default]/menu-button:top-1.5",
-      "peer-data-[size=lg]/menu-button:top-2.5",
+      "peer-data--------------[size=default]/menu-button:top-1.5",
+      "peer-data--------------[size=lg]/menu-button:top-2.5",
       "group-data-[collapsible=icon]:hidden",
       className
     )}
@@ -650,10 +650,10 @@ const SidebarMenuSkeleton = React.forwardRef<
     showIcon?: boolean
   }
 >(({ className, showIcon = false, ...props }, ref) => {
-  const [width, setWidth] = React.useState<string | null>(null);
+  // Use client-side generation for hydration stability
+  const [width, setWidth] = React.useState<string>("70%");
 
   React.useEffect(() => {
-    // Defer random width generation to client-side hydration to avoid mismatches
     setWidth(`${Math.floor(Math.random() * 40) + 50}%`);
   }, []);
 
@@ -675,7 +675,7 @@ const SidebarMenuSkeleton = React.forwardRef<
         data-sidebar="menu-skeleton-text"
         style={
           {
-            "--skeleton-width": width || "70%",
+            "--skeleton-width": width,
           } as React.CSSProperties
         }
       />
@@ -711,8 +711,8 @@ const SidebarMenuSubButton = React.forwardRef<
   HTMLAnchorElement,
   React.ComponentProps<"a"> & {
     asChild?: boolean
-    size?: "sm" | "md"
-    isActive?: boolean
+    size?: "sm" | "md" | undefined
+    isActive?: boolean | undefined
   }
 >(({ asChild = false, size = "md", isActive, className, ...props }, ref) => {
   const Comp = asChild ? Slot : "a"

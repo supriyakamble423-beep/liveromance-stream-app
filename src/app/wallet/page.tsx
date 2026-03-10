@@ -19,7 +19,7 @@ export default function RewardWallet() {
   const [adTimer, setAdTimer] = useState(0);
   const [showRewardSuccess, setShowRewardSuccess] = useState(false);
   
-  // Guard to prevent multiple reward claims
+  // Guard to prevent multiple reward claims and rendering side-effects
   const isClaimingRef = useRef(false);
 
   // Load User Balance
@@ -46,8 +46,8 @@ export default function RewardWallet() {
     return () => unsubscribe();
   }, [firestore, user?.uid, areServicesAvailable]);
 
-  // Finish Ad Logic - Memoized
-  const finishAd = useCallback(async () => {
+  // Finish Ad Logic - Executed only inside useEffect to avoid "update during render" errors
+  const processReward = useCallback(async () => {
     if (isClaimingRef.current) return;
     isClaimingRef.current = true;
     
@@ -72,8 +72,7 @@ export default function RewardWallet() {
     setShowRewardSuccess(true);
     toast({ 
       title: "🎉 +5 Diamonds!", 
-      description: "High-yield ad bonus added.", 
-      className: "romantic-glow bg-primary text-white" 
+      description: "Ad bonus successfully added to your vault.",
     });
     
     setTimeout(() => {
@@ -91,21 +90,20 @@ export default function RewardWallet() {
         setAdTimer((prev) => prev - 1);
       }, 1000);
     } else if (isWatching && adTimer === 0) {
-      finishAd();
+      processReward();
     }
 
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [isWatching, adTimer, finishAd]);
+  }, [isWatching, adTimer, processReward]);
 
-  // Handle Ad Watching Start
   const handleWatchAd = () => {
-    if (isWatching) return;
+    if (isWatching || isClaimingRef.current) return;
     setIsWatching(true);
     setAdTimer(10); 
 
-    // Open actual Adsterra Direct Link in background
+    // Simulation of revenue generation
     const adUrl = "https://www.highrevenuegate.com/direct-link"; 
     window.open(adUrl, '_blank');
   };
@@ -153,7 +151,7 @@ export default function RewardWallet() {
           
           <Button 
             onClick={handleWatchAd} 
-            disabled={isWatching} 
+            disabled={isWatching || isLoading} 
             className={cn(
               "w-full h-16 rounded-[2rem] font-black uppercase tracking-widest text-white shadow-xl transition-all active:scale-95",
               isWatching ? "bg-slate-800" : "romantic-gradient"

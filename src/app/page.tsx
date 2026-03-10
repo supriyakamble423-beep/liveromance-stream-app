@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, Suspense, useState } from 'react';
@@ -15,22 +14,22 @@ function RedirectLogic() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [showManualBypass, setShowManualBypass] = useState(false);
 
-  // ✅ Hard Bypass: If signal establishment is too slow
+  // ✅ Hard Bypass: Prevent infinite hang if Firebase signal is missing
   useEffect(() => {
     const timer = setTimeout(() => {
       if (!isProcessing) {
         console.warn("Signal timeout. Showing manual bypass.");
         setShowManualBypass(true);
       }
-    }, 4000);
+    }, 3000);
     
-    // Auto-redirect to global after 8 seconds as absolute fallback
+    // Absolute fallback after 6 seconds
     const autoTimer = setTimeout(() => {
       if (!isProcessing) {
         setIsProcessing(true);
         router.push('/global');
       }
-    }, 8000);
+    }, 6000);
 
     return () => {
       clearTimeout(timer);
@@ -39,14 +38,14 @@ function RedirectLogic() {
   }, [isProcessing, router]);
 
   useEffect(() => {
-    // If services are missing, skip to global immediately
+    // If services are confirmed missing, jump to marketplace
     if (!areServicesAvailable && !isUserLoading) {
-      router.push('/global');
       setIsProcessing(true);
+      router.push('/global');
       return;
     }
 
-    // Wait for auth to settle
+    // Wait for auth settlement
     if (isUserLoading || isProcessing) return;
 
     const handleLogic = async () => {
@@ -93,12 +92,12 @@ function RedirectLogic() {
       <div className="space-y-6">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="size-10 text-primary animate-spin" />
-          <p className="text-white/40 text-[10px] font-black uppercase tracking-[0.4em] animate-pulse">Establishing Romantic Grid...</p>
+          <p className="text-white/40 text-[10px] font-black uppercase tracking-[0.4em] animate-pulse">Establishing Signal...</p>
         </div>
 
         {showManualBypass && (
           <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-700">
-            <p className="text-[10px] text-primary/60 font-black uppercase tracking-widest">Signal Slow? Try Manual Override</p>
+            <p className="text-[10px] text-primary/60 font-black uppercase tracking-widest">Slow Connection Detected</p>
             <Button 
               variant="outline" 
               onClick={() => {
@@ -122,7 +121,7 @@ export default function RootRedirect() {
       <Suspense fallback={
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="animate-spin text-primary size-10" />
-          <div className="text-white opacity-20 font-black uppercase tracking-[0.2em] text-[10px]">Booting Grid...</div>
+          <div className="text-white opacity-20 font-black uppercase tracking-[0.2em] text-[10px]">Syncing Nodes...</div>
         </div>
       }>
         <RedirectLogic />
