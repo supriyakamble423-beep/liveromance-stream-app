@@ -10,7 +10,6 @@ import { useFirebase, useDoc } from "@/firebase";
 import { doc, updateDoc, serverTimestamp, collection, addDoc, onSnapshot, query, orderBy, limit } from "firebase/firestore";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import AdBanner from "@/components/Ads/AdBanner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
@@ -63,49 +62,63 @@ export default function StreamClient({ id }: { id: string }) {
     return () => clearTimeout(timer);
   }, [host, id, areServicesAvailable, isGridLoading]);
 
-  const requestPermissions = async () => {
-    setPermissionError(null);
-    try {
-      // Relaxed constraints for better compatibility
-      const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: { 
-          facingMode: 'user',
-          // Lower initial requirement to prevent failure on weak hardware
-          width: { min: 640, ideal: 1280 },
-          height: { min: 480, ideal: 720 }
-        },
-        audio: true
-      });
-      return mediaStream;
-    } catch (err: any) {
-      console.error("Media Error:", err);
-      let errorMsg = "Camera & Mic access denied.";
-      
-      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-        errorMsg = "Aapne camera access mana kar diya hai. Browser settings mein jaakar ise 'Allow' karein.";
-      } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
-        errorMsg = "Aapke device mein camera nahi mila.";
+  // ✅ Android Camera Permission Handler (Capacitor)
+  const requestCameraPermission = async () => {
+    // Check if we are running in a Capacitor/Native environment
+    const isCapacitor = typeof window !== 'undefined' && (window as any).Capacitor?.isNative;
+    
+    if (isCapacitor) {
+      try {
+        const { Camera: CapCamera } = await import('@capacitor/camera');
+        const permissionStatus = await CapCamera.checkPermissions();
+        
+        if (permissionStatus.camera === 'prompt' || permissionStatus.camera === 'prompt-with-rationale') {
+          const requestResult = await CapCamera.requestPermissions();
+          return requestResult.camera === 'granted';
+        }
+        
+        return permissionStatus.camera === 'granted';
+      } catch (error) {
+        console.error("Capacitor Permission error:", error);
+        return false;
       }
-      
-      setPermissionError(errorMsg);
-      toast({
-        variant: "destructive",
-        title: "Permissions Failed",
-        description: errorMsg
-      });
-      throw err;
     }
+    return true; // Web par browser handle karega navigation media devices se
   };
 
   const startBroadcast = async () => {
+    setPermissionError(null);
+    
+    // 1. Android/iOS native permissions check
+    const hasPermission = await requestCameraPermission();
+    
+    if (!hasPermission) {
+      const errorMsg = "Camera/Mic access denied. Please enable it from app settings.";
+      setPermissionError(errorMsg);
+      toast({
+        variant: "destructive",
+        title: "Permission Required",
+        description: errorMsg
+      });
+      return;
+    }
+
+    // 2. Start Media Stream
     try {
-      const mediaStream = await requestPermissions();
+      const mediaStream = await navigator.mediaDevices.getUserMedia({
+        video: { 
+          facingMode: 'user',
+          width: { ideal: 640 },
+          height: { ideal: 480 }
+        },
+        audio: true
+      });
+
       setStream(mediaStream);
       setShowPermissionModal(false);
       
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream;
-        // Explicitly play after setting source
         try {
           await videoRef.current.play();
         } catch (e) {
@@ -122,8 +135,17 @@ export default function StreamClient({ id }: { id: string }) {
       
       setIsLive(true);
       toast({ title: "🔴 LIVE", description: "Broadcast signal established." });
-    } catch (err) {
-      // Error is already handled in requestPermissions
+    } catch (err: any) {
+      console.error("Media Capture Error:", err);
+      let errorMsg = "Could not access camera/mic.";
+      if (err.name === 'NotAllowedError') errorMsg = "Settings mein jaakar camera access allow karein.";
+      
+      setPermissionError(errorMsg);
+      toast({
+        variant: "destructive",
+        title: "Camera Error",
+        description: errorMsg
+      });
     }
   };
 
