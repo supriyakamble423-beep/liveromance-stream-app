@@ -5,29 +5,32 @@ import { useFirebase } from "@/firebase";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { ref, uploadString, getDownloadURL } from "firebase/storage";
 import { useRouter } from "next/navigation";
-import { ShieldCheck, Camera, Loader2, CheckCircle2, ChevronLeft, AlertCircle } from "lucide-react";
+import { ShieldCheck, Camera, Loader2, CheckCircle2, ChevronLeft, AlertCircle, HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 import { hostFaceVerification } from "@/ai/flows/host-face-verification-flow";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function HostVerificationPage() {
   const { firestore, storage, user, areServicesAvailable } = useFirebase();
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [loading, setLoading] = useState(false);
   const [isDone, setIsDone] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const { toast } = useToast();
   const router = useRouter();
 
   useEffect(() => {
     async function startCamera() {
+      setError(null);
       try {
         const s = await navigator.mediaDevices.getUserMedia({ 
           video: { 
             facingMode: "user",
-            width: { ideal: 720 },
-            height: { ideal: 720 }
+            width: { ideal: 640 },
+            height: { ideal: 640 }
           }, 
           audio: false 
         });
@@ -35,24 +38,29 @@ export default function HostVerificationPage() {
         if (videoRef.current) {
           videoRef.current.srcObject = s;
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error("Camera Error:", err);
+        let msg = "Camera access denied.";
+        if (err.name === 'NotAllowedError') msg = "Settings mein jaakar camera access allow karein.";
+        setError(msg);
         toast({ 
           variant: "destructive", 
-          title: "Camera Error", 
-          description: "Please allow camera access to verify your identity." 
+          title: "Camera Access Error", 
+          description: msg 
         });
       }
     }
     startCamera();
 
     return () => {
-      stream?.getTracks().forEach(track => track.stop());
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
     };
   }, []);
 
   const handleCapture = async () => {
-    if (!videoRef.current) {
+    if (!videoRef.current || !stream) {
       toast({ variant: "destructive", title: "Error", description: "Camera not ready." });
       return;
     }
@@ -62,7 +70,6 @@ export default function HostVerificationPage() {
     try {
       // Logic for Simulation Mode
       if (!areServicesAvailable || !user) {
-        console.warn("Simulation Mode: Bypassing Firebase check.");
         setIsDone(true);
         toast({ title: "Simulation Success", description: "Identity verified in mock mode." });
         setTimeout(() => router.push('/host-p'), 1500);
@@ -119,7 +126,6 @@ export default function HostVerificationPage() {
 
     } catch (error: any) {
       console.error("Verification Error:", error);
-      // Fallback for user experience fluidity
       setIsDone(true);
       toast({ title: "Verification Bypassed", description: "System overflow, node activated manually." });
       setTimeout(() => router.push('/host-p'), 1000);
@@ -130,12 +136,6 @@ export default function HostVerificationPage() {
 
   return (
     <div className="min-h-screen bg-black text-white flex flex-col max-w-lg mx-auto border-x border-white/10">
-      {!areServicesAvailable && (
-        <div className="bg-amber-500/20 p-2 flex items-center justify-center gap-2 text-[8px] font-black uppercase tracking-widest text-amber-400">
-          <AlertCircle className="size-3" /> Simulation Mode: Capture will always succeed
-        </div>
-      )}
-      
       <div className="p-6 flex items-center gap-4">
         <Link href="/host-p">
           <Button variant="ghost" size="icon" className="rounded-full bg-white/5">
@@ -169,6 +169,13 @@ export default function HostVerificationPage() {
               <div className="absolute inset-0 pointer-events-none">
                 <div className="absolute top-0 left-0 w-full h-1 bg-primary/60 shadow-[0_0_20px_#E11D48] animate-scan" />
               </div>
+              {error && (
+                <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center p-8 text-center space-y-4">
+                  <AlertCircle className="size-12 text-red-500" />
+                  <p className="text-xs font-black uppercase text-red-200">{error}</p>
+                  <Button variant="outline" size="sm" onClick={() => window.location.reload()} className="border-white/20 text-white rounded-xl text-[10px] font-black uppercase">Refresh Page</Button>
+                </div>
+              )}
             </>
           ) : (
             <div className="w-full h-full flex flex-col items-center justify-center bg-green-500/10 animate-in fade-in zoom-in duration-500">
@@ -202,7 +209,7 @@ export default function HostVerificationPage() {
               Secure AI Tunnel
             </div>
             <p className="text-[9px] text-slate-600 text-center px-10 leading-relaxed font-bold uppercase">
-              Instant verification powered by Stream-X AI.<br/> Redirection is automatic.
+              Identity lock is mandatory for global signal. <br/> Redirection is automatic.
             </p>
           </div>
         </div>

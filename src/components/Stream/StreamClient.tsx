@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { X, Heart, Send, Lock, Zap, Eye, Gift, Share2, MoreVertical, Power, Grid3X3, Loader2, AlertCircle, MapPin, Camera, ShieldCheck } from "lucide-react";
+import { X, Heart, Send, Lock, Zap, Eye, Gift, Share2, MoreVertical, Power, Grid3X3, Loader2, AlertCircle, MapPin, Camera, ShieldCheck, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useFirebase, useDoc } from "@/firebase";
@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import AdBanner from "@/components/Ads/AdBanner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function StreamClient({ id }: { id: string }) {
   const router = useRouter();
@@ -27,6 +28,7 @@ export default function StreamClient({ id }: { id: string }) {
   const [isSimulated, setIsSimulated] = useState(false);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [showPermissionModal, setShowPermissionModal] = useState(false);
+  const [permissionError, setPermissionError] = useState<string | null>(null);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const isHost = user?.uid === id || id === 'simulate_host';
@@ -62,30 +64,53 @@ export default function StreamClient({ id }: { id: string }) {
   }, [host, id, areServicesAvailable, isGridLoading]);
 
   const requestPermissions = async () => {
+    setPermissionError(null);
     try {
+      // Relaxed constraints for better compatibility
       const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
+        video: { 
+          facingMode: 'user',
+          // Lower initial requirement to prevent failure on weak hardware
+          width: { min: 640, ideal: 1280 },
+          height: { min: 480, ideal: 720 }
+        },
         audio: true
       });
       return mediaStream;
-    } catch (err) {
+    } catch (err: any) {
+      console.error("Media Error:", err);
+      let errorMsg = "Camera & Mic access denied.";
+      
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        errorMsg = "Aapne camera access mana kar diya hai. Browser settings mein jaakar ise 'Allow' karein.";
+      } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+        errorMsg = "Aapke device mein camera nahi mila.";
+      }
+      
+      setPermissionError(errorMsg);
       toast({
         variant: "destructive",
-        title: "Permissions Denied",
-        description: "Camera & Mic access is required for streaming."
+        title: "Permissions Failed",
+        description: errorMsg
       });
       throw err;
     }
   };
 
   const startBroadcast = async () => {
-    setShowPermissionModal(false);
     try {
       const mediaStream = await requestPermissions();
       setStream(mediaStream);
+      setShowPermissionModal(false);
+      
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream;
-        await videoRef.current.play();
+        // Explicitly play after setting source
+        try {
+          await videoRef.current.play();
+        } catch (e) {
+          console.error("Video play failed:", e);
+        }
       }
 
       if (hostRef && isHost && areServicesAvailable) {
@@ -98,7 +123,7 @@ export default function StreamClient({ id }: { id: string }) {
       setIsLive(true);
       toast({ title: "🔴 LIVE", description: "Broadcast signal established." });
     } catch (err) {
-      console.error(err);
+      // Error is already handled in requestPermissions
     }
   };
 
@@ -132,7 +157,9 @@ export default function StreamClient({ id }: { id: string }) {
 
   useEffect(() => {
     return () => {
-      stream?.getTracks().forEach(track => track.stop());
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
     };
   }, [stream]);
 
@@ -147,9 +174,18 @@ export default function StreamClient({ id }: { id: string }) {
 
   return (
     <div className="relative h-screen w-full bg-black overflow-hidden max-w-[430px] mx-auto screen-guard-active">
-      {/* Social Bar Safe Zone Padding (Top & Bottom) */}
-      <div className="absolute inset-0 pt-16 pb-24">
-        <video ref={videoRef} autoPlay muted playsInline className={cn("w-full h-full object-cover transition-opacity duration-1000 rounded-3xl", isLive ? "opacity-100" : "opacity-30")} />
+      {/* Video Layer */}
+      <div className="absolute inset-0 pt-16 pb-24 bg-slate-900/20">
+        <video 
+          ref={videoRef} 
+          autoPlay 
+          muted 
+          playsInline 
+          className={cn(
+            "w-full h-full object-cover transition-opacity duration-1000", 
+            isLive ? "opacity-100" : "opacity-20"
+          )} 
+        />
       </div>
       <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-transparent to-black/90 pointer-events-none" />
 
@@ -160,15 +196,33 @@ export default function StreamClient({ id }: { id: string }) {
             <div className="size-20 bg-primary/20 rounded-full flex items-center justify-center border-2 border-primary animate-pulse">
               <Camera className="size-10 text-primary" />
             </div>
+            
             <div className="space-y-2">
               <DialogTitle className="text-2xl font-black uppercase italic tracking-tighter">Identity Access</DialogTitle>
               <p className="text-sm text-slate-400 font-bold uppercase leading-relaxed">
                 Duniya se judne ke liye <br/><span className="text-white">Camera aur Mic</span> allow karein.
               </p>
             </div>
-            <Button onClick={startBroadcast} className="w-full h-16 romantic-gradient rounded-2xl font-black uppercase tracking-widest text-lg shadow-xl">
-              Chalo Shuru Karein
-            </Button>
+
+            {permissionError && (
+              <Alert variant="destructive" className="bg-red-500/10 border-red-500/20 text-red-200 rounded-2xl py-3">
+                <AlertCircle className="size-4" />
+                <AlertDescription className="text-[10px] font-bold uppercase tracking-tight">
+                  {permissionError}
+                </AlertDescription>
+              </Alert>
+            )}
+
+            <div className="w-full space-y-3">
+              <Button onClick={startBroadcast} className="w-full h-16 romantic-gradient rounded-2xl font-black uppercase tracking-widest text-lg shadow-xl border-none">
+                Chalo Shuru Karein
+              </Button>
+              {permissionError && (
+                <p className="text-[9px] text-slate-500 font-black uppercase">
+                  Settings > Site Settings > Camera > Reset
+                </p>
+              )}
+            </div>
           </div>
         </DialogContent>
       </Dialog>
