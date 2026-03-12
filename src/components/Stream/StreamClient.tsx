@@ -62,48 +62,38 @@ export default function StreamClient({ id }: { id: string }) {
     return () => clearTimeout(timer);
   }, [host, id, areServicesAvailable, isGridLoading]);
 
-  // ✅ Android Camera Permission Handler (Capacitor)
+  // ✅ Capacitor/Native Permission Handler
   const requestCameraPermission = async () => {
-    // Check if we are running in a Capacitor/Native environment
     const isCapacitor = typeof window !== 'undefined' && (window as any).Capacitor?.isNative;
-    
     if (isCapacitor) {
       try {
         const { Camera: CapCamera } = await import('@capacitor/camera');
-        const permissionStatus = await CapCamera.checkPermissions();
-        
-        if (permissionStatus.camera === 'prompt' || permissionStatus.camera === 'prompt-with-rationale') {
-          const requestResult = await CapCamera.requestPermissions();
-          return requestResult.camera === 'granted';
+        const status = await CapCamera.checkPermissions();
+        if (status.camera !== 'granted') {
+          const res = await CapCamera.requestPermissions();
+          return res.camera === 'granted';
         }
-        
-        return permissionStatus.camera === 'granted';
-      } catch (error) {
-        console.error("Capacitor Permission error:", error);
+        return true;
+      } catch (e) {
+        console.error("Capacitor Permission Error", e);
         return false;
       }
     }
-    return true; // Web par browser handle karega navigation media devices se
+    return true;
   };
 
   const startBroadcast = async () => {
     setPermissionError(null);
     
-    // 1. Android/iOS native permissions check
-    const hasPermission = await requestCameraPermission();
-    
-    if (!hasPermission) {
-      const errorMsg = "Camera/Mic access denied. Please enable it from app settings.";
-      setPermissionError(errorMsg);
-      toast({
-        variant: "destructive",
-        title: "Permission Required",
-        description: errorMsg
-      });
+    // 1. Check Native Permissions first
+    const hasNativePermission = await requestCameraPermission();
+    if (!hasNativePermission) {
+      setPermissionError("Camera access denied in app settings.");
+      toast({ variant: "destructive", title: "Permission Denied", description: "Please enable camera in phone settings." });
       return;
     }
 
-    // 2. Start Media Stream
+    // 2. Request Media Stream
     try {
       const mediaStream = await navigator.mediaDevices.getUserMedia({
         video: { 
@@ -119,33 +109,27 @@ export default function StreamClient({ id }: { id: string }) {
       
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream;
-        try {
-          await videoRef.current.play();
-        } catch (e) {
-          console.error("Video play failed:", e);
-        }
+        await videoRef.current.play();
       }
 
       if (hostRef && isHost && areServicesAvailable) {
-        await updateDoc(hostRef, {
-          isLive: true,
-          lastLive: serverTimestamp()
-        });
+        await updateDoc(hostRef, { isLive: true, lastLive: serverTimestamp() });
       }
       
       setIsLive(true);
-      toast({ title: "🔴 LIVE", description: "Broadcast signal established." });
+      toast({ title: "🔴 LIVE", description: "Broadcasting started successfully!" });
     } catch (err: any) {
-      console.error("Media Capture Error:", err);
-      let errorMsg = "Could not access camera/mic.";
-      if (err.name === 'NotAllowedError') errorMsg = "Settings mein jaakar camera access allow karein.";
+      console.error("Media Error:", err.name);
       
-      setPermissionError(errorMsg);
-      toast({
-        variant: "destructive",
-        title: "Camera Error",
-        description: errorMsg
-      });
+      let msg = "Could not access camera/mic.";
+      if (err.name === 'NotAllowedError') {
+        msg = "Permission Denied! Browser settings mein jaakar camera allow karein.";
+      } else if (err.name === 'NotFoundError') {
+        msg = "No camera found on this device.";
+      }
+      
+      setPermissionError(msg);
+      toast({ variant: "destructive", title: "Signal Error", description: msg });
     }
   };
 
@@ -179,9 +163,7 @@ export default function StreamClient({ id }: { id: string }) {
 
   useEffect(() => {
     return () => {
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-      }
+      if (stream) stream.getTracks().forEach(track => track.stop());
     };
   }, [stream]);
 
@@ -196,7 +178,6 @@ export default function StreamClient({ id }: { id: string }) {
 
   return (
     <div className="relative h-screen w-full bg-black overflow-hidden max-w-[430px] mx-auto screen-guard-active">
-      {/* Video Layer */}
       <div className="absolute inset-0 pt-16 pb-24 bg-slate-900/20">
         <video 
           ref={videoRef} 
@@ -211,40 +192,25 @@ export default function StreamClient({ id }: { id: string }) {
       </div>
       <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-transparent to-black/90 pointer-events-none" />
 
-      {/* Permission Modal */}
       <Dialog open={showPermissionModal} onOpenChange={setShowPermissionModal}>
         <DialogContent className="bg-[#2D1B2D] border-white/10 text-white rounded-[3rem] p-8 max-w-[90vw] mx-auto shadow-2xl">
           <div className="flex flex-col items-center text-center space-y-6">
             <div className="size-20 bg-primary/20 rounded-full flex items-center justify-center border-2 border-primary animate-pulse">
               <Camera className="size-10 text-primary" />
             </div>
-            
-            <div className="space-y-2">
-              <DialogTitle className="text-2xl font-black uppercase italic tracking-tighter">Identity Access</DialogTitle>
-              <p className="text-sm text-slate-400 font-bold uppercase leading-relaxed">
-                Duniya se judne ke liye <br/><span className="text-white">Camera aur Mic</span> allow karein.
-              </p>
-            </div>
-
+            <DialogTitle className="text-2xl font-black uppercase italic tracking-tighter">Identity Access</DialogTitle>
+            <p className="text-sm text-slate-400 font-bold uppercase leading-relaxed">
+              Duniya se judne ke liye <br/><span className="text-white">Camera aur Mic</span> allow karein.
+            </p>
             {permissionError && (
-              <Alert variant="destructive" className="bg-red-500/10 border-red-500/20 text-red-200 rounded-2xl py-3">
+              <Alert variant="destructive" className="bg-red-500/10 border-red-500/20 text-red-200 rounded-2xl">
                 <AlertCircle className="size-4" />
-                <AlertDescription className="text-[10px] font-bold uppercase tracking-tight">
-                  {permissionError}
-                </AlertDescription>
+                <AlertDescription className="text-[10px] font-bold uppercase">{permissionError}</AlertDescription>
               </Alert>
             )}
-
-            <div className="w-full space-y-3">
-              <Button onClick={startBroadcast} className="w-full h-16 romantic-gradient rounded-2xl font-black uppercase tracking-widest text-lg shadow-xl border-none">
-                Chalo Shuru Karein
-              </Button>
-              {permissionError && (
-                <p className="text-[9px] text-slate-500 font-black uppercase">
-                  Settings > Site Settings > Camera > Reset
-                </p>
-              )}
-            </div>
+            <Button onClick={startBroadcast} className="w-full h-16 romantic-gradient rounded-2xl font-black uppercase tracking-widest text-lg shadow-xl">
+              Chalo Shuru Karein
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
@@ -261,11 +227,6 @@ export default function StreamClient({ id }: { id: string }) {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {isHost && (
-              <Button variant="destructive" size="icon" className="rounded-full size-10 shadow-lg" onClick={() => router.push('/host-p')}>
-                <Power size={16} />
-              </Button>
-            )}
             <Button variant="ghost" size="icon" className="rounded-full size-10 bg-black/40 backdrop-blur-md border border-white/10" onClick={() => router.push('/global')}>
               <X size={20} className="text-white" />
             </Button>
