@@ -1,4 +1,3 @@
-
 import { MetadataRoute } from 'next'
 
 /**
@@ -8,21 +7,21 @@ import { MetadataRoute } from 'next'
  */
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'Global Love - Social Discovery',
+    name: 'Global Love',
     short_name: 'GlobalLove',
-    description: 'Connect with hosts around the world in real-time.',
+    description: 'Live Streaming App',
     start_url: '/',
     display: 'standalone',
-    background_color: '#2D1B2D',
+    background_color: '#0F0101',
     theme_color: '#E11D48',
     icons: [
       {
-        src: 'https://placehold.co/192x192/E11D48/white?text=GL',
+        src: '/logo.png',
         sizes: '192x192',
         type: 'image/png',
       },
       {
-        src: 'https://placehold.co/512x512/E11D48/white?text=Global+Love',
+        src: '/logo.png',
         sizes: '512x512',
         type: 'image/png',
       },

@@ -1,5 +1,3 @@
-'use client';
-
 import type { Metadata, Viewport } from "next";
 import { Inter, Spline_Sans } from "next/font/google";
 import "./globals.css";
@@ -19,6 +17,18 @@ const splineSans = Spline_Sans({
   variable: "--font-spline-sans",
   display: 'swap',
 });
+
+export const metadata: Metadata = {
+  title: 'Global Love - Live Romance Grid',
+  description: 'Connect with global hosts and earn lifetime rewards.',
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+};
 
 export default function RootLayout({
   children,
