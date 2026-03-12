@@ -16,6 +16,9 @@ export default function WalletPage() {
   const [adLoading, setAdLoading] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
+  // ✅ Adsterra Smartlink (High CPM)
+  const ADSTERRA_SMARTLINK = "https://www.effectivegatecpm.com/a19zzj4ww?key=bd774f375ffbe786775bfb3fe5df5e16";
+
   // Real-time balance listener
   useEffect(() => {
     if (!user || !firestore) {
@@ -52,50 +55,50 @@ export default function WalletPage() {
     setAdLoading(true);
 
     try {
-      // Adsterra Direct Link Simulation / Placeholder
-      const adsterraLink = "https://www.topcreativeformat.com/28788998/invoke.js"; 
-      
-      const adWindow = window.open(adsterraLink, '_blank', 'width=500,height=700');
+      // ✅ Open Smartlink in new window
+      const adWindow = window.open(ADSTERRA_SMARTLINK, '_blank', 
+        'width=400,height=600,toolbar=no,menubar=no,scrollbars=yes,resizable=yes');
 
-      if (!adWindow) {
+      // Check if popup blocked
+      if (!adWindow || adWindow.closed || typeof adWindow.closed === 'undefined') {
         toast({
           variant: "destructive",
           title: "Popup Blocked",
-          description: "Please allow popups to watch ads and earn."
+          description: "Browser settings se popups allow karo taaki aap diamonds earn kar sako."
         });
         setAdLoading(false);
         return;
       }
 
-      // Reward user after 8 seconds (Simulated engagement)
+      // ✅ Reward after 5 seconds (Simulated engagement)
       setTimeout(async () => {
         try {
           if (firestore && user) {
             const userRef = doc(firestore, 'users', user.uid);
             
             await updateDoc(userRef, {
-              diamonds: increment(2),
+              diamonds: increment(5),
               lastAdWatched: serverTimestamp(),
               totalAdsWatched: increment(1),
               updatedAt: serverTimestamp()
             });
 
             toast({
-              title: "🎉 +2 Diamonds!",
-              description: "AI Agent verified your engagement."
+              title: "🎉 +5 Diamonds!",
+              description: "AI Agent verified your engagement. Reward credited!"
             });
           }
         } catch (error) {
           console.error("Reward error:", error);
           toast({
             variant: "destructive",
-            title: "Error",
-            description: "Failed to sync reward."
+            title: "Sync Error",
+            description: "Diamonds add nahi ho sake. Connection check karein."
           });
         } finally {
           setAdLoading(false);
         }
-      }, 8000);
+      }, 5000);
 
     } catch (error) {
       console.error("Ad error:", error);
@@ -152,7 +155,7 @@ export default function WalletPage() {
           </div>
           <h3 className="text-xl font-black uppercase italic tracking-tight mb-2">Free Diamonds</h3>
           <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-8 leading-relaxed">
-            Watch a high-CPM Social Bar ad <br/>and earn <span className="text-primary">+2 Diamonds</span> instantly.
+            Watch a high-CPM Smartlink ad <br/>and earn <span className="text-primary font-black">+5 Diamonds</span> instantly.
           </p>
 
           <Button
