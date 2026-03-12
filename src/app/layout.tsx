@@ -46,7 +46,6 @@ export default function RootLayout({
           id="adsterra-social-bar-new"
           strategy="afterInteractive"
           src={`//www.topcreativeformat.com/28788998/invoke.js`} 
-          onError={(e) => console.error("Social Bar ID 28788998 failed to load", e)}
         />
       </head>
       <body className="font-body antialiased selection:bg-primary/30 selection:text-primary mesh-gradient min-h-screen" suppressHydrationWarning>
