@@ -12,6 +12,8 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 export default function StreamClient({ id }: { id: string }) {
   const router = useRouter();
@@ -62,75 +64,74 @@ export default function StreamClient({ id }: { id: string }) {
     return () => clearTimeout(timer);
   }, [host, id, areServicesAvailable, isGridLoading]);
 
-  // ✅ Capacitor/Native Permission Handler
-  const requestCameraPermission = async () => {
-    const isCapacitor = typeof window !== 'undefined' && (window as any).Capacitor?.isNative;
-    if (isCapacitor) {
-      try {
-        const { Camera: CapCamera } = await import('@capacitor/camera');
-        const status = await CapCamera.checkPermissions();
-        if (status.camera !== 'granted') {
-          const res = await CapCamera.requestPermissions();
-          return res.camera === 'granted';
-        }
-        return true;
-      } catch (e) {
-        console.error("Capacitor Permission Error", e);
-        return false;
-      }
-    }
-    return true;
-  };
-
-  const startBroadcast = async () => {
-    setPermissionError(null);
-    
-    // 1. Check Native Permissions first
-    const hasNativePermission = await requestCameraPermission();
-    if (!hasNativePermission) {
-      setPermissionError("Camera access denied in app settings.");
-      toast({ variant: "destructive", title: "Permission Denied", description: "Please enable camera in phone settings." });
-      return;
-    }
-
-    // 2. Request Media Stream
+  // ✅ Camera + Mic Permission Handler (Web + APK)
+  const requestMediaPermissions = async () => {
     try {
       const mediaStream = await navigator.mediaDevices.getUserMedia({
         video: { 
-          facingMode: 'user',
+          facingMode: 'user', 
           width: { ideal: 640 },
           height: { ideal: 480 }
         },
-        audio: true
+        audio: true // ✅ Mic permission included
       });
-
-      setStream(mediaStream);
-      setShowPermissionModal(false);
       
-      if (videoRef.current) {
-        videoRef.current.srcObject = mediaStream;
-        await videoRef.current.play();
-      }
-
-      if (hostRef && isHost && areServicesAvailable) {
-        await updateDoc(hostRef, { isLive: true, lastLive: serverTimestamp() });
-      }
-      
-      setIsLive(true);
-      toast({ title: "🔴 LIVE", description: "Broadcasting started successfully!" });
+      return { success: true, stream: mediaStream };
     } catch (err: any) {
-      console.error("Media Error:", err.name);
+      console.error("Permission error:", err.name);
       
-      let msg = "Could not access camera/mic.";
-      if (err.name === 'NotAllowedError') {
-        msg = "Permission Denied! Browser settings mein jaakar camera allow karein.";
-      } else if (err.name === 'NotFoundError') {
-        msg = "No camera found on this device.";
-      }
+      const messages: Record<string, string> = {
+        'NotAllowedError': 'Permission denied. Settings se Camera/Mic allow karein.',
+        'NotFoundError': 'No camera/mic found. Device check karein.',
+        'NotReadableError': 'Camera/mic busy hai. Doosre apps band karein.',
+      };
       
-      setPermissionError(msg);
-      toast({ variant: "destructive", title: "Signal Error", description: msg });
+      const errorMsg = messages[err.name] || "Camera & Mic access allow karein";
+      setPermissionError(errorMsg);
+      
+      toast({
+        variant: "destructive",
+        title: "Permission Required",
+        description: errorMsg
+      });
+      
+      return { success: false, error: err };
     }
+  };
+
+  const startBroadcast = async () => {
+    if (!areServicesAvailable && !isSimulated) {
+      toast({ title: "Signal Weak", description: "Connecting to romantic grid..." });
+    }
+
+    const { success, stream: mediaStream } = await requestMediaPermissions();
+    
+    if (!success || !mediaStream) return;
+    
+    setStream(mediaStream);
+    setShowPermissionModal(false);
+    
+    if (videoRef.current) {
+      videoRef.current.srcObject = mediaStream;
+      videoRef.current.play().catch(e => console.error("Video play failed", e));
+    }
+    
+    // Firestore update (Non-blocking)
+    if (hostRef && isHost && areServicesAvailable) {
+      updateDoc(hostRef, {
+        isLive: true,
+        lastLive: serverTimestamp()
+      }).catch(async (serverError) => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: hostRef.path,
+          operation: 'update',
+          requestResourceData: { isLive: true }
+        }));
+      });
+    }
+    
+    setIsLive(true);
+    toast({ title: "🔴 LIVE", description: "Broadcasting started successfully!" });
   };
 
   useEffect(() => {
@@ -150,13 +151,13 @@ export default function StreamClient({ id }: { id: string }) {
       return;
     }
     try {
-      await addDoc(collection(firestore, 'streamMessages'), {
+      addDoc(collection(firestore, 'streamMessages'), {
         text: inputText,
         user: user.displayName || 'Guest',
         uid: user.uid,
         hostId: id,
         timestamp: serverTimestamp()
-      });
+      }).catch(e => console.error("Msg send failed", e));
       setInputText("");
     } catch (e) { console.error(e); }
   };
@@ -219,7 +220,7 @@ export default function StreamClient({ id }: { id: string }) {
         <div className="flex justify-between items-start">
           <div className="flex items-center gap-3 bg-black/60 backdrop-blur-md px-4 py-2 rounded-full border border-white/20">
             <div className="relative size-10 rounded-full overflow-hidden border-2 border-primary">
-              <Image src={hostData?.photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${id}`} alt="Host" fill className="object-cover" />
+              <Image src={hostData?.photo || hostData?.previewImageUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${id}`} alt="Host" fill className="object-cover" />
             </div>
             <div>
               <p className="text-white font-black text-xs uppercase italic">@{hostData?.username || "Host"}</p>
