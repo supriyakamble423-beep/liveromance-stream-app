@@ -67,26 +67,24 @@ export default function StreamClient({ id }: { id: string }) {
   // ✅ Camera + Mic Permission Handler (Web + APK)
   const requestMediaPermissions = async () => {
     try {
-      const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: { 
-          facingMode: 'user', 
-          width: { ideal: 640 },
-          height: { ideal: 480 }
-        },
-        audio: true // ✅ Mic permission included
+      // Web API se camera/mic request karo (ye APK mein bhi kaam karta hai)
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user', width: { ideal: 640 } },
+        audio: true  // ✅ Mic permission bhi yahi se maangi jayegi
       });
       
-      return { success: true, stream: mediaStream };
+      return { success: true, stream };
     } catch (err: any) {
       console.error("Permission error:", err.name);
       
+      // User-friendly messages
       const messages: Record<string, string> = {
-        'NotAllowedError': 'Permission denied. Settings se Camera/Mic allow karein.',
-        'NotFoundError': 'No camera/mic found. Device check karein.',
-        'NotReadableError': 'Camera/mic busy hai. Doosre apps band karein.',
+        'NotAllowedError': 'Permission denied. Enable Camera/Mic in Settings.',
+        'NotFoundError': 'No camera/mic found. Connect devices and retry.',
+        'NotReadableError': 'Camera/mic is busy. Close other apps.',
       };
       
-      const errorMsg = messages[err.name] || "Camera & Mic access allow karein";
+      const errorMsg = messages[err.name] || "Please allow Camera & Mic access";
       setPermissionError(errorMsg);
       
       toast({
@@ -99,6 +97,7 @@ export default function StreamClient({ id }: { id: string }) {
     }
   };
 
+  // ✅ Use in startBroadcast
   const startBroadcast = async () => {
     if (!areServicesAvailable && !isSimulated) {
       toast({ title: "Signal Weak", description: "Connecting to romantic grid..." });
@@ -111,6 +110,7 @@ export default function StreamClient({ id }: { id: string }) {
     setStream(mediaStream);
     setShowPermissionModal(false);
     
+    // Camera start karo
     if (videoRef.current) {
       videoRef.current.srcObject = mediaStream;
       videoRef.current.play().catch(e => console.error("Video play failed", e));
@@ -131,7 +131,7 @@ export default function StreamClient({ id }: { id: string }) {
     }
     
     setIsLive(true);
-    toast({ title: "🔴 LIVE", description: "Broadcasting started successfully!" });
+    toast({ title: "🔴 LIVE", description: "Broadcasting started!" });
   };
 
   useEffect(() => {
@@ -193,6 +193,7 @@ export default function StreamClient({ id }: { id: string }) {
       </div>
       <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-transparent to-black/90 pointer-events-none" />
 
+      {/* Permission UX Modal */}
       <Dialog open={showPermissionModal} onOpenChange={setShowPermissionModal}>
         <DialogContent className="bg-[#2D1B2D] border-white/10 text-white rounded-[3rem] p-8 max-w-[90vw] mx-auto shadow-2xl">
           <div className="flex flex-col items-center text-center space-y-6">
