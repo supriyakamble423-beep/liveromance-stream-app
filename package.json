@@ -12,7 +12,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@capacitor/camera": "^7.0.0",
+    "@capacitor/camera": "^7.0.5",
     "@capacitor/core": "^7.0.0",
     "@genkit-ai/google-genai": "^1.28.0",
     "@hookform/resolvers": "^4.1.3",
