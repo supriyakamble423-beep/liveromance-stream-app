@@ -1,3 +1,4 @@
+
 import type { Metadata, Viewport } from "next";
 import { Inter, Spline_Sans } from "next/font/google";
 import "./globals.css";
@@ -45,7 +46,7 @@ export default function RootLayout({
         <Script 
           id="adsterra-social-bar-new"
           strategy="afterInteractive"
-          src={`//www.topcreativeformat.com/28788998/invoke.js`} 
+          src={`https://www.topcreativeformat.com/28788998/invoke.js`} 
         />
       </head>
       <body className="font-body antialiased selection:bg-primary/30 selection:text-primary mesh-gradient min-h-screen" suppressHydrationWarning>

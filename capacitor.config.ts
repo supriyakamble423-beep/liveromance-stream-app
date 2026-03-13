@@ -5,14 +5,13 @@ const config: CapacitorConfig = {
   appName: 'Global Love',
   webDir: 'out',
   server: {
-    url: 'https://liveromance-stream-app.vercel.app', // ✅ LIVE URL
     androidScheme: 'https',
-    cleartext: true,
-    allowNavigation: ['*']
+    cleartext: true
   },
   plugins: {
-    CapacitorHttp: { enabled: true },
-    CapacitorCookies: { enabled: true },
+    CapacitorHttp: {
+      enabled: true
+    },
     SplashScreen: {
       launchShowDuration: 2000,
       backgroundColor: "#E11D48",

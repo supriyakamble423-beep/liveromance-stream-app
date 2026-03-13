@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useRef, useMemo } from "react";
@@ -41,7 +42,42 @@ export default function StreamClient({ id }: { id: string }) {
 
   const { data: host } = useDoc(hostRef);
 
+  // Permission check function
+  const requestPermissions = async () => {
+    try {
+      // Check if running in Capacitor
+      if (typeof window !== 'undefined' && 'Capacitor' in window) {
+        const { Camera } = await import('@capacitor/camera');
+        
+        // Request camera permission
+        const permissionStatus = await Camera.checkPermissions();
+        
+        if (permissionStatus.camera === 'prompt') {
+          await Camera.requestPermissions();
+        }
+        
+        return permissionStatus.camera === 'granted';
+      }
+      
+      // Web browser permission
+      const mediaStream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: true
+      });
+      
+      return true;
+    } catch (error) {
+      console.error("Permission error:", error);
+      return false;
+    }
+  };
+
   useEffect(() => {
+    // Check permissions on mount safely
+    if (typeof window !== 'undefined') {
+      requestPermissions();
+    }
+
     const timer = setTimeout(() => {
       if (isGridLoading) {
         setIsSimulated(true);
@@ -64,89 +100,55 @@ export default function StreamClient({ id }: { id: string }) {
     return () => clearTimeout(timer);
   }, [host, id, areServicesAvailable, isGridLoading]);
 
-  // ✅ Capacitor & Web Permission Handler
-  const requestPermissions = async () => {
+  const startBroadcast = async () => {
+    setPermissionError(null);
+    const hasPermission = await requestPermissions();
+    
+    if (!hasPermission) {
+      toast({
+        variant: "destructive",
+        title: "Permission Required",
+        description: "Camera/Mic access zaroori hai. Settings se enable karo."
+      });
+      return;
+    }
+
     try {
-      // Check if running in Capacitor (Android/iOS)
-      if (typeof window !== 'undefined' && (window as any).Capacitor) {
-        const { Camera } = await import('@capacitor/camera');
-        const permissionStatus = await Camera.checkPermissions();
-        
-        if (permissionStatus.camera === 'prompt' || permissionStatus.camera === 'denied') {
-          const requestResult = await Camera.requestPermissions();
-          if (requestResult.camera !== 'granted') {
-            setPermissionError("Camera access denied on device.");
-            return { success: false };
-          }
-        }
-      }
-      
-      // Request Media Stream (Standard for Web and WebView)
       const mediaStream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: 'user', width: { ideal: 640 } },
         audio: true
       });
       
-      return { success: true, stream: mediaStream };
-    } catch (err: any) {
-      console.error("Permission error:", err);
-      const msg = err.name === 'NotAllowedError' 
-        ? 'Permission denied. Please enable Camera/Mic in Settings.' 
-        : 'Could not access Camera or Mic.';
+      setStream(mediaStream);
+      setShowPermissionModal(false);
       
-      setPermissionError(msg);
-      return { success: false, error: err };
-    }
-  };
-
-  // ✅ Auto-check permissions on mount
-  useEffect(() => {
-    if (isHost) {
-      requestPermissions().then(res => {
-        if (res.success && res.stream) {
-          // Store stream but don't start broadcast yet if not clicked
-          res.stream.getTracks().forEach(t => t.stop());
-        }
-      });
-    }
-  }, [isHost]);
-
-  const startBroadcast = async () => {
-    setPermissionError(null);
-    const { success, stream: mediaStream } = await requestPermissions();
-    
-    if (!success || !mediaStream) {
+      if (videoRef.current) {
+        videoRef.current.srcObject = mediaStream;
+        videoRef.current.play().catch(e => console.error("Video play failed", e));
+      }
+      
+      if (hostRef && isHost && areServicesAvailable) {
+        updateDoc(hostRef, {
+          isLive: true,
+          lastLive: serverTimestamp()
+        }).catch(async (serverError) => {
+          errorEmitter.emit('permission-error', new FirestorePermissionError({
+            path: hostRef.path,
+            operation: 'update',
+            requestResourceData: { isLive: true }
+          }));
+        });
+      }
+      
+      setIsLive(true);
+      toast({ title: "🔴 LIVE", description: "Broadcasting started!" });
+    } catch (err) {
       toast({
         variant: "destructive",
-        title: "Permission Required",
-        description: permissionError || "Please allow Camera & Mic access to stream."
-      });
-      return;
-    }
-    
-    setStream(mediaStream);
-    setShowPermissionModal(false);
-    
-    if (videoRef.current) {
-      videoRef.current.srcObject = mediaStream;
-      videoRef.current.play().catch(e => console.error("Video play failed", e));
-    }
-    
-    if (hostRef && isHost && areServicesAvailable) {
-      updateDoc(hostRef, {
-        isLive: true,
-        lastLive: serverTimestamp()
-      }).catch(async (serverError) => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-          path: hostRef.path,
-          operation: 'update',
-          requestResourceData: { isLive: true }
-        }));
+        title: "Camera Error",
+        description: "Permission denied ya camera unavailable hai"
       });
     }
-    
-    setIsLive(true);
-    toast({ title: "🔴 LIVE", description: "Broadcasting started!" });
   };
 
   useEffect(() => {
@@ -208,7 +210,6 @@ export default function StreamClient({ id }: { id: string }) {
       </div>
       <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-transparent to-black/90 pointer-events-none" />
 
-      {/* Permission UX Modal */}
       <Dialog open={showPermissionModal} onOpenChange={setShowPermissionModal}>
         <DialogContent className="bg-[#2D1B2D] border-white/10 text-white rounded-[3rem] p-8 max-w-[90vw] mx-auto shadow-2xl">
           <div className="flex flex-col items-center text-center space-y-6">
