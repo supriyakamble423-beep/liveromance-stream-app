@@ -64,59 +64,74 @@ export default function StreamClient({ id }: { id: string }) {
     return () => clearTimeout(timer);
   }, [host, id, areServicesAvailable, isGridLoading]);
 
-  // ✅ Camera + Mic Permission Handler (Web + APK)
-  const requestMediaPermissions = async () => {
+  // ✅ Capacitor & Web Permission Handler
+  const requestPermissions = async () => {
     try {
-      // Web API se camera/mic request karo (ye APK mein bhi kaam karta hai)
-      const stream = await navigator.mediaDevices.getUserMedia({
+      // Check if running in Capacitor (Android/iOS)
+      if (typeof window !== 'undefined' && (window as any).Capacitor) {
+        const { Camera } = await import('@capacitor/camera');
+        const permissionStatus = await Camera.checkPermissions();
+        
+        if (permissionStatus.camera === 'prompt' || permissionStatus.camera === 'denied') {
+          const requestResult = await Camera.requestPermissions();
+          if (requestResult.camera !== 'granted') {
+            setPermissionError("Camera access denied on device.");
+            return { success: false };
+          }
+        }
+      }
+      
+      // Request Media Stream (Standard for Web and WebView)
+      const mediaStream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: 'user', width: { ideal: 640 } },
-        audio: true  // ✅ Mic permission bhi yahi se maangi jayegi
+        audio: true
       });
       
-      return { success: true, stream };
+      return { success: true, stream: mediaStream };
     } catch (err: any) {
-      console.error("Permission error:", err.name);
+      console.error("Permission error:", err);
+      const msg = err.name === 'NotAllowedError' 
+        ? 'Permission denied. Please enable Camera/Mic in Settings.' 
+        : 'Could not access Camera or Mic.';
       
-      // User-friendly messages
-      const messages: Record<string, string> = {
-        'NotAllowedError': 'Permission denied. Enable Camera/Mic in Settings.',
-        'NotFoundError': 'No camera/mic found. Connect devices and retry.',
-        'NotReadableError': 'Camera/mic is busy. Close other apps.',
-      };
-      
-      const errorMsg = messages[err.name] || "Please allow Camera & Mic access";
-      setPermissionError(errorMsg);
-      
-      toast({
-        variant: "destructive",
-        title: "Permission Required",
-        description: errorMsg
-      });
-      
+      setPermissionError(msg);
       return { success: false, error: err };
     }
   };
 
-  // ✅ Use in startBroadcast
-  const startBroadcast = async () => {
-    if (!areServicesAvailable && !isSimulated) {
-      toast({ title: "Signal Weak", description: "Connecting to romantic grid..." });
+  // ✅ Auto-check permissions on mount
+  useEffect(() => {
+    if (isHost) {
+      requestPermissions().then(res => {
+        if (res.success && res.stream) {
+          // Store stream but don't start broadcast yet if not clicked
+          res.stream.getTracks().forEach(t => t.stop());
+        }
+      });
     }
+  }, [isHost]);
 
-    const { success, stream: mediaStream } = await requestMediaPermissions();
+  const startBroadcast = async () => {
+    setPermissionError(null);
+    const { success, stream: mediaStream } = await requestPermissions();
     
-    if (!success || !mediaStream) return;
+    if (!success || !mediaStream) {
+      toast({
+        variant: "destructive",
+        title: "Permission Required",
+        description: permissionError || "Please allow Camera & Mic access to stream."
+      });
+      return;
+    }
     
     setStream(mediaStream);
     setShowPermissionModal(false);
     
-    // Camera start karo
     if (videoRef.current) {
       videoRef.current.srcObject = mediaStream;
       videoRef.current.play().catch(e => console.error("Video play failed", e));
     }
     
-    // Firestore update (Non-blocking)
     if (hostRef && isHost && areServicesAvailable) {
       updateDoc(hostRef, {
         isLive: true,
