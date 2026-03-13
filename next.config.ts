@@ -2,8 +2,10 @@
 import { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
+  output: 'export', // ✅ Required for static export (Capacitor/Firebase Hosting)
+  trailingSlash: true, // ✅ Better for static hosting path resolution
   images: {
-    unoptimized: true,
+    unoptimized: true, // ✅ Required for static export
     remotePatterns: [
       { protocol: 'https', hostname: 'placehold.co' },
       { protocol: 'https', hostname: 'images.unsplash.com' },
