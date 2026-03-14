@@ -1,22 +1,21 @@
-
 'use client';
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Search, Radio, User, Wallet } from "lucide-react";
+import { Home, Search, MapPin, User, Wallet } from "lucide-react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 /**
  * BottomNav Component
- * Features Framer Motion active states and sits above the Social Bar (ID: 28788998).
- * Positioned at bottom-14 to accommodate Adsterra floating bar.
+ * Items: Home, Trends, Wallet, Map, Profile (Gateway for Host Login)
+ * Positioned above Adsterra Social Bar.
  */
 const navItems = [
   { icon: Home, label: "Home", href: "/global" },
   { icon: Search, label: "Trends", href: "/trends" },
   { icon: Wallet, label: "Wallet", href: "/wallet" },
-  { icon: Radio, label: "Go Live", href: "/host-p" },
+  { icon: MapPin, label: "Map", href: "/map" },
   { icon: User, label: "Profile", href: "/host-p" },
 ];
 
@@ -27,7 +26,6 @@ export function BottomNav() {
     <nav className="fixed bottom-14 left-0 right-0 z-50 bg-[#2D1B2D]/95 backdrop-blur-2xl border-t border-white/5 pb-safe shadow-[0_-8px_30px_rgba(0,0,0,0.5)]">
       <div className="flex justify-around items-center h-16 max-w-lg mx-auto px-2">
         {navItems.map((item) => {
-          // Match pathname to highlight active route
           const isActive = pathname === item.href;
           
           return (
