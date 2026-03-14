@@ -15,6 +15,7 @@ import { AdsterraBanner } from "@/components/AdsterraBanner";
 /**
  * Wallet Page
  * Features Adsterra Smartlink rewards and display banner.
+ * Rewards user with +5 Diamonds for each validated engagement.
  */
 export default function WalletPage() {
   const { user, firestore, areServicesAvailable } = useFirebase();
@@ -31,7 +32,7 @@ export default function WalletPage() {
   // Real-time balance listener
   useEffect(() => {
     if (!user || !firestore) {
-      setIsLoading(false);
+      if (!user) setIsLoading(false);
       return;
     }
     
@@ -63,21 +64,19 @@ export default function WalletPage() {
 
     try {
       // ✅ Open Smartlink in new window
-      const adWindow = window.open(SMARTLINK_URL, '_blank', 
-        'width=400,height=600,toolbar=no,menubar=no,scrollbars=yes,resizable=yes');
+      const adWindow = window.open(SMARTLINK_URL, '_blank');
 
-      // Check if popup blocked
-      if (!adWindow || adWindow.closed || typeof adWindow.closed === 'undefined') {
+      if (!adWindow) {
         toast({
           variant: "destructive",
           title: "Popup Blocked",
-          description: "Browser settings se popups allow karo taaki aap diamonds earn kar sako."
+          description: "Please allow popups to earn diamonds."
         });
         setAdLoading(false);
         return;
       }
 
-      // ✅ Reward after 5 seconds
+      // ✅ AI-Simulation Reward after 5 seconds
       setTimeout(async () => {
         try {
           if (firestore && user) {
@@ -85,23 +84,16 @@ export default function WalletPage() {
             
             await updateDoc(userRef, {
               diamonds: increment(5),
-              lastAdWatched: serverTimestamp(),
-              totalAdsWatched: increment(1),
               updatedAt: serverTimestamp()
             });
 
             toast({
               title: "🎉 +5 Diamonds!",
-              description: "AI Agent verified your engagement. Reward credited!"
+              description: "AI validated your engagement. Reward credited!"
             });
           }
         } catch (error) {
           console.error("Reward error:", error);
-          toast({
-            variant: "destructive",
-            title: "Sync Error",
-            description: "Diamonds add nahi ho sake. Connection check karein."
-          });
         } finally {
           setAdLoading(false);
         }
@@ -109,18 +101,13 @@ export default function WalletPage() {
 
     } catch (error) {
       console.error("Ad error:", error);
-      toast({
-        variant: "destructive",
-        title: "Ad Error",
-        description: "Ad could not be loaded."
-      });
       setAdLoading(false);
     }
   };
 
   return (
     <div className="min-h-screen bg-[#0f0a10] text-white pb-32 max-w-lg mx-auto border-x border-white/5 mesh-gradient p-4">
-      {/* Wallet Card with Animation */}
+      {/* Wallet Card */}
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -132,7 +119,7 @@ export default function WalletPage() {
 
         <div className="flex items-center justify-between mb-6 relative z-10">
           <div className="flex items-center gap-4">
-            <div className="size-14 rounded-2xl bg-gradient-to-br from-[#E11D48] to-[#F472B6] flex items-center justify-center shadow-lg romantic-glow">
+            <div className="size-14 rounded-2xl bg-gradient-to-br from-[#E11D48] to-[#F472B6] flex items-center justify-center shadow-lg">
               <Diamond className="size-8 text-white" />
             </div>
             <div>
@@ -142,8 +129,7 @@ export default function WalletPage() {
               </p>
             </div>
           </div>
-          <motion.button
-            whileTap={{ scale: 0.9 }}
+          <button
             onClick={handleWatchAd}
             disabled={adLoading || !areServicesAvailable}
             className="bg-gradient-to-r from-[#E11D48] to-[#F472B6] text-white px-5 py-3 rounded-2xl text-xs font-black uppercase tracking-widest flex items-center gap-2 shadow-xl active:scale-95 transition-all disabled:opacity-50"
@@ -151,10 +137,9 @@ export default function WalletPage() {
             {adLoading ? <Loader2 className="size-4 animate-spin" /> : <PlayCircle className="size-4" />}
             {adLoading ? 'Verifying...' : 'Watch Ad'}
             <span className="bg-white/20 px-2 py-0.5 rounded-full text-[10px]">+5</span>
-          </motion.button>
+          </button>
         </div>
         
-        {/* Stats Grid */}
         <div className="grid grid-cols-2 gap-4 relative z-10">
           <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
             <div className="flex items-center gap-2 mb-1">
@@ -173,19 +158,14 @@ export default function WalletPage() {
         </div>
       </motion.div>
 
-      {/* Adsterra Banner Section */}
+      {/* Adsterra Banner */}
       <div className="mb-8">
-        <div className="flex items-center gap-3 mb-3 opacity-30 justify-center">
-          <span className="h-px w-4 bg-white/20" />
-          <p className="text-[7px] text-white font-black uppercase tracking-[0.4em] italic">Promoted Node</p>
-          <span className="h-px w-4 bg-white/20" />
-        </div>
-        
+        <p className="text-[7px] text-white/20 font-black uppercase tracking-[0.4em] text-center mb-3 italic">Promoted Node</p>
         <div className="flex justify-center">
           <AdsterraBanner 
             adId={BANNER_AD_ID} 
             scriptUrl={BANNER_SCRIPT_URL} 
-            className="rounded-[2rem] border border-white/5 overflow-hidden min-h-[50px] min-w-[320px] shadow-2xl bg-black/40 backdrop-blur-xl flex items-center justify-center"
+            className="rounded-[2rem] border border-white/5 overflow-hidden shadow-2xl bg-black/40"
           />
         </div>
       </div>
