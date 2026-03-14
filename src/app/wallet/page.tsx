@@ -7,9 +7,15 @@ import { doc, updateDoc, increment, serverTimestamp, onSnapshot } from "firebase
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Sparkles, Trophy, PlayCircle, ShieldCheck, Wallet } from "lucide-react";
+import { Loader2, Sparkles, Trophy, PlayCircle, ShieldCheck, Wallet as WalletIcon, Diamond, TrendingUp, Users } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
+import { motion } from "framer-motion";
+import { AdsterraBanner } from "@/components/AdsterraBanner";
 
+/**
+ * Wallet Page
+ * Features Adsterra Smartlink rewards and display banner.
+ */
 export default function WalletPage() {
   const { user, firestore, areServicesAvailable } = useFirebase();
   const { toast } = useToast();
@@ -17,8 +23,10 @@ export default function WalletPage() {
   const [adLoading, setAdLoading] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  // ✅ Adsterra Smartlink (High CPM)
-  const ADSTERRA_SMARTLINK = "https://www.effectivegatecpm.com/a19zzj4ww?key=bd774f375ffbe786775bfb3fe5df5e16";
+  // ✅ Adsterra Configuration
+  const SMARTLINK_URL = "https://www.effectivegatecpm.com/a19zzj4ww?key=bd774f375ffbe786775bfb3fe5df5e16";
+  const BANNER_AD_ID = "28678576";
+  const BANNER_SCRIPT_URL = "//pl28678576.profitablegatecpm.com/28678576/invoke.js";
 
   // Real-time balance listener
   useEffect(() => {
@@ -41,8 +49,6 @@ export default function WalletPage() {
     return () => unsubscribe();
   }, [user, firestore]);
 
-  const isLowBalance = balance < 50;
-
   const handleWatchAd = async () => {
     if (!user) {
       toast({
@@ -57,7 +63,7 @@ export default function WalletPage() {
 
     try {
       // ✅ Open Smartlink in new window
-      const adWindow = window.open(ADSTERRA_SMARTLINK, '_blank', 
+      const adWindow = window.open(SMARTLINK_URL, '_blank', 
         'width=400,height=600,toolbar=no,menubar=no,scrollbars=yes,resizable=yes');
 
       // Check if popup blocked
@@ -71,7 +77,7 @@ export default function WalletPage() {
         return;
       }
 
-      // ✅ Reward after 5 seconds (Simulated engagement)
+      // ✅ Reward after 5 seconds
       setTimeout(async () => {
         try {
           if (firestore && user) {
@@ -113,75 +119,84 @@ export default function WalletPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-white pb-32 max-w-lg mx-auto border-x border-white/5 mesh-gradient">
-      <header className="p-8 pt-16 bg-primary/10 rounded-b-[3.5rem] border-b border-white/5 mb-8">
-        <div className="flex items-center gap-4 mb-8">
-          <div className="size-12 bg-primary/20 rounded-2xl flex items-center justify-center border border-primary/30 romantic-glow">
-            <Wallet className="size-6 text-primary" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-black uppercase italic tracking-tighter">Diamond Vault</h1>
-            <p className="text-[9px] font-black text-primary uppercase tracking-[0.3em]">Secure Node Assets</p>
-          </div>
+    <div className="min-h-screen bg-[#0f0a10] text-white pb-32 max-w-lg mx-auto border-x border-white/5 mesh-gradient p-4">
+      {/* Wallet Card with Animation */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="bg-gradient-to-br from-[#2D1B2D] to-[#1a0f1b] rounded-[2.5rem] p-6 border border-white/10 mb-8 shadow-2xl relative overflow-hidden"
+      >
+        <div className="absolute top-0 right-0 p-6 opacity-10">
+          <Trophy className="size-24" />
         </div>
 
-        <div className="bg-[#3D263D]/80 p-8 rounded-[3rem] border border-white/10 shadow-2xl relative overflow-hidden romantic-glow">
-          <div className="absolute top-0 right-0 p-6 opacity-10">
-            <Trophy className="size-24" />
-          </div>
-          <div className="relative z-10 space-y-4">
-            <div className="flex items-center gap-2 mb-3">
-              <p className="text-[11px] font-black uppercase tracking-[0.4em] opacity-80">Diamond Balance</p>
-              {isLowBalance && <Badge className="bg-white/20 text-white border-none text-[8px] animate-pulse">RECHARGE NEEDED</Badge>}
+        <div className="flex items-center justify-between mb-6 relative z-10">
+          <div className="flex items-center gap-4">
+            <div className="size-14 rounded-2xl bg-gradient-to-br from-[#E11D48] to-[#F472B6] flex items-center justify-center shadow-lg romantic-glow">
+              <Diamond className="size-8 text-white" />
             </div>
-            <div className="flex items-baseline gap-2">
-              <span className="text-6xl font-black italic tracking-tighter">
-                {isLoading ? <Loader2 className="size-10 animate-spin inline-block" /> : `💎 ${balance}`}
-              </span>
-            </div>
-            <div className="h-px bg-white/10 my-4" />
-            <div className="flex justify-between items-center">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Est. Value: ₹{(balance * 0.02).toFixed(2)}</p>
-              <ShieldCheck className="size-4 text-green-500" />
+            <div>
+              <p className="text-gray-400 text-xs font-bold uppercase tracking-widest">Your Balance</p>
+              <p className="text-white text-3xl font-black italic tracking-tighter">
+                {isLoading ? <Loader2 className="size-6 animate-spin" /> : `${balance} 💎`}
+              </p>
             </div>
           </div>
-        </div>
-      </header>
-
-      <main className="px-8 space-y-8">
-        <section className="bg-white/5 border border-primary/20 rounded-[2.5rem] p-8 text-center relative overflow-hidden group">
-          <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-          <div className="size-20 bg-gradient-to-tr from-primary to-secondary rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-xl rotate-3 group-hover:rotate-0 transition-transform">
-            <PlayCircle size={40} className="text-white fill-current" />
-          </div>
-          <h3 className="text-xl font-black uppercase italic tracking-tight mb-2">Free Diamonds</h3>
-          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-8 leading-relaxed">
-            Watch a high-CPM Smartlink ad <br/>and earn <span className="text-primary font-black">+5 Diamonds</span> instantly.
-          </p>
-
-          <Button
+          <motion.button
+            whileTap={{ scale: 0.9 }}
             onClick={handleWatchAd}
             disabled={adLoading || !areServicesAvailable}
-            className="w-full h-16 rounded-2xl romantic-gradient hover:scale-[1.02] transition-transform font-black uppercase tracking-widest text-[11px] shadow-2xl shadow-primary/20"
+            className="bg-gradient-to-r from-[#E11D48] to-[#F472B6] text-white px-5 py-3 rounded-2xl text-xs font-black uppercase tracking-widest flex items-center gap-2 shadow-xl active:scale-95 transition-all disabled:opacity-50"
           >
-            {adLoading ? (
-              <><Loader2 className="size-4 animate-spin mr-2" /> AI Verifying...</>
-            ) : (
-              <><Sparkles className="size-4 mr-2" /> Watch & Earn Now</>
-            )}
-          </Button>
+            {adLoading ? <Loader2 className="size-4 animate-spin" /> : <PlayCircle className="size-4" />}
+            {adLoading ? 'Verifying...' : 'Watch Ad'}
+            <span className="bg-white/20 px-2 py-0.5 rounded-full text-[10px]">+5</span>
+          </motion.button>
+        </div>
+        
+        {/* Stats Grid */}
+        <div className="grid grid-cols-2 gap-4 relative z-10">
+          <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
+            <div className="flex items-center gap-2 mb-1">
+              <Users className="size-3 text-secondary" />
+              <p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest">Active Invites</p>
+            </div>
+            <p className="text-white text-xl font-black italic">0</p>
+          </div>
+          <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
+            <div className="flex items-center gap-2 mb-1">
+              <TrendingUp className="size-3 text-green-400" />
+              <p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest">Earnings</p>
+            </div>
+            <p className="text-white text-xl font-black italic">₹{(balance * 0.02).toFixed(0)}</p>
+          </div>
+        </div>
+      </motion.div>
 
-          <p className="text-[9px] text-white/30 mt-6 uppercase font-black tracking-widest">
-            AI Agent monitors engagement for reward release
-          </p>
-        </section>
+      {/* Adsterra Banner Section */}
+      <div className="mb-8">
+        <div className="flex items-center gap-3 mb-3 opacity-30 justify-center">
+          <span className="h-px w-4 bg-white/20" />
+          <p className="text-[7px] text-white font-black uppercase tracking-[0.4em] italic">Promoted Node</p>
+          <span className="h-px w-4 bg-white/20" />
+        </div>
+        
+        <div className="flex justify-center">
+          <AdsterraBanner 
+            adId={BANNER_AD_ID} 
+            scriptUrl={BANNER_SCRIPT_URL} 
+            className="rounded-[2rem] border border-white/5 overflow-hidden min-h-[50px] min-w-[320px] shadow-2xl bg-black/40 backdrop-blur-xl flex items-center justify-center"
+          />
+        </div>
+      </div>
 
+      <main className="space-y-8 px-2">
         <section className="p-6 bg-slate-900/50 rounded-3xl border border-white/5 flex items-center gap-4">
           <div className="size-10 bg-green-500/10 rounded-xl flex items-center justify-center text-green-500">
             <ShieldCheck size={20} />
           </div>
           <div>
-            <p className="text-[10px] font-black uppercase text-white mb-0.5">Secure Transfers</p>
+            <p className="text-[10px] font-black uppercase text-white mb-0.5 tracking-widest">Secure Node Assets</p>
             <p className="text-[9px] text-slate-500 font-bold uppercase leading-tight">All earnings are encrypted and synced to the global grid.</p>
           </div>
         </section>
