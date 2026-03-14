@@ -36,6 +36,10 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  /**
+   * NOTE: Next.js uses folders in src/app/ for routing.
+   * Global state and layouts are handled here.
+   */
   return (
     <html lang="en" className={`dark ${inter.variable} ${splineSans.variable}`} suppressHydrationWarning>
       <head>
@@ -49,10 +53,13 @@ export default function RootLayout({
           src={`https://www.topcreativeformat.com/28788998/invoke.js`} 
         />
       </head>
-      <body className="font-body antialiased selection:bg-primary/30 selection:text-primary mesh-gradient min-h-screen" suppressHydrationWarning>
+      <body className="font-body antialiased selection:bg-primary/30 selection:text-primary mesh-gradient min-h-screen bg-[#0f0a10]" suppressHydrationWarning>
         <ErrorBoundary>
           <FirebaseClientProvider>
-            {children}
+            {/* Main content container with bottom padding for Navigation + Social Bar */}
+            <main className="pb-32 pt-4 px-4 min-h-screen">
+              {children}
+            </main>
             <Toaster />
           </FirebaseClientProvider>
         </ErrorBoundary>

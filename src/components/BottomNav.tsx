@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from "next/link";
@@ -16,8 +17,9 @@ const navItems = [
 export function BottomNav() {
   const pathname = usePathname();
 
+  // Navigation is fixed at bottom-14 (56px) to sit above the Social Bar
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-[#2D1B2D]/95 backdrop-blur-2xl border-t border-white/5 pb-safe shadow-[0_-8px_30px_rgba(0,0,0,0.5)]">
+    <nav className="fixed bottom-14 left-0 right-0 z-50 bg-[#2D1B2D]/95 backdrop-blur-2xl border-t border-white/5 pb-safe shadow-[0_-8px_30px_rgba(0,0,0,0.5)]">
       <div className="flex justify-around items-end h-16 max-w-lg mx-auto px-4">
         {navItems.map((item) => {
           const isActive = pathname === item.href;
