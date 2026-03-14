@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useRef, useMemo } from "react";
@@ -42,69 +41,72 @@ export default function StreamClient({ id }: { id: string }) {
 
   const { data: host } = useDoc(hostRef);
 
+  // 📍 Request Location Permission (optional)
+  const requestLocationPermission = () => {
+    if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          console.log("📍 Location:", pos.coords);
+          // Optional: Update Firestore with rough location for map accuracy
+          if (hostRef && areServicesAvailable) {
+            updateDoc(hostRef, {
+              location: {
+                lat: pos.coords.latitude,
+                lng: pos.coords.longitude
+              }
+            }).catch(() => {});
+          }
+        },
+        (err) => {
+          console.warn("📍 Location denied:", err);
+          toast({
+            title: "Location Access",
+            description: "Location optional hai, par better experience ke liye allow karein.",
+            variant: "default"
+          });
+        }
+      );
+    }
+  };
+
   // Permission check function
-  const requestPermissions = async () => {
+  const requestMediaPermissions = async () => {
     try {
       // Check if running in Capacitor
       if (typeof window !== 'undefined' && 'Capacitor' in window) {
         const { Camera } = await import('@capacitor/camera');
-        
-        // Request camera permission
         const permissionStatus = await Camera.checkPermissions();
         
         if (permissionStatus.camera === 'prompt') {
           await Camera.requestPermissions();
         }
         
-        return permissionStatus.camera === 'granted';
+        if (permissionStatus.camera !== 'granted') return { success: false };
       }
       
       // Web browser permission
       const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: true,
+        video: { facingMode: 'user', width: { ideal: 640 } },
         audio: true
       });
       
-      return true;
+      return { success: true, stream: mediaStream };
     } catch (error) {
       console.error("Permission error:", error);
-      return false;
+      return { success: false };
     }
   };
 
-  useEffect(() => {
-    // Check permissions on mount safely
-    if (typeof window !== 'undefined') {
-      requestPermissions();
-    }
-
-    const timer = setTimeout(() => {
-      if (isGridLoading) {
-        setIsSimulated(true);
-        setHostData({
-          username: id === 'simulate_host' ? 'SimNode' : 'GuestHost',
-          streamType: 'public',
-          viewers: Math.floor(Math.random() * 500),
-          photo: `https://api.dicebear.com/7.x/avataaars/svg?seed=${id}`
-        });
-        setIsGridLoading(false);
-      }
-    }, 5000);
-
-    if (areServicesAvailable && host) {
-      setHostData(host);
-      setIsGridLoading(false);
-      clearTimeout(timer);
-    }
-
-    return () => clearTimeout(timer);
-  }, [host, id, areServicesAvailable, isGridLoading]);
-
   const startBroadcast = async () => {
+    if (!areServicesAvailable) {
+      toast({ title: "Loading...", description: "Please wait" });
+      return;
+    }
+
     setPermissionError(null);
-    const hasPermission = await requestPermissions();
+    const { success, stream: mediaStream } = await requestMediaPermissions();
     
-    if (!hasPermission) {
+    if (!success || !mediaStream) {
       toast({
         variant: "destructive",
         title: "Permission Required",
@@ -113,12 +115,10 @@ export default function StreamClient({ id }: { id: string }) {
       return;
     }
 
+    // Location permission (optional)
+    requestLocationPermission();
+
     try {
-      const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user', width: { ideal: 640 } },
-        audio: true
-      });
-      
       setStream(mediaStream);
       setShowPermissionModal(false);
       
@@ -150,6 +150,29 @@ export default function StreamClient({ id }: { id: string }) {
       });
     }
   };
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (isGridLoading) {
+        setIsSimulated(true);
+        setHostData({
+          username: id === 'simulate_host' ? 'SimNode' : 'GuestHost',
+          streamType: 'public',
+          viewers: Math.floor(Math.random() * 500),
+          photo: `https://api.dicebear.com/7.x/avataaars/svg?seed=${id}`
+        });
+        setIsGridLoading(false);
+      }
+    }, 5000);
+
+    if (areServicesAvailable && host) {
+      setHostData(host);
+      setIsGridLoading(false);
+      clearTimeout(timer);
+    }
+
+    return () => clearTimeout(timer);
+  }, [host, id, areServicesAvailable, isGridLoading]);
 
   useEffect(() => {
     if (!firestore || !areServicesAvailable) return;
