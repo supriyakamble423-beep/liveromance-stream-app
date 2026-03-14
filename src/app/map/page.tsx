@@ -1,141 +1,151 @@
+'use client';
 
-"use client"
-
+import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { MapPin, Users, Eye, Heart, X, Zap } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { BottomNav } from "@/components/BottomNav";
-import { Search, Bell, Map as MapIcon, Layers, Target, Eye } from "lucide-react";
-import Image from "next/image";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import Link from 'next/link';
 
-const MapHotspot = ({ top, left, avatar }: { top: string, left: string, avatar: string }) => (
-  <div className="absolute animate-pulse" style={{ top, left }}>
-    <div className="relative group">
-      <div className="size-4 bg-primary rounded-full shadow-[0_0_15px_rgba(137,90,246,0.6)]" />
-      <div className="absolute -top-14 -left-6 bg-background/80 border border-primary/30 rounded-xl p-1.5 backdrop-blur-md transition-transform group-hover:scale-110">
-        <div className="relative size-10 rounded-full border-2 border-primary overflow-hidden">
-          <Image src={avatar} alt="Host" fill className="object-cover" />
-        </div>
-        <div className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-destructive rounded-full border-2 border-background" />
-      </div>
-    </div>
-  </div>
-);
+// Mock data for users on the map
+const MAP_USERS = [
+  { id: '1', name: 'Sophia', country: 'USA', viewers: 1200, top: '30%', left: '20%', avatar: 'S', color: '#E11D48' },
+  { id: '2', name: 'Priya', country: 'India', viewers: 3400, top: '45%', left: '68%', avatar: 'P', color: '#F472B6' },
+  { id: '3', name: 'Lucas', country: 'Brazil', viewers: 890, top: '65%', left: '32%', avatar: 'L', color: '#FDA4AF' },
+  { id: '4', name: 'Emma', country: 'UK', viewers: 560, top: '25%', left: '48%', avatar: 'E', color: '#E11D48' },
+  { id: '5', name: 'Yuki', country: 'Japan', viewers: 2100, top: '35%', left: '82%', avatar: 'Y', color: '#F472B6' },
+  { id: '6', name: 'Amara', country: 'Nigeria', viewers: 450, top: '55%', left: '50%', avatar: 'A', color: '#FDA4AF' },
+];
 
 export default function MapPage() {
-  const mapImg = PlaceHolderImages.find(img => img.id === "map-bg")?.imageUrl || "";
-  const hosts = [
-    { top: "35%", left: "25%", avatar: PlaceHolderImages.find(img => img.id === "host-1")?.imageUrl || "" },
-    { top: "55%", left: "65%", avatar: PlaceHolderImages.find(img => img.id === "host-5")?.imageUrl || "" },
-    { top: "45%", left: "45%", avatar: PlaceHolderImages.find(img => img.id === "host-3")?.imageUrl || "" },
-  ];
+  const [selectedUser, setSelectedUser] = useState<typeof MAP_USERS[0] | null>(null);
 
   return (
-    <div className="relative h-screen w-full max-w-lg mx-auto bg-background overflow-hidden border-x border-border flex flex-col">
-      {/* Header Overlay */}
-      <header className="absolute top-0 left-0 right-0 z-30 p-4 space-y-4">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-            <Input 
-              className="bg-background/60 border-primary/20 rounded-full py-2 pl-10 pr-4 text-sm backdrop-blur-md" 
-              placeholder="Search global hosts..." 
-            />
+    <div className="relative h-screen w-full max-w-lg mx-auto bg-[#0f0a10] overflow-hidden border-x border-white/5 mesh-gradient">
+      {/* Abstract Map Background */}
+      <div className="absolute inset-0 opacity-20 pointer-events-none">
+        <div className="absolute top-[20%] left-[10%] w-[30%] h-[40%] bg-primary/20 rounded-full blur-[100px]" />
+        <div className="absolute top-[40%] left-[40%] w-[20%] h-[30%] bg-secondary/20 rounded-full blur-[80px]" />
+        <div className="absolute top-[50%] left-[60%] w-[25%] h-[35%] bg-primary/10 rounded-full blur-[120px]" />
+      </div>
+
+      {/* Tech Grid Overlay */}
+      <div className="absolute inset-0 opacity-10 pointer-events-none" 
+           style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
+
+      {/* Header */}
+      <header className="absolute top-0 left-0 right-0 p-8 pt-12 bg-gradient-to-b from-black/80 to-transparent z-30">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-black italic uppercase tracking-tighter text-white">Global Grid</h1>
+            <p className="text-[10px] font-black text-primary uppercase tracking-[0.3em]">Live Satellite Nodes</p>
           </div>
-          <Button variant="outline" size="icon" className="rounded-full size-10 bg-background/60 backdrop-blur-md border-primary/20">
-            <Bell className="size-5 text-primary" />
-          </Button>
-        </div>
-        
-        <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-          {["Couples", "Groups", "Nearby", "Trending"].map((cat, i) => (
-            <Badge 
-              key={cat} 
-              variant={i === 0 ? "default" : "outline"}
-              className={cn(
-                "px-5 py-2 rounded-full text-sm font-medium whitespace-nowrap backdrop-blur-md",
-                i === 0 ? "bg-primary border-none" : "bg-background/60 border-primary/20"
-              )}
-            >
-              {cat}
-            </Badge>
-          ))}
+          <div className="size-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center">
+            <Zap className="size-6 text-amber-400 fill-current animate-pulse" />
+          </div>
         </div>
       </header>
 
-      {/* Map Content */}
-      <div className="flex-1 relative bg-slate-950">
-        <Image 
-          src={mapImg} 
-          alt="World Map" 
-          fill 
-          className="object-cover opacity-40 mix-blend-lighten" 
-        />
-        {hosts.map((h, i) => (
-          <MapHotspot key={i} {...h} />
+      {/* Map Interaction Area */}
+      <div className="relative flex-1 h-full">
+        {MAP_USERS.map((user) => (
+          <motion.button
+            key={user.id}
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            whileHover={{ scale: 1.2, zIndex: 40 }}
+            onClick={() => setSelectedUser(user)}
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 cursor-pointer group"
+            style={{ top: user.top, left: user.left }}
+          >
+            {/* Pulsating Rings */}
+            <div className="absolute inset-0 bg-primary rounded-full opacity-40 animate-ping scale-150" />
+            <div className="absolute inset-0 bg-primary/20 rounded-full animate-pulse scale-125" />
+            
+            {/* Avatar Pin */}
+            <Avatar className="size-12 border-2 border-white/20 relative z-10 shadow-[0_0_20px_rgba(225,29,72,0.4)]">
+              <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user.name}`} />
+              <AvatarFallback className="bg-primary text-white font-black">{user.avatar}</AvatarFallback>
+            </Avatar>
+            
+            {/* Mini Live Label */}
+            <div className="absolute -top-2 -right-2 bg-primary text-white text-[7px] px-1.5 py-0.5 rounded-full font-black uppercase z-20 border border-white/20">
+              Live
+            </div>
+          </motion.button>
         ))}
-        
-        <div className="absolute bottom-40 right-4 flex flex-col gap-2">
-          <Button variant="secondary" size="icon" className="size-12 rounded-2xl glass-effect shadow-xl">
-            <Target className="size-6" />
-          </Button>
-          <Button variant="secondary" size="icon" className="size-12 rounded-2xl glass-effect shadow-xl">
-            <Layers className="size-6" />
-          </Button>
-        </div>
       </div>
 
-      {/* Details Sheet Simulation */}
-      <div className="h-[40%] glass-effect rounded-t-[2.5rem] flex flex-col pt-4 px-6 relative z-40 border-t border-primary/20">
-        <div className="w-12 h-1 bg-muted rounded-full mx-auto mb-6 opacity-50" />
-        
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold tracking-tight font-headline">
-            Active Couples <span className="text-primary ml-1">• 24</span>
-          </h2>
-          <Button variant="link" className="text-primary text-sm font-semibold p-0 h-auto">
-            View List
-          </Button>
-        </div>
+      {/* Streamer Detail Card */}
+      <AnimatePresence>
+        {selectedUser && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 50, scale: 0.9 }}
+            className="absolute bottom-36 left-6 right-6 z-50"
+          >
+            <div className="bg-[#2D1B2D]/90 backdrop-blur-2xl border border-white/10 rounded-[2.5rem] p-6 shadow-[0_20px_50px_rgba(0,0,0,0.5)] relative overflow-hidden">
+              {/* Background Glow */}
+              <div className="absolute -top-10 -right-10 size-32 bg-primary/20 rounded-full blur-3xl" />
+              
+              <button 
+                onClick={() => setSelectedUser(null)}
+                className="absolute top-4 right-4 text-white/40 hover:text-white transition-colors"
+              >
+                <X size={20} />
+              </button>
 
-        <div className="flex-1 overflow-x-auto no-scrollbar flex items-start gap-4 pb-8">
-          {[1, 2].map((i) => (
-            <div key={i} className="flex-shrink-0 w-72 bg-card/60 border border-primary/20 rounded-2xl overflow-hidden relative shadow-lg">
-              <div className="h-32 relative">
-                <Image 
-                  src={PlaceHolderImages.find(img => img.id === (i === 1 ? "hero-stream" : "host-5"))?.imageUrl || ""} 
-                  alt="Preview" 
-                  fill 
-                  className="object-cover" 
-                />
-                <div className="absolute top-3 left-3 flex gap-2">
-                  <Badge className="bg-destructive text-[10px] uppercase gap-1">
-                    <span className="size-1.5 bg-white rounded-full animate-ping" /> Live
-                  </Badge>
-                  <Badge variant="secondary" className="bg-black/40 backdrop-blur-md text-white text-[10px] gap-1">
-                    <Eye className="size-3" /> 1.2k
-                  </Badge>
-                </div>
-              </div>
-              <div className="p-4 flex flex-col gap-3">
-                <div className="flex justify-between items-start">
+              <div className="flex items-start gap-5">
+                <Avatar className="size-20 border-4 border-primary/30 rounded-3xl">
+                  <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${selectedUser.name}`} />
+                  <AvatarFallback className="text-2xl font-black">{selectedUser.avatar}</AvatarFallback>
+                </Avatar>
+                
+                <div className="flex-1 space-y-3">
                   <div>
-                    <h3 className="font-bold text-lg leading-tight">Alex & Maria</h3>
-                    <p className="text-muted-foreground text-xs flex items-center mt-1">
-                      Barcelona, Spain
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-xl font-black uppercase italic tracking-tighter text-white">@{selectedUser.name}</h3>
+                      <Badge variant="secondary" className="bg-green-500/20 text-green-400 border-none text-[8px] font-black uppercase h-5">Verified</Badge>
+                    </div>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1 mt-1">
+                      <MapPin className="size-3 text-secondary" /> {selectedUser.country}
                     </p>
                   </div>
+                  
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-1.5">
+                      <Eye className="size-4 text-primary" />
+                      <span className="text-xs font-black italic">{selectedUser.viewers.toLocaleString()}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Heart className="size-4 text-secondary fill-secondary" />
+                      <span className="text-xs font-black italic">12.5k</span>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2 pt-2">
+                    <Link href={`/stream/${selectedUser.id}`} className="flex-1">
+                      <Button className="w-full h-12 romantic-gradient rounded-xl font-black uppercase text-[10px] tracking-widest shadow-lg">
+                        Connect Now
+                      </Button>
+                    </Link>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setSelectedUser(null)}
+                      className="px-5 h-12 bg-white/5 border-white/10 text-white rounded-xl font-black uppercase text-[10px]"
+                    >
+                      Close
+                    </Button>
+                  </div>
                 </div>
-                <Button className="w-full bg-primary hover:bg-primary/90 rounded-xl font-bold">
-                  Connect Now
-                </Button>
               </div>
             </div>
-          ))}
-        </div>
-      </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <BottomNav />
     </div>
