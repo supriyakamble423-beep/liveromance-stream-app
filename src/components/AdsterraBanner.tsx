@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useRef } from 'react';
@@ -11,6 +12,7 @@ interface AdsterraBannerProps {
 /**
  * AdsterraBanner Component
  * Dynamically injects Adsterra banner scripts with cleanup safety.
+ * Optimized for React 19 and Next.js 15.
  */
 export function AdsterraBanner({ adId, scriptUrl, className = '' }: AdsterraBannerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -19,11 +21,11 @@ export function AdsterraBanner({ adId, scriptUrl, className = '' }: AdsterraBann
     // Only run on client side
     if (typeof window === 'undefined' || !containerRef.current) return;
 
-    // Clear existing content to prevent duplicate ads on re-renders
+    // Clear existing content to prevent duplicate ads
     const currentContainer = containerRef.current;
     currentContainer.innerHTML = '';
 
-    // Script load karne ke liye
+    // Create and inject script
     const script = document.createElement('script');
     script.type = 'application/javascript';
     script.src = scriptUrl;
@@ -38,7 +40,7 @@ export function AdsterraBanner({ adId, scriptUrl, className = '' }: AdsterraBann
 
     return () => {
       if (currentContainer) {
-        currentContainer.innerHTML = ''; // Cleanup on unmount
+        currentContainer.innerHTML = ''; // Cleanup on unmount to prevent leaks
       }
     };
   }, [scriptUrl]);
@@ -48,9 +50,9 @@ export function AdsterraBanner({ adId, scriptUrl, className = '' }: AdsterraBann
       id={`ad-container-${adId}`} 
       ref={containerRef} 
       className={`w-full flex justify-center items-center overflow-hidden ${className}`}
-      style={{ minHeight: '50px' }} // Banner height ke liye min-height set ki hai
+      style={{ minHeight: '50px' }} 
     >
-      {/* Ad yahan load hoga */}
+      {/* Ad content injected here */}
     </div>
   );
 }

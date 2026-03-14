@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Search, Radio, User, MapPin } from "lucide-react";
+import { Home, Search, Radio, User, Wallet } from "lucide-react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
@@ -14,8 +14,8 @@ import { cn } from "@/lib/utils";
  */
 const navItems = [
   { icon: Home, label: "Home", href: "/global" },
-  { icon: Search, label: "Discover", href: "/trends" },
-  { icon: MapPin, label: "Map", href: "/interest" },
+  { icon: Search, label: "Trends", href: "/trends" },
+  { icon: Wallet, label: "Wallet", href: "/wallet" },
   { icon: Radio, label: "Go Live", href: "/host-p" },
   { icon: User, label: "Profile", href: "/host-p" },
 ];

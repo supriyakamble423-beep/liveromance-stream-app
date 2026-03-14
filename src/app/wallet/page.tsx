@@ -24,7 +24,7 @@ export default function WalletPage() {
   const [adLoading, setAdLoading] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  // ✅ Adsterra Configuration
+  // Adsterra Configuration
   const SMARTLINK_URL = "https://www.effectivegatecpm.com/a19zzj4ww?key=bd774f375ffbe786775bfb3fe5df5e16";
   const BANNER_AD_ID = "28678576";
   const BANNER_SCRIPT_URL = "//pl28678576.profitablegatecpm.com/28678576/invoke.js";
@@ -63,7 +63,7 @@ export default function WalletPage() {
     setAdLoading(true);
 
     try {
-      // ✅ Open Smartlink in new window
+      // Open Smartlink in new window
       const adWindow = window.open(SMARTLINK_URL, '_blank');
 
       if (!adWindow) {
@@ -76,7 +76,7 @@ export default function WalletPage() {
         return;
       }
 
-      // ✅ AI-Simulation Reward after 5 seconds
+      // AI-Simulation Reward after 5 seconds
       setTimeout(async () => {
         try {
           if (firestore && user) {
@@ -158,7 +158,7 @@ export default function WalletPage() {
         </div>
       </motion.div>
 
-      {/* Adsterra Banner */}
+      {/* Adsterra Banner Section */}
       <div className="mb-8">
         <p className="text-[7px] text-white/20 font-black uppercase tracking-[0.4em] text-center mb-3 italic">Promoted Node</p>
         <div className="flex justify-center">
