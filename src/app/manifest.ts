@@ -1,10 +1,7 @@
-import { MetadataRoute } from 'next'
+import type { MetadataRoute } from 'next';
 
-/**
- * Dynamic Manifest Handler
- * Using manifest.ts instead of a static file to prevent 404 HTML errors 
- * that cause "Unexpected end of JSON input" and ChunkLoadErrors.
- */
+export const dynamic = 'force-static';
+
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: 'Global Love',
@@ -26,5 +23,5 @@ export default function manifest(): MetadataRoute.Manifest {
         type: 'image/png',
       },
     ],
-  }
+  };
 }

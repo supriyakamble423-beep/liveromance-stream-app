@@ -1,4 +1,4 @@
-'use server';
+
 /**
  * @fileOverview A streamlined Genkit flow for fast host face verification with guiding messages.
  * 

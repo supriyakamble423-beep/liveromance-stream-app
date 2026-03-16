@@ -1,4 +1,4 @@
-'use server';
+
 /**
  * @fileOverview AI flow for NSFW content detection and stream moderation.
  *

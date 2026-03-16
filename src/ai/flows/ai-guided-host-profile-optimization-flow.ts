@@ -1,4 +1,4 @@
-'use server';
+
 /**
  * @fileOverview This file implements a Genkit flow that provides AI-guided suggestions
  * for host profile optimization, including descriptions, stream titles, and content strategy.

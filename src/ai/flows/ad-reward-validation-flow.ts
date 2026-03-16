@@ -1,4 +1,4 @@
-'use server';
+
 /**
  * @fileOverview AI Flow to validate ad engagement and reward delivery.
  *

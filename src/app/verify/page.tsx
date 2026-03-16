@@ -7,7 +7,6 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import Image from "next/image";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
-import { hostFaceVerification } from "@/ai/flows/host-face-verification-flow";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 

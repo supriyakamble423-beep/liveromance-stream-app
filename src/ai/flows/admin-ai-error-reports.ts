@@ -1,4 +1,4 @@
-'use server';
+
 /**
  * @fileOverview An AI agent for generating administrative error reports.
  *

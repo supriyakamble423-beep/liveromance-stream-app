@@ -14,7 +14,6 @@ import { useState, useEffect } from 'react';
 import { MOCK_HOSTS } from '@/lib/mock-data';
 import { cn } from "@/lib/utils";
 import AdBanner from "@/components/Ads/AdBanner";
-import { personalizedHostRecommendations, type PersonalizedHostRecommendationsOutput } from "@/ai/flows/personalized-host-recommendations-flow";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export default function GlobalMarketplace() {
