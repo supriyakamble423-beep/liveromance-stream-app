@@ -1,27 +1,66 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- 📸 Camera -->
+    <!-- ======================================== -->
+    <!-- 📸 CAMERA PERMISSIONS                    -->
+    <!-- ======================================== -->
     <uses-permission android:name="android.permission.CAMERA" />
-    <uses-feature android:name="android.hardware.camera" android:required="true" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
+    <uses-feature android:name="android.hardware.camera.front" android:required="false" />
 
-    <!-- 🎤 Microphone -->
+    <!-- ======================================== -->
+    <!-- 🎤 MICROPHONE PERMISSIONS                -->
+    <!-- ======================================== -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <uses-feature android:name="android.hardware.microphone" android:required="false" />
 
-    <!-- 📍 Location (for ads & map) -->
+    <!-- ======================================== -->
+    <!-- 📍 LOCATION (Ads + Map ke liye)          -->
+    <!-- ======================================== -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
-    <!-- 🌐 Internet -->
+    <!-- ======================================== -->
+    <!-- 🌐 INTERNET & NETWORK                    -->
+    <!-- ======================================== -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
 
-    <!-- 💾 Storage (optional) -->
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="32" android:requestLegacyExternalStorage="true" />
+    <!-- ======================================== -->
+    <!-- 💾 STORAGE — Android 12 aur neeche       -->
+    <!-- ======================================== -->
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+    <uses-permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
 
+    <!-- ======================================== -->
+    <!-- 📁 STORAGE — Android 13+ (API 33+)       -->
+    <!-- ======================================== -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
+    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
+
+    <!-- ======================================== -->
+    <!-- 🔴 STREAMING / FOREGROUND SERVICE        -->
+    <!-- ======================================== -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+
+    <!-- ======================================== -->
+    <!-- 🔔 NOTIFICATIONS (Android 13+)           -->
+    <!-- ======================================== -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- ======================================== -->
+    <!-- APPLICATION BLOCK                        -->
+    <!-- ======================================== -->
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
@@ -29,34 +68,55 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme"
+        android:hardwareAccelerated="true"
         android:usesCleartextTraffic="true"
         android:requestLegacyExternalStorage="true"
-        android:hardwareAccelerated="true">
+        android:largeHeap="true">
 
+        <!-- ======================================== -->
+        <!-- MAIN ACTIVITY                            -->
+        <!-- ======================================== -->
         <activity
             android:name=".MainActivity"
-            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|fontScale|density"
             android:exported="true"
             android:hardwareAccelerated="true"
             android:launchMode="singleTask"
             android:theme="@style/LaunchTheme"
-            android:windowSoftInputMode="adjustResize">
+            android:windowSoftInputMode="adjustResize"
+            android:screenOrientation="portrait">
 
+            <!-- App Launcher -->
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
-            <!-- Deep Links (optional) -->
+            <!-- Deep Links: liveromance://profile -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="liveromance" android:host="profile" />
+                <data
+                    android:scheme="liveromance"
+                    android:host="profile" />
             </intent-filter>
+
+            <!-- HTTPS Deep Links (optional future use) -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="https"
+                    android:host="liveromance.app" />
+            </intent-filter>
+
         </activity>
 
-        <!-- FileProvider for camera -->
+        <!-- ======================================== -->
+        <!-- FILE PROVIDER (Camera capture ke liye)   -->
+        <!-- ======================================== -->
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
@@ -66,5 +126,7 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths" />
         </provider>
+
     </application>
+
 </manifest>

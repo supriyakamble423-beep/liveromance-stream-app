@@ -16,13 +16,14 @@ public class MainActivity extends BridgeActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        // WebView ko camera/mic permission dene ke liye
+        
+        // SABSE IMPORTANT: WebView ko camera/mic permission handle karne dene ke liye
         WebView webView = getBridge().getWebView();
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
             public void onPermissionRequest(final PermissionRequest request) {
                 runOnUiThread(() -> {
-                    // Camera aur Mic dono grant karo
+                    // Camera aur Mic permissions ko turant grant karo
                     request.grant(request.getResources());
                 });
             }
